@@ -1,0 +1,394 @@
+"use client";
+
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import {
+  BookOpenText,
+  BriefcaseBusiness,
+  Check,
+  Circle,
+  Compass,
+  FileSearch,
+  GraduationCap,
+  Lightbulb,
+  LoaderCircle,
+  Search,
+  Sparkles,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BottomSheet } from "@/components/app/bottom-sheet";
+import {
+  AppLogo,
+  AppShell,
+  Card,
+  ChoiceCard,
+  ChoiceChip,
+  PageHeader,
+  PrimaryButton,
+  ProgressBar,
+  SecondaryButton,
+  Tag,
+} from "@/components/app/primitives";
+import {
+  careerOptions,
+  cropPath,
+  goalOptions,
+  interestOptions,
+  skillOptions,
+  type Goal,
+} from "@/data/prototype";
+import { usePrototypeStore } from "@/store/prototype-store";
+
+const goalIcons = [Compass, Lightbulb, GraduationCap, FileSearch];
+
+export function SplashScreen() {
+  const router = useRouter();
+  const setSampleMode = usePrototypeStore((state) => state.setSampleMode);
+  const setDnaStep = usePrototypeStore((state) => state.setDnaStep);
+
+  const start = () => {
+    setSampleMode(false);
+    setDnaStep(1);
+    router.push("/goal");
+  };
+
+  const preview = () => {
+    setSampleMode(true);
+    router.push("/evolution-report");
+  };
+
+  return (
+    <AppShell showHeader={false} className="splash-screen">
+      <div className="splash-layout">
+        <AppLogo />
+        <div className="splash-copy">
+          <p className="eyebrow">대학생 AI 연구 여정</p>
+          <h1>
+            내 전공,<br />
+            <span className="gradient-text">AI 먹이면</span> 뭐가 됨?
+          </h1>
+          <p>전공 고민을 연구 아이디어로, 아이디어를 교수님과 실행계획으로.</p>
+        </div>
+        <div className="splash-art" aria-hidden="true">
+          <Image
+            src={`${cropPath}/02_campus_scene_visible.png`}
+            alt=""
+            width={371}
+            height={360}
+            priority
+            sizes="(max-width: 430px) calc(100vw - 40px), 371px"
+          />
+        </div>
+        <div className="splash-actions">
+          <PrimaryButton onClick={start}>전공 진화 시작하기</PrimaryButton>
+          <SecondaryButton onClick={preview}>샘플 결과 먼저 보기</SecondaryButton>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+export function GoalScreen() {
+  const router = useRouter();
+  const goal = usePrototypeStore((state) => state.goal);
+  const setGoal = usePrototypeStore((state) => state.setGoal);
+  const [paperSheet, setPaperSheet] = useState(false);
+
+  const selectGoal = (value: Goal) => {
+    setGoal(value);
+    if (value === "understand-paper") setPaperSheet(true);
+  };
+
+  const continueJourney = () => {
+    if (goal === "understand-paper") {
+      setPaperSheet(true);
+      return;
+    }
+    if (goal) router.push("/dna");
+  };
+
+  return (
+    <AppShell
+      title="오늘의 목적"
+      backHref="/"
+      stickyAction={<PrimaryButton disabled={!goal} onClick={continueJourney}>내 전공 DNA 만들기</PrimaryButton>}
+    >
+      <PageHeader
+        eyebrow="첫 번째 선택"
+        title="오늘 무엇을 해결하고 싶나요?"
+        description="목적에 맞춰 질문과 결과를 보여주는 순서를 바꿔드릴게요."
+      />
+      <div className="goal-list">
+        {goalOptions.map((option, index) => (
+          <ChoiceCard
+            key={option.value}
+            title={option.title}
+            description={option.description}
+            selected={goal === option.value}
+            onClick={() => selectGoal(option.value)}
+            icon={goalIcons[index]}
+          />
+        ))}
+      </div>
+      <BottomSheet
+        open={paperSheet}
+        onClose={() => setPaperSheet(false)}
+        title="논문 이해 기능은 준비 중이에요"
+        description="이번 프로토타입에서는 가까운 연구 주제 경로를 먼저 경험할 수 있어요."
+        footer={
+          <PrimaryButton
+            onClick={() => {
+              setGoal("find-topic");
+              setPaperSheet(false);
+              router.push("/dna");
+            }}
+          >
+            프로젝트 주제로 시작하기
+          </PrimaryButton>
+        }
+      >
+        <div className="sheet-message-list">
+          <p><Search size={18} aria-hidden="true" /> 관심 있는 분야를 연구 질문으로 정리해요.</p>
+          <p><BookOpenText size={18} aria-hidden="true" /> 필요한 데이터와 방법을 함께 살펴봐요.</p>
+          <p><BriefcaseBusiness size={18} aria-hidden="true" /> 교수 면담과 첫 행동까지 준비해요.</p>
+        </div>
+      </BottomSheet>
+    </AppShell>
+  );
+}
+
+export function DnaScreen() {
+  const router = useRouter();
+  const step = usePrototypeStore((state) => state.dnaStep);
+  const setStep = usePrototypeStore((state) => state.setDnaStep);
+  const profile = usePrototypeStore((state) => state.profile);
+  const updateProfile = usePrototypeStore((state) => state.updateProfile);
+  const toggleProfileItem = usePrototypeStore((state) => state.toggleProfileItem);
+  const setDifficulty = usePrototypeStore((state) => state.setDifficulty);
+  const [error, setError] = useState("");
+
+  const stepContent = useMemo(() => {
+    switch (step) {
+      case 1:
+        return {
+          title: "어떤 전공을 공부하고 있나요?",
+          description: "주전공을 중심으로 서로 다른 관심과 경험을 연결해볼게요.",
+        };
+      case 2:
+        return {
+          title: "요즘 가장 궁금한 분야는 무엇인가요?",
+          description: "현재 관심이 가는 주제를 최대 5개 골라주세요.",
+        };
+      case 3:
+        return {
+          title: "어떤 경험으로 이어가고 싶나요?",
+          description: "이번 결과를 어디에 활용하고 싶은지 최대 2개 골라주세요.",
+        };
+      case 4:
+        return {
+          title: "지금 사용할 수 있는 강점을 골라주세요",
+          description: "완벽할 필요 없어요. 한 번이라도 써본 기술이면 충분해요.",
+        };
+      case 5:
+        return {
+          title: "해본 프로젝트가 있나요?",
+          description: "없어도 괜찮아요. 기억나는 경험을 짧게 적어주세요.",
+        };
+      default:
+        return {
+          title: "이번에는 어느 정도까지 해보고 싶나요?",
+          description: "가용 시간과 원하는 결과물을 기준으로 범위를 계산할게요.",
+        };
+    }
+  }, [step]);
+
+  const validate = () => {
+    if (step === 1 && !profile.major.trim()) return "주전공을 입력해 주세요.";
+    if (step === 2 && profile.interests.length === 0) return "관심 주제를 1개 이상 골라주세요.";
+    return "";
+  };
+
+  const next = () => {
+    const nextError = validate();
+    if (nextError) {
+      setError(nextError);
+      return;
+    }
+    setError("");
+    if (step < 6) setStep(step + 1);
+    else router.push("/analyzing");
+  };
+
+  const back = () => {
+    setError("");
+    if (step > 1) setStep(step - 1);
+    else router.push("/goal");
+  };
+
+  return (
+    <AppShell
+      title="나의 전공 DNA 만들기"
+      onBack={back}
+      step={{ current: step, total: 6 }}
+      stickyAction={<PrimaryButton onClick={next}>{step === 6 ? "내 전공 DNA 분석하기" : "다음 질문"}</PrimaryButton>}
+    >
+      <div className="dna-progress"><ProgressBar value={step} max={6} label={`전공 DNA 입력 ${step}/6`} /></div>
+      <PageHeader title={stepContent.title} description={stepContent.description} />
+      <Card className="form-card">
+        {step === 1 && (
+          <div className="form-grid">
+            <label className="field-group">
+              <span className="field-label">학교 <small>선택</small></span>
+              <input className="input" value={profile.school} onChange={(event) => updateProfile({ school: event.target.value })} placeholder="학교 이름" />
+            </label>
+            <label className="field-group">
+              <span className="field-label">주전공 <small>필수</small></span>
+              <input className="input" value={profile.major} onChange={(event) => updateProfile({ major: event.target.value })} placeholder="예: 수학" aria-invalid={Boolean(error)} />
+            </label>
+            <label className="field-group">
+              <span className="field-label">부전공 <small>선택</small></span>
+              <input className="input" value={profile.minor} onChange={(event) => updateProfile({ minor: event.target.value })} placeholder="예: 식품자원경제" />
+            </label>
+            <label className="field-group">
+              <span className="field-label">학년</span>
+              <select className="select" value={profile.grade} onChange={(event) => updateProfile({ grade: event.target.value })}>
+                {["1학년", "2학년", "3학년", "4학년", "졸업 예정"].map((grade) => <option key={grade}>{grade}</option>)}
+              </select>
+            </label>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="chip-grid">
+            {interestOptions.map((item) => (
+              <ChoiceChip key={item} selected={profile.interests.includes(item)} onClick={() => toggleProfileItem("interests", item, 5)} disabled={!profile.interests.includes(item) && profile.interests.length >= 5}>
+                {item}
+              </ChoiceChip>
+            ))}
+          </div>
+        )}
+        {step === 3 && (
+          <div className="choice-stack">
+            {careerOptions.map((item) => (
+              <ChoiceChip key={item} selected={profile.careers.includes(item)} onClick={() => toggleProfileItem("careers", item, 2)} disabled={!profile.careers.includes(item) && profile.careers.length >= 2}>
+                {item}
+              </ChoiceChip>
+            ))}
+          </div>
+        )}
+        {step === 4 && (
+          <div className="chip-grid">
+            {skillOptions.map((item) => (
+              <ChoiceChip key={item} selected={profile.skills.includes(item)} onClick={() => toggleProfileItem("skills", item)}>
+                {item}
+              </ChoiceChip>
+            ))}
+          </div>
+        )}
+        {step === 5 && (
+          <div className="field-group">
+            <label className="field-label" htmlFor="experience">프로젝트 경험 <small>{profile.experience.length}/160</small></label>
+            <textarea
+              id="experience"
+              className="textarea"
+              maxLength={160}
+              disabled={profile.noExperience}
+              value={profile.noExperience ? "" : profile.experience}
+              onChange={(event) => updateProfile({ experience: event.target.value })}
+              placeholder="예: 소비자 설문 데이터를 활용해 구매의도를 분석한 팀 프로젝트"
+            />
+            <label className="checkbox-row">
+              <input type="checkbox" checked={profile.noExperience} onChange={(event) => updateProfile({ noExperience: event.target.checked })} />
+              경험 없음
+            </label>
+          </div>
+        )}
+        {step === 6 && (
+          <div className="form-grid">
+            <div className="field-group">
+              <span className="field-label">가용 시간</span>
+              <div className="segmented" style={{ "--segments": 3 } as React.CSSProperties}>
+                {[2, 4, 8].map((weeks) => (
+                  <button key={weeks} type="button" className={profile.availableWeeks === weeks ? "is-selected" : ""} onClick={() => updateProfile({ availableWeeks: weeks as 2 | 4 | 8 })}>
+                    {weeks === 8 ? "8주 이상" : `${weeks}주`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="field-group">
+              <span className="field-label">원하는 결과물</span>
+              <div className="option-list">
+                {["포트폴리오 프로젝트", "논문 초안", "서비스 프로토타입", "공모전 제안서"].map((item) => (
+                  <button type="button" key={item} className={profile.outputGoal === item ? "is-selected" : ""} onClick={() => updateProfile({ outputGoal: item })}>
+                    <span>{item}</span>{profile.outputGoal === item && <Check size={17} aria-hidden="true" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="field-group">
+              <span className="field-label">난이도</span>
+              <div className="segmented" style={{ "--segments": 3 } as React.CSSProperties}>
+                {(["starter", "project", "advanced"] as const).map((difficulty) => (
+                  <button key={difficulty} type="button" className={profile.difficulty === difficulty ? "is-selected" : ""} onClick={() => setDifficulty(difficulty)}>
+                    {{ starter: "입문", project: "프로젝트", advanced: "심화" }[difficulty]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        {error && <p className="field-error dna-error" role="alert">{error}</p>}
+      </Card>
+      <div className="input-summary" aria-live="polite">
+        {step === 2 && <span>{profile.interests.length}/5 선택</span>}
+        {step === 3 && <span>{profile.careers.length}/2 선택</span>}
+        {step === 4 && <span>{profile.skills.length}개 강점 선택</span>}
+      </div>
+    </AppShell>
+  );
+}
+
+export function AnalyzingScreen() {
+  const router = useRouter();
+  const profile = usePrototypeStore((state) => state.profile);
+  const [activeStep, setActiveStep] = useState(0);
+  const messages = [
+    "전공과 강점을 정리하고 있어요",
+    "전공별 AI 활용 방향을 연결하고 있어요",
+    `${profile.availableWeeks}주 안에 가능한 아이디어 범위를 계산하고 있어요`,
+  ];
+
+  useEffect(() => {
+    const first = window.setTimeout(() => setActiveStep(1), 700);
+    const second = window.setTimeout(() => setActiveStep(2), 1450);
+    const done = window.setTimeout(() => router.replace("/evolution-report"), 2350);
+    return () => [first, second, done].forEach(window.clearTimeout);
+  }, [router]);
+
+  return (
+    <AppShell showHeader={false} className="analyzing-screen">
+      <div className="analyzing-layout">
+        <div className="analysis-mascot">
+          <span className="analysis-pulse" />
+          <Image src="/major-evolution-assets/03_TRANSPARENT_PNG/01_robot_graduate_laptop_alpha.png" alt="분석 중인 전공진화소 로봇" width={76} height={95} priority />
+        </div>
+        <div className="analyzing-title">
+          <Tag tone="violet">AI 분석 중</Tag>
+          <h1>전공의 연결 고리를 찾고 있어요</h1>
+          <p>{profile.major || "수학"} × {profile.minor || "관심 분야"} × AI</p>
+        </div>
+        <div className="analysis-steps" aria-live="polite">
+          {messages.map((message, index) => {
+            const complete = index < activeStep;
+            const current = index === activeStep;
+            return (
+              <div key={message} className={current ? "is-current" : complete ? "is-complete" : ""}>
+                <span>{complete ? <Check size={18} /> : current ? <LoaderCircle size={18} className="spin" /> : <Circle size={17} />}</span>
+                <p>{message}</p>
+              </div>
+            );
+          })}
+        </div>
+        <p className="analysis-trust"><Sparkles size={16} aria-hidden="true" /> 입력한 정보만 사용해 결과를 만들어요.</p>
+      </div>
+    </AppShell>
+  );
+}

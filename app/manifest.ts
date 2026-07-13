@@ -1,24 +1,21 @@
 import type { MetadataRoute } from "next";
 
-// PWA 매니페스트 — 홈화면 추가·모바일 브랜딩 신호. Next가 <link rel="manifest">를 자동 주입.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "모두의 창업 솔루션",
-    short_name: "모두의창업",
-    description: "아이디어 하나로 시작하는 창업 제작 솔루션",
+    name: "전공진화소",
+    short_name: "전공진화소",
+    description: "전공을 연구 아이디어와 교수님, 첫 실행으로 연결하는 대학생 연구 여정 앱",
     start_url: "/",
     display: "standalone",
-    lang: "ko",
-    background_color: "#ffffff",
-    theme_color: "#ffffff",
+    background_color: "#F7F9FF",
+    theme_color: "#7658F5",
+    lang: "ko-KR",
+    orientation: "portrait",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
       {
-        src: "/icon-512.png",
+        src: "/icon",
         sizes: "512x512",
         type: "image/png",
-        purpose: "maskable",
       },
     ],
   };
