@@ -6,19 +6,27 @@ import type {
 
 type ApiErrorPayload = { error?: { message?: string } };
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
+async function postJson<T>(
+  url: string,
+  body: unknown,
+  options: { signal?: AbortSignal } = {},
+): Promise<T> {
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: options.signal,
   });
   const payload = await response.json() as T & ApiErrorPayload;
   if (!response.ok) throw new Error(payload.error?.message || "AI 요청을 완료하지 못했습니다.");
   return payload;
 }
 
-export function requestPaperAnalysis(body: PaperAnalysisRequest): Promise<PaperAnalysisResult> {
-  return postJson<PaperAnalysisResult>("/api/ai/paper", body);
+export function requestPaperAnalysis(
+  body: PaperAnalysisRequest,
+  options: { signal?: AbortSignal } = {},
+): Promise<PaperAnalysisResult> {
+  return postJson<PaperAnalysisResult>("/api/ai/paper", body, options);
 }
 
 export function requestCoDesignCandidates(body: CoDesignRequest): Promise<CoDesignResponse> {

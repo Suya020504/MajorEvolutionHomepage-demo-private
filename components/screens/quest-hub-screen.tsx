@@ -14,6 +14,7 @@ import {
 } from "@/components/app/primitives";
 import { questIcon } from "@/lib/brand-assets";
 import { cardsForTool, useQuestStore, type QuestToolId } from "@/store/quest-store";
+import { useResearchStore } from "@/store/research-store";
 
 /**
  * Q-00 교수님 퀘스트 허브.
@@ -53,7 +54,7 @@ const TOOLS: Tool[] = [
     summary: "문제·방법·결과·질문을 3분 카드로 정리",
     output: "문제·방법·결과·한계·질문 5카드",
     icon: questIcon.paperBite,
-    href: "/paper/reader?mode=bite",
+    href: "/paper/reader?mode=bite&source=favorites",
     note: "텍스트 분석은 지금 사용할 수 있어요. PDF 페이지 근거는 후속 모듈이에요.",
   },
   {
@@ -102,7 +103,7 @@ const NEVER_DOES = [
   "자동 발송",
   "면담 녹음",
   "교수 성격·가능성 추정",
-  "페이지 근거 없는 요약",
+  "근거 범위 표시 없는 요약",
 ];
 
 const TOOL_NAME = new Map(TOOLS.map((tool) => [tool.id, tool.name]));
@@ -110,12 +111,14 @@ const TOOL_NAME = new Map(TOOLS.map((tool) => [tool.id, tool.name]));
 export function QuestHubScreen() {
   const router = useRouter();
   const hasHydrated = useQuestStore((state) => state.hasHydrated);
+  const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
+  const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
   const cards = useQuestStore((state) => state.cards);
   const deleteCard = useQuestStore((state) => state.deleteCard);
   const [timing, setTiming] = useState<Timing | "all">("all");
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
-  if (!hasHydrated) {
+  if (!hasHydrated || !hasResearchHydrated) {
     return (
       <div className="research-loading">
         <LoaderCircle className="spin" />
@@ -165,13 +168,19 @@ export function QuestHubScreen() {
               <div className="tag-row">
                 {tool.timings.map((item) => <Tag key={item} tone="violet">{TIMING_LABEL[item]}</Tag>)}
                 {saved > 0 && <Tag tone="mint">저장 {saved}장</Tag>}
+                {tool.id === "paper-bite" && (
+                  <Tag tone={favoriteProfessorIds.length > 0 ? "mint" : "warning"}>
+                    즐겨찾는 교수 {favoriteProfessorIds.length}명
+                  </Tag>
+                )}
               </div>
               <p className="quest-tool__summary">{tool.summary}</p>
               <p className="quest-tool__output"><span>결과</span> {tool.output}</p>
               {tool.note && <p className="quest-tool__note">{tool.note}</p>}
               {ready ? (
                 <button type="button" onClick={() => router.push(tool.href!)}>
-                  시작하기 <ArrowRight size={16} />
+                  {tool.id === "paper-bite" ? "교수님 논문 고르기" : "시작하기"}
+                  <ArrowRight size={16} />
                 </button>
               ) : (
                 <p className="quest-tool__pending">아직 열지 않은 도구입니다.</p>

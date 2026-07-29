@@ -34,7 +34,9 @@ import type {
   ProfessorMatch,
   ProfessorMatchResponse,
   ProfessorMentorLoopEntry,
+  ProfessorPaperSelection,
 } from "@/lib/professor-domain";
+import { MAX_FAVORITE_PROFESSORS } from "@/lib/professor-paper-selection";
 
 const MAX_INTERESTS = 3;
 const MAX_METHODS = 2;
@@ -54,6 +56,48 @@ const toggle = (list: string[], value: string, max: number) => {
 };
 
 export type InterestAddResult = "added" | "duplicate" | "empty" | "full";
+export type FavoriteProfessorToggleResult = "added" | "removed" | "full";
+
+function normalizeFavoriteProfessorIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(
+    value
+      .map((item) => typeof item === "string" ? item.trim().slice(0, 64) : "")
+      .filter(Boolean),
+  )).slice(0, MAX_FAVORITE_PROFESSORS);
+}
+
+function normalizePaperSelection(value: unknown): ProfessorPaperSelection | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const required = [
+    "professorId",
+    "professorName",
+    "professorDepartment",
+    "paperId",
+    "title",
+    "publicationType",
+    "officialProfileUrl",
+    "selectedAt",
+  ] as const;
+  if (required.some((key) => typeof raw[key] !== "string" || !raw[key])) return null;
+  if (raw.publishedDate !== null && typeof raw.publishedDate !== "string") return null;
+  if (raw.doi !== null && typeof raw.doi !== "string") return null;
+  if (raw.kciId !== null && typeof raw.kciId !== "string") return null;
+  return {
+    professorId: String(raw.professorId).slice(0, 64),
+    professorName: String(raw.professorName).slice(0, 80),
+    professorDepartment: String(raw.professorDepartment).slice(0, 120),
+    paperId: String(raw.paperId).slice(0, 64),
+    title: String(raw.title).slice(0, 300),
+    publicationType: String(raw.publicationType).slice(0, 80),
+    publishedDate: raw.publishedDate as string | null,
+    doi: raw.doi as string | null,
+    kciId: raw.kciId as string | null,
+    officialProfileUrl: String(raw.officialProfileUrl).slice(0, 500),
+    selectedAt: String(raw.selectedAt).slice(0, 40),
+  };
+}
 
 type ResearchState = {
   hasHydrated: boolean;
@@ -74,6 +118,8 @@ type ResearchState = {
   professorMatchError: string | null;
   professorMatchTopicId: string | null;
   selectedProfessorId: string | null;
+  favoriteProfessorIds: string[];
+  selectedProfessorPaper: ProfessorPaperSelection | null;
   knockKitDrafts: Record<string, ProfessorKnockKitDraft>;
   mentorLoopEntries: Record<string, ProfessorMentorLoopEntry>;
   seenIds: string[];
@@ -109,6 +155,10 @@ type ResearchState = {
   setProfessorMatches: (response: ProfessorMatchResponse) => void;
   setProfessorMatchError: (topicId: string, message: string) => void;
   selectProfessor: (id: string) => void;
+  toggleFavoriteProfessor: (id: string) => FavoriteProfessorToggleResult;
+  removeFavoriteProfessors: (ids: string[]) => void;
+  clearFavoriteProfessors: () => void;
+  selectProfessorPaper: (selection: ProfessorPaperSelection | null) => void;
   saveKnockKitDraft: (key: string, draft: ProfessorKnockKitDraft) => void;
   saveMentorLoopEntry: (key: string, entry: ProfessorMentorLoopEntry) => void;
   deleteMentorLoopEntry: (key: string) => void;
@@ -138,7 +188,7 @@ const invalidatedResearchState = () => ({
 
 export function migrateResearchState(
   persistedState: unknown,
-  _persistedVersion: number,
+  persistedVersion: number,
 ): Partial<ResearchState> {
   const state = persistedState && typeof persistedState === "object"
     ? persistedState as Partial<ResearchState>
@@ -171,13 +221,19 @@ export function migrateResearchState(
     methods,
     avoid: Array.isArray(rawConditions.avoid) ? rawConditions.avoid : [],
   };
+  const favoriteProfessorIds = normalizeFavoriteProfessorIds(state.favoriteProfessorIds);
+  const selectedProfessorPaper = normalizePaperSelection(state.selectedProfessorPaper);
 
   return {
     ...state,
     conditions,
+    favoriteProfessorIds,
+    selectedProfessorPaper,
     interestsFull: interests.length >= MAX_INTERESTS,
     methodsFull: methods.length >= MAX_METHODS,
-    ...invalidatedResearchState(),
+    // v1의 개인 맞춤 입력은 보편 대학생 입력으로 바뀌어 결과를 다시 계산해야 했습니다.
+    // v2→v3은 즐겨찾기·논문 선택만 추가하므로 기존 공동설계와 추천 결과를 보존합니다.
+    ...(persistedVersion < 2 ? invalidatedResearchState() : {}),
   };
 }
 
@@ -197,6 +253,8 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   professorMatchError: null,
   professorMatchTopicId: null,
   selectedProfessorId: null,
+  favoriteProfessorIds: [],
+  selectedProfessorPaper: null,
   knockKitDrafts: {},
   mentorLoopEntries: {},
   seenIds: [],
@@ -424,6 +482,38 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorMatchError,
     })),
   selectProfessor: (selectedProfessorId) => set({ selectedProfessorId }),
+  toggleFavoriteProfessor: (id) => {
+    const normalizedId = id.trim().slice(0, 64);
+    if (!normalizedId) return "full";
+    const { favoriteProfessorIds } = get();
+    if (favoriteProfessorIds.includes(normalizedId)) {
+      set({
+        favoriteProfessorIds: favoriteProfessorIds.filter(
+          (professorId) => professorId !== normalizedId,
+        ),
+      });
+      return "removed";
+    }
+    if (favoriteProfessorIds.length >= MAX_FAVORITE_PROFESSORS) return "full";
+    set({ favoriteProfessorIds: [...favoriteProfessorIds, normalizedId] });
+    return "added";
+  },
+  removeFavoriteProfessors: (ids) => {
+    const idsToRemove = new Set(normalizeFavoriteProfessorIds(ids));
+    if (idsToRemove.size === 0) return;
+    set((state) => ({
+      favoriteProfessorIds: state.favoriteProfessorIds.filter(
+        (professorId) => !idsToRemove.has(professorId),
+      ),
+    }));
+  },
+  clearFavoriteProfessors: () => set({ favoriteProfessorIds: [] }),
+  selectProfessorPaper: (selectedProfessorPaper) => set({
+    selectedProfessorPaper,
+    ...(selectedProfessorPaper
+      ? { selectedProfessorId: selectedProfessorPaper.professorId }
+      : {}),
+  }),
   saveKnockKitDraft: (key, draft) =>
     set((state) => ({ knockKitDrafts: { ...state.knockKitDrafts, [key]: draft } })),
   saveMentorLoopEntry: (key, entry) =>
@@ -471,7 +561,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     }),
 }), {
   name: "major-evolution-research-v1",
-  version: 2,
+  version: 3,
   migrate: migrateResearchState,
   storage: createJSONStorage(() => localStorage),
   skipHydration: true,

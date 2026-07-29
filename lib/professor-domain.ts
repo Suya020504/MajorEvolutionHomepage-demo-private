@@ -57,6 +57,51 @@ export type OfficialProfessor = {
   profileEvidenceId: string;
 };
 
+/**
+ * 즐겨찾기 논문 선택 창에 필요한 최소 교수 정보입니다.
+ *
+ * 연락처·사진 원본처럼 논문 선택에 불필요한 필드는 API로 보내지 않습니다.
+ */
+export type FavoriteProfessorPaperCatalog = Pick<
+  OfficialProfessor,
+  | "id"
+  | "university"
+  | "college"
+  | "department"
+  | "name"
+  | "title"
+  | "publications"
+  | "publicationCount"
+  | "publicationsStatus"
+  | "officialProfileUrl"
+>;
+
+export type FavoriteProfessorPaperCatalogResponse = {
+  professors: FavoriteProfessorPaperCatalog[];
+  missingProfessorIds: string[];
+  fetchedAt: string;
+};
+
+/**
+ * 논문 한입에 전달하는 공식 논문 메타데이터입니다.
+ *
+ * 제목과 출처만 자동 입력하며, 초록·본문은 저작권과 정확성을 위해
+ * 학생이 직접 붙여 넣어야 합니다.
+ */
+export type ProfessorPaperSelection = {
+  professorId: string;
+  professorName: string;
+  professorDepartment: string;
+  paperId: string;
+  title: string;
+  publicationType: string;
+  publishedDate: string | null;
+  doi: string | null;
+  kciId: string | null;
+  officialProfileUrl: string;
+  selectedAt: string;
+};
+
 export type ProfessorMatch = {
   professor: OfficialProfessor;
   role: ProfessorMatchRole;

@@ -13,6 +13,7 @@ import {
   LoaderCircle,
   SearchCheck,
   ShieldCheck,
+  Star,
   ThumbsDown,
 } from "lucide-react";
 import {
@@ -33,11 +34,13 @@ import {
 } from "@/lib/professor-discovery-client";
 import type {
   OfficialProfessor,
+  ProfessorDataStatus,
   ProfessorMatch,
   ProfessorMatchRole,
 } from "@/lib/professor-domain";
 import { ProfessorMatchRequestAbortedError } from "@/lib/professor-match-http";
 import { resolveProfessorPortrait } from "@/lib/professor-photo";
+import { MAX_FAVORITE_PROFESSORS } from "@/lib/professor-paper-selection";
 import { useResearchStore } from "@/store/research-store";
 
 const ROLE_LABEL: Record<ProfessorMatchRole, string> = {
@@ -45,6 +48,17 @@ const ROLE_LABEL: Record<ProfessorMatchRole, string> = {
   METHOD: "방법 연결형",
   CONTEXT: "확장 관점형",
 };
+
+function officialDataStatusLabel(status: ProfessorDataStatus, subject: string): string {
+  const labels: Record<ProfessorDataStatus, string> = {
+    FOUND: `${subject} 확인`,
+    NOT_LISTED_ON_OFFICIAL_PROFILE: `공식 프로필에 ${subject} 미기재`,
+    PROFILE_UNAVAILABLE: "공식 프로필에 현재 접근할 수 없음",
+    PARSE_FAILED: `${subject} 수집 형식을 확인하지 못함`,
+    ROBOTS_BLOCKED: "공식 사이트 수집 정책으로 자동 확인 제한",
+  };
+  return labels[status];
+}
 
 const GOAL_OPTIONS = [
   "전공·진로 방향 찾기",
@@ -134,6 +148,49 @@ function ProfessorPortrait({
   );
 }
 
+function ProfessorFavoriteButton({
+  professorId,
+  professorName,
+}: {
+  professorId: string;
+  professorName: string;
+}) {
+  const hasHydrated = useResearchStore((state) => state.hasHydrated);
+  const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
+  const toggleFavoriteProfessor = useResearchStore((state) => state.toggleFavoriteProfessor);
+  const [limitNotice, setLimitNotice] = useState(false);
+  const isFavorite = favoriteProfessorIds.includes(professorId);
+  const isAtLimit = !isFavorite && favoriteProfessorIds.length >= MAX_FAVORITE_PROFESSORS;
+  const label = isFavorite ? "즐겨찾기 완료" : "즐겨찾기";
+  const noticeId = `favorite-limit-${professorId}`;
+
+  return (
+    <div className="professor-favorite-control">
+      <button
+        type="button"
+        className={`professor-favorite-button${isFavorite ? " is-active" : ""}`}
+        aria-label={`${professorName} 교수님 ${isFavorite ? "즐겨찾기 해제" : "즐겨찾기 등록"}`}
+        aria-pressed={isFavorite}
+        aria-describedby={limitNotice ? noticeId : undefined}
+        disabled={!hasHydrated}
+        title={isAtLimit ? `즐겨찾기는 ${MAX_FAVORITE_PROFESSORS}명까지 등록할 수 있어요.` : undefined}
+        onClick={() => {
+          const result = toggleFavoriteProfessor(professorId);
+          setLimitNotice(result === "full");
+        }}
+      >
+        <Star size={16} fill={isFavorite ? "currentColor" : "none"} aria-hidden="true" />
+        {hasHydrated ? label : "불러오는 중"}
+      </button>
+      {limitNotice && (
+        <small id={noticeId} role="status">
+          즐겨찾기는 {MAX_FAVORITE_PROFESSORS}명까지 등록할 수 있어요.
+        </small>
+      )}
+    </div>
+  );
+}
+
 /**
  * 주제·방법·확장 관점 카드.
  *
@@ -211,6 +268,10 @@ function MatchCard({
         <button type="button" className="official-professor-open" onClick={onOpen}>
           상세 근거 보기 <ArrowRight size={16} />
         </button>
+        <ProfessorFavoriteButton
+          professorId={professor.id}
+          professorName={professor.name}
+        />
         <button type="button" className="match-card__reject" onClick={onReject}>
           <ThumbsDown size={15} /> 이 교수는 아니에요
         </button>
@@ -711,6 +772,10 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
       backHref="/professors"
       stickyAction={(
         <>
+          <ProfessorFavoriteButton
+            professorId={professor.id}
+            professorName={professor.name}
+          />
           <PrimaryButton onClick={() => {
             selectProfessor(professor.id);
             router.push("/quest");
@@ -756,13 +821,13 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
           ? professor.researchFields.map((field) => (
               <div key={field}><GraduationCap size={18} /><span>{field}</span></div>
             ))
-          : <p>{professor.researchFieldsStatus}</p>}
+          : <p>{officialDataStatusLabel(professor.researchFieldsStatus, "연구분야")}</p>}
       </Card>
 
       <SectionHeading
         title="공식 프로필에 노출된 논문"
         description={professor.publicationsStatus === "FOUND"
-          ? `전체 ${professor.publicationCount}건 중 최근 목록 순서 ${recentPublications.length}건`
+          ? `공식 프로필에서 수집한 전체 ${professor.publicationCount}건 중 최근 논문 최대 6건`
           : "논문이 없다는 뜻이 아니라 공식 프로필에 목록이 노출되지 않았다는 뜻입니다."}
       />
       {recentPublications.length > 0 ? (
@@ -782,7 +847,7 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
         <Card className="official-publication-empty">
           <CircleAlert size={18} />
           <div>
-            <strong>{professor.publicationsStatus}</strong>
+            <strong>{officialDataStatusLabel(professor.publicationsStatus, "논문 목록")}</strong>
             <p>공식 프로필에 논문 목록이 노출되지 않아 논문 근거를 만들지 않았습니다.</p>
           </div>
         </Card>
