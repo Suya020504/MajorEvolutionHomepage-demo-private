@@ -2911,6 +2911,326 @@ strong {
   font-weight: 700;
 }
 
+.professor-analysis-guide {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 18px;
+  border-top: 3px solid var(--brand-violet);
+}
+.professor-analysis-guide > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.professor-analysis-guide h2 { font-size: 17px; line-height: 1.4; }
+.professor-analysis-guide header p {
+  max-width: 640px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.professor-analysis-guide ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  list-style: none;
+}
+.professor-analysis-guide li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+.professor-analysis-guide li > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-inverse);
+  background: var(--brand-navy-700);
+  font-size: 12px;
+  font-weight: 800;
+}
+.professor-analysis-guide li strong { font-size: 13px; line-height: 1.4; }
+.professor-analysis-guide li p {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.professor-discovery-form { gap: 16px; }
+.professor-discovery-form__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+.professor-discovery-form__head > div:first-child p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.professor-discovery-steps {
+  display: grid;
+  grid-template-columns: auto 36px auto;
+  align-items: center;
+  gap: 7px;
+}
+.professor-discovery-steps > span {
+  height: 1px;
+  background: var(--border-strong);
+}
+.professor-discovery-steps button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-tertiary);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 760;
+}
+.professor-discovery-steps button > span {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 11px;
+}
+.professor-discovery-steps button.is-active { color: var(--brand-purple); background: var(--bg-lavender); }
+.professor-discovery-steps button.is-active > span {
+  border-color: var(--brand-violet);
+  color: var(--text-inverse);
+  background: var(--brand-violet);
+}
+.professor-discovery-steps button.is-complete { color: var(--success); }
+.professor-discovery-steps button.is-complete > span {
+  border-color: var(--success);
+  color: var(--success);
+  background: var(--success-soft);
+}
+.professor-discovery-step { display: grid; gap: 12px; }
+.discovery-question {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+.discovery-question__title {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+}
+.discovery-question__title > svg { margin-top: 2px; color: var(--brand-purple); }
+.discovery-question__title h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.discovery-question__title p {
+  margin-top: 3px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.discovery-question > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 720;
+}
+.discovery-selection-count {
+  color: var(--brand-purple);
+  font-size: 11px;
+  font-weight: 800;
+}
+.university-choice {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 66px;
+  grid-template-columns: 34px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-primary);
+  background: var(--surface);
+  text-align: left;
+}
+.university-choice > svg:first-child { color: var(--brand-purple); }
+.university-choice > svg:last-child { color: var(--text-disabled); }
+.university-choice span { display: grid; min-width: 0; gap: 2px; }
+.university-choice strong { font-size: 14px; }
+.university-choice small { color: var(--text-tertiary); font-size: 11px; }
+.university-choice.is-selected {
+  border-color: var(--brand-violet);
+  background: var(--bg-lavender);
+  box-shadow: 0 0 0 2px rgba(117, 87, 255, 0.08);
+}
+.university-choice.is-selected > svg:last-child { color: var(--success); }
+.academic-select-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.academic-select-grid__wide { grid-column: 1 / -1; }
+.professor-discovery-form label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+.professor-discovery-form label > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 720;
+}
+.professor-discovery-form input,
+.professor-discovery-form select,
+.professor-discovery-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 15px;
+}
+.professor-discovery-form textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.55;
+}
+.professor-discovery-form input:focus-visible,
+.professor-discovery-form select:focus-visible,
+.professor-discovery-form textarea:focus-visible,
+.professor-discovery-form button:focus-visible {
+  outline: 3px solid rgba(40, 180, 155, 0.22);
+  outline-offset: 2px;
+}
+.professor-discovery-form select:disabled,
+.professor-discovery-form input:disabled {
+  color: var(--text-disabled);
+  background: var(--bg-secondary);
+}
+.academic-entry-toggle {
+  justify-self: start;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-link);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 740;
+}
+.discovery-data-note {
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.discovery-chip-grid { gap: 7px; }
+.discovery-chip-grid .choice-chip {
+  min-height: 42px;
+  padding: 8px 12px;
+  white-space: normal;
+  text-align: center;
+}
+.custom-interest-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.custom-interest-row > button { min-width: 70px; }
+.selected-signal-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.selected-signal-list button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border: 1px solid rgba(117, 87, 255, 0.24);
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--brand-purple);
+  background: var(--bg-lavender);
+  font-size: 11px;
+  font-weight: 740;
+}
+.selected-signal-list button span {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-inverse);
+  background: var(--brand-violet);
+  font-size: 9px;
+}
+.professor-discovery-form__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.professor-discovery-form__actions > .button--primary { justify-content: center; }
+.discovery-skip-button,
+.discovery-back-button {
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-link);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 740;
+}
+.discovery-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.professor-discovery-form__actions--deep { grid-template-columns: auto minmax(0, 1fr); }
+
 .match-grid { display: grid; gap: 12px; margin-top: 14px; }
 /*
  * 연결 교수와 대안은 같은 구조·같은 크기입니다.
@@ -2977,6 +3297,26 @@ strong {
 .match-card__block--check h3 { color: var(--warning); }
 .match-card__block--check ul { display: grid; gap: 5px; margin: 0; padding-left: 17px; }
 .match-card__block--check li { color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
+.match-card__block--questions {
+  padding: 12px;
+  border: 1px solid rgba(117, 87, 255, 0.16);
+  border-radius: var(--radius-md);
+  background: var(--bg-lavender);
+}
+.match-card__block--questions h3 { color: var(--brand-purple); }
+.match-card__block--questions ol {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 19px;
+}
+.match-card__block--questions li {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+.match-card__block--questions p { color: var(--text-tertiary); font-size: 10px; line-height: 1.5; }
 .match-card__actions { display: grid; gap: 8px; }
 .match-card__actions .official-professor-open { margin-top: 0; }
 .professor-favorite-button {
@@ -3230,6 +3570,22 @@ strong {
 .knock-kit-etiquette svg { flex: 0 0 auto; margin-top: 1px; color: var(--success); }
 .knock-kit-saved { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 12px; color: var(--text-tertiary); font-size: 11px; }
 
+@media (max-width: 700px) {
+  .professor-analysis-guide > header,
+  .professor-discovery-form__head { grid-template-columns: 1fr; }
+  .professor-analysis-guide > header { display: grid; }
+  .professor-analysis-guide > header .tag { justify-self: start; }
+  .professor-analysis-guide ol { grid-template-columns: 1fr; }
+  .professor-discovery-steps { width: 100%; grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1fr); }
+  .professor-discovery-steps button { justify-content: center; }
+  .academic-select-grid,
+  .professor-discovery-form__actions,
+  .professor-discovery-form__actions--deep { grid-template-columns: 1fr; }
+  .professor-discovery-form__actions--deep .discovery-back-button { order: 2; }
+  .custom-interest-row { grid-template-columns: 1fr; }
+  .custom-interest-row > button { width: 100%; }
+}
+
 @media (min-width: 768px) {
   .official-match-grid,
   .official-match-actions,
@@ -3246,6 +3602,13 @@ strong {
 }
 
 @media (max-width: 420px) {
+  .professor-analysis-guide,
+  .context-panel.professor-discovery-form { padding: 14px; }
+  .discovery-question { padding: 13px; }
+  .discovery-question__title { grid-template-columns: 21px minmax(0, 1fr); gap: 7px; }
+  .professor-discovery-steps button { min-width: 0; min-height: 44px; padding-inline: 5px; font-size: 11px; }
+  .context-panel.professor-discovery-form .choice-chip { min-height: 44px; padding-inline: 10px; }
+  .university-choice { grid-template-columns: 30px minmax(0, 1fr) 22px; padding-inline: 11px; }
   .official-professor-avatar { width: 44px; height: 44px; }
   .match-card { padding: 16px; }
   .official-professor-hero { flex-direction: column; }

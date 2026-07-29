@@ -124,9 +124,17 @@ export type ProfessorMatchTopic = {
   major: string;
   /** 기존 만들다 → 찾다 호출과 호환하기 위해 선택 필드로 둡니다. API는 별도로 학교를 검증합니다. */
   university?: string;
+  college?: string;
   goal?: string;
+  studentStage?: string;
+  secondaryMajorType?: string;
+  secondaryMajor?: string;
+  careerInterests?: string[];
+  careerConcerns?: string[];
   careerGoal?: string;
   meetingSituation?: string;
+  preferredSupport?: string;
+  experience?: string;
   additionalContext?: string;
 };
 

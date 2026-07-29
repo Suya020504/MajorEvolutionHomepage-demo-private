@@ -116,9 +116,9 @@ const cases = [
     },
   },
   {
-    id: "goal-and-meeting-context",
+    id: "research-evidence-context-boundary",
     topic: {
-      id: "goal-and-meeting-context",
+      id: "research-evidence-context-boundary",
       title: "AI 기반 대학생 연구 프로젝트",
       question: "AI 프로젝트를 학부연구로 발전시키려면 무엇을 확인해야 하는가",
       methodDetail: "머신러닝",
@@ -136,11 +136,12 @@ const cases = [
       );
       assert.ok(
         concepts.includes("프로젝트·실무 연결"),
-        "goal field must participate in the context rules",
+        "research-project wording must participate in the evidence rules",
       );
-      assert.ok(
+      assert.equal(
         concepts.includes("교수와의 만남 상황"),
-        "meetingSituation field must participate in the context rules",
+        false,
+        "meetingSituation must not be treated as official research evidence",
       );
     },
   },

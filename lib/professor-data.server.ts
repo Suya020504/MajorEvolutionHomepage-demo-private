@@ -1,7 +1,12 @@
 import "server-only";
 
 import dkuRuntime from "@/data/professors/runtime/dku-professors.json";
+import {
+  buildProfessorAcademicTaxonomy,
+  type ProfessorAcademicTaxonomy,
+} from "@/lib/professor-academic-taxonomy";
 import { PROFESSOR_MATCH_POLICY } from "@/lib/professor-domain";
+import { buildProfessorEvidenceText } from "@/lib/professor-match-evidence";
 import type {
   OfficialProfessor,
   OfficialPublication,
@@ -356,24 +361,15 @@ function evaluateProfessor(
   professor: OfficialProfessor,
   topic: ProfessorMatchTopic,
 ): EvaluatedProfessor {
-  const topicText = normalize([
-    topic.title,
-    topic.question,
-    topic.methodDetail,
-    topic.scope,
-    topic.major,
-    topic.goal,
-    topic.careerGoal,
-    topic.meetingSituation,
-    topic.additionalContext,
-    ...topic.interests,
-    ...topic.methods,
-  ].join(" "));
-  const topicTerms = meaningfulTerms(topicText);
+  // 공식 연구근거 대조에는 전공·연구/산업 관심·희망 직무만 사용합니다.
+  // 취업 고민, 학년, 만남 방식 같은 학생 맥락은 면담 질문을 개인화하되
+  // 교수의 연구분야와 직접 일치하는 근거로 간주하지 않습니다.
+  const evidenceText = normalize(buildProfessorEvidenceText(topic));
+  const topicTerms = meaningfulTerms(evidenceText);
   const evidenceTopicTerms = topicTerms.filter((term) => !genericTerms.has(term));
   const fieldTerms = unique(professor.researchFields.flatMap(meaningfulTerms));
   const directTerms = fieldTerms.filter(
-    (term) => !genericTerms.has(term) && containsTerm(topicText, term),
+    (term) => !genericTerms.has(term) && containsTerm(evidenceText, term),
   );
   const professorFieldEvidence = normalize([
     professor.department,
@@ -385,7 +381,7 @@ function evaluateProfessor(
   const conceptMatches = matchingConcepts
     .map((concept) => {
       const topicHits = concept.topicTerms.filter((term) =>
-        containsTerm(topicText, term));
+        containsTerm(evidenceText, term));
       const fieldHits = concept.evidenceTerms.filter((term) =>
         containsTerm(professorFieldEvidence, term));
       const publicationHits = concept.evidenceTerms.filter((term) =>
@@ -446,7 +442,7 @@ function evaluateProfessor(
   } else if (directTerms.length > 0) {
     role = methodDirectTerms.length > 0 ? "METHOD" : "TOPIC";
     matchedTerms.push(...directTerms.slice(0, 3));
-    reason = `공식 프로필 연구분야의 ‘${matchedTerms.join(", ")}’가 선택한 주제의 표현과 직접 연결됩니다.`;
+    reason = `공식 프로필 연구분야의 ‘${matchedTerms.join(", ")}’ 표현이 선택한 주제와 직접 연결됩니다.`;
   }
 
   if (publication) {
@@ -629,6 +625,21 @@ export function getOfficialProfessorById(id: string): OfficialProfessor | null {
 
 export function getOfficialProfessors(): OfficialProfessor[] {
   return officialProfessors;
+}
+
+export function getProfessorAcademicTaxonomy(): ProfessorAcademicTaxonomy {
+  return buildProfessorAcademicTaxonomy(
+    dataset.records.map((record) => ({
+      college: record.college,
+      departments: record.departments?.length
+        ? record.departments
+        : [record.department],
+    })),
+    dataset.official_record_count,
+    coverageGaps
+      .map((gap) => gap.department)
+      .filter((department): department is string => Boolean(department)),
+  );
 }
 
 export function matchOfficialProfessors(
