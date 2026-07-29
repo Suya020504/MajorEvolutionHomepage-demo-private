@@ -20,6 +20,7 @@ export function useQuestContext(): QuestContext {
   const selectedTopicId = useResearchStore((state) => state.selectedTopicId);
   const matches = useResearchStore((state) => state.professorMatches);
   const selectedProfessorId = useResearchStore((state) => state.selectedProfessorId);
+  const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
 
   return useMemo(() => {
     let topic: ResearchTopic | null = null;
@@ -30,9 +31,19 @@ export function useQuestContext(): QuestContext {
         topic = result.candidate.topic;
       }
     }
-    const match = matches.find((item) => item.professor.id === selectedProfessorId) ?? null;
+    /*
+     * 교수 맥락은 두 신호에서 옵니다.
+     *
+     * 찾다에서 상세로 들어가면 selectedProfessorId가 잡히고,
+     * 카드에서 바로 즐겨찾기만 누르면 favoriteProfessorIds에 담깁니다.
+     * 논문 한입과 퀘스트 허브가 이미 즐겨찾기를 기준으로 삼으므로 여기서도 같이 봅니다.
+     */
+    const match =
+      matches.find((item) => item.professor.id === selectedProfessorId)
+      ?? matches.find((item) => favoriteProfessorIds.includes(item.professor.id))
+      ?? null;
     return { topic, match };
-  }, [result, selectedTopicId, matches, selectedProfessorId]);
+  }, [result, selectedTopicId, matches, selectedProfessorId, favoriteProfessorIds]);
 }
 
 /**
