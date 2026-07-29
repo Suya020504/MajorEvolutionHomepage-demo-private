@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ArrowUpRight,
   CircleAlert,
@@ -103,6 +103,94 @@ function CandidateCard({ cand, label, selected, onSelect }: { cand: TopicWithChe
         {selected ? "선택됨" : "이 주제로 선택"}
       </button>
     </article>
+  );
+}
+
+/**
+ * 전공 진화 실험실 — 한 질문씩 공동설계 + 아이디어 1·2 비교.
+ *
+ * 와이어프레임대로 왼쪽에 공동설계 진행 상태를 두고, 오른쪽 두 아이디어를
+ * 같은 다섯 항목(방법·데이터·범위·불확실성·첫 행동)으로 나란히 비교합니다.
+ * 어느 쪽이 더 낫다는 점수는 표시하지 않습니다.
+ */
+const DESIGN_STEPS = [
+  { id: "problem", label: "문제" },
+  { id: "target", label: "대상" },
+  { id: "method", label: "방법" },
+  { id: "evidence", label: "데이터" },
+  { id: "scope", label: "범위" },
+] as const;
+
+function IdeaLab({
+  candidates,
+  answers,
+  selectedTopicId,
+  onSelect,
+}: {
+  candidates: TopicWithChecks[];
+  answers: { questionId: string; label: string; value: string }[];
+  selectedTopicId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  const answerFor = (id: string) => answers.find((a) => a.questionId === id) ?? null;
+
+  return (
+    <div className="lab-layout">
+      <Card className="lab-panel">
+        <h2>한 질문씩 공동설계</h2>
+        <ol>
+          {DESIGN_STEPS.map((step) => {
+            const answer = answerFor(step.id);
+            return (
+              <li key={step.id} className={answer ? "is-done" : undefined}>
+                <span className="lab-panel__dot" aria-hidden="true" />
+                <div>
+                  <strong>{step.label}</strong>
+                  <p>{answer ? answer.value : "아직 확인 전"}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </Card>
+
+      <div className="lab-ideas">
+        {candidates.map((candidate, index) => {
+          const t = candidate.topic;
+          const selected = selectedTopicId === t.id;
+          const rows: Array<[string, ReactNode]> = [
+            ["방법", t.methodDetail],
+            ["데이터", t.dataOptions.map((d) => d.name).join(" · ")],
+            ["범위", t.scope],
+            ["불확실성", t.uncertainties.join(" ")],
+            ["첫 행동", t.firstAction],
+          ];
+          return (
+            <article key={t.id} className={cx("lab-idea", selected && "is-selected")}>
+              <span className="lab-idea__index">아이디어 {index + 1}</span>
+              <h3>{t.question}</h3>
+              <p className="lab-idea__title">{t.title}</p>
+              <dl>
+                {rows.map(([label, value]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <button
+                type="button"
+                className={cx("lab-idea__select", selected && "is-selected")}
+                aria-pressed={selected}
+                onClick={() => onSelect(t.id)}
+              >
+                {selected ? "선택됨" : "이 주제로 선택"}
+              </button>
+            </article>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -482,7 +570,7 @@ export function ResearchResultScreen() {
   );
 
   return (
-    <AppShell title="공동설계 결과" onBack={() => router.push("/research")} className="research-screen" stickyAction={stickyAction}>
+    <AppShell title="전공 진화 실험실 — 만들다" onBack={() => router.push("/research")} className="research-screen result-screen" stickyAction={stickyAction}>
       {loading ? (
         <div className="research-loading">
           <Image src="/mvp-assets/robot-pose-2.png" alt="" width={92} height={92} priority />
@@ -540,11 +628,21 @@ export function ResearchResultScreen() {
 
           {result.kind === "ok" && (
             <>
-              <IdeaComparisonTable
+              <IdeaLab
                 candidates={result.candidates}
+                answers={coDesignAnswers}
                 selectedTopicId={selectedTopicId}
                 onSelect={onSelectTopic}
               />
+
+              <details className="lab-full-compare">
+                <summary>항목별 전체 비교표 보기</summary>
+                <IdeaComparisonTable
+                  candidates={result.candidates}
+                  selectedTopicId={selectedTopicId}
+                  onSelect={onSelectTopic}
+                />
+              </details>
 
               <section className="compare-block">
                 <div className="section-heading"><h2><Sliders size={18} /> 정성 비교</h2><p>숫자 점수 없이 조건별 근거로 비교해요.</p></div>

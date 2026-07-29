@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   BookOpenCheck,
+  CalendarClock,
   CircleAlert,
   ExternalLink,
   GraduationCap,
@@ -226,6 +227,8 @@ export function OfficialProfessorsScreen() {
         description="점수 대신 연결 근거와 직접 확인할 점을 보여줍니다."
       />
 
+      {/* 와이어프레임대로 넓은 화면에서는 입력 · 연결 교수 · 대안을 나란히 둡니다. */}
+      <div className="find-layout">
       <Card className="context-panel">
         <h2>내 맥락 입력</h2>
         {CONTEXT_FIELDS.map((field) => (
@@ -267,6 +270,7 @@ export function OfficialProfessorsScreen() {
         )}
       </Card>
 
+      <div className="find-results">
       {status === "loading" && (
         <Card className="official-professor-empty">
           <LoaderCircle className="spin" size={26} />
@@ -319,6 +323,8 @@ export function OfficialProfessorsScreen() {
           {coverage && <p className="prof-scope-note">{coverage.note}</p>}
         </>
       )}
+      </div>
+      </div>
     </AppShell>
   );
 }
@@ -379,6 +385,16 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
           이 주소로 직접 들어왔기 때문에 선택 주제와의 연결 이유는 표시하지 않습니다. 연구 결과 화면에서 다시 연결해 주세요.
         </StatusBanner>
       )}
+
+      <SectionHeading title="공식 강의정보" description="대학이 공개한 강의·시간표를 확인합니다." />
+      <Link className="official-courses-link" href={`/professors/${professor.id}/courses`}>
+        <CalendarClock size={18} aria-hidden="true" />
+        <div>
+          <strong>공식 강의정보 보기</strong>
+          <p>학기별 강의명·시간·강의실과 공식 시간표 링크</p>
+        </div>
+        <ArrowRight size={16} aria-hidden="true" />
+      </Link>
 
       <SectionHeading title="공식 프로필의 연구분야" />
       <Card className="official-field-list">
