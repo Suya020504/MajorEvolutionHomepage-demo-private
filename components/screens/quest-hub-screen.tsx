@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Ban, HandHeart, LoaderCircle, Trash2 } from "lucide-react";
+import { ArrowRight, Ban, HandHeart, LoaderCircle, Sparkles, Trash2 } from "lucide-react";
 import {
   AppShell,
   Card,
@@ -184,6 +184,15 @@ export function QuestHubScreen() {
           );
         })}
       </div>
+
+      <button type="button" className="official-courses-link quest-hub-mini" onClick={() => router.push("/quest/mini-tools")}>
+        <Sparkles size={18} aria-hidden="true" />
+        <div>
+          <strong>교수님과 친해지기 미니도구</strong>
+          <p>논문 한 줄 리액션 · 용어 번역 카드 · 키워드 빙고 · 첫 질문 셔플</p>
+        </div>
+        <ArrowRight size={16} aria-hidden="true" />
+      </button>
 
       <Card className="quest-hub-note">
         <HandHeart size={18} aria-hidden="true" />

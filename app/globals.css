@@ -3078,6 +3078,15 @@ strong {
   .lab-layout { grid-template-columns: 300px minmax(0, 1fr); align-items: start; gap: 16px; }
   .lab-ideas { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
 
+  .mini-tools-screen.app-viewport { max-width: 980px; }
+  .mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mini-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  /* 포트폴리오는 타임라인 · 단계 상세 · 미리보기 3단입니다. */
+  .portfolio-screen.app-viewport { max-width: 1200px; }
+  .pf-layout { grid-template-columns: 258px minmax(0, 1fr) 288px; align-items: start; gap: 16px; }
+  .pf-compare { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+
   .courses-screen.app-viewport { max-width: 980px; }
   .courses-hero { grid-template-columns: auto minmax(0, 1fr) 220px; align-items: center; }
   .courses-semester { grid-column: auto; }
@@ -3283,6 +3292,139 @@ strong {
 .official-courses-link strong { display: block; font-size: 14px; }
 .official-courses-link p { margin-top: 3px; color: var(--text-secondary); font-size: 12px; }
 
+/* ===================== F26 교수님과 친해지기 미니도구 ===================== */
+.mini-grid { display: grid; gap: 12px; margin-top: 16px; }
+.mini-card {
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+.mini-card.is-active { border-color: var(--brand-violet); background: var(--brand-violet-soft); }
+.mini-card__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: var(--radius-md);
+  color: var(--brand-purple);
+  background: var(--surface-soft);
+}
+.mini-card.is-active .mini-card__icon { background: var(--surface); }
+.mini-card strong { font-size: 15px; }
+.mini-card p { color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
+.mini-card__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-link);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.mini-panel { display: grid; gap: 12px; margin-top: 14px; padding: 18px; }
+.mini-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mini-panel h2 { display: flex; align-items: center; gap: 7px; font-size: 15px; }
+.mini-panel h2 svg { color: var(--brand-purple); }
+.mini-panel__empty { color: var(--text-secondary); font-size: 13px; line-height: 1.65; }
+.mini-panel__note { color: var(--text-tertiary); font-size: 11px; line-height: 1.5; }
+.mini-panel__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mini-panel__actions button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-link);
+  background: var(--surface-soft);
+  font-size: 12px;
+  font-weight: 750;
+}
+.mini-panel__actions button.is-primary {
+  border-color: transparent;
+  color: var(--text-inverse);
+  background: var(--brand-purple);
+}
+.mini-questions { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.mini-questions li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
+  padding: 13px;
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+.mini-questions__no {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--text-inverse);
+  background: var(--brand-violet);
+  font-size: 12px;
+  font-weight: 820;
+}
+.mini-questions p { font-size: 13px; line-height: 1.6; }
+.mini-questions .tag { margin-top: 7px; }
+.mini-field { display: grid; gap: 5px; }
+.mini-field > span { color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.mini-field input,
+.mini-field textarea {
+  min-height: 46px;
+  padding: 11px 13px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.mini-field input:focus,
+.mini-field textarea:focus { border-color: var(--brand-violet); outline: none; }
+.mini-two { display: grid; gap: 10px; }
+.mini-inline { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.mini-inline button {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-inverse);
+  background: var(--brand-purple);
+  font-size: 13px;
+  font-weight: 750;
+}
+.mini-inline button:disabled { cursor: not-allowed; background: var(--disabled); }
+.mini-bingo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.mini-bingo span {
+  display: grid;
+  min-height: 62px;
+  place-items: center;
+  padding: 6px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  word-break: keep-all;
+}
+.mini-bingo span.is-filled {
+  border-style: solid;
+  border-color: var(--brand-mint);
+  color: var(--text-primary);
+  background: var(--brand-mint-soft);
+  font-weight: 720;
+}
+.quest-hub-mini { width: 100%; margin-top: 12px; cursor: pointer; text-align: left; }
+
 /* ===================== Q-02 첫마디 랜덤박스 ===================== */
 .first-line-hint { margin-top: 8px; color: var(--text-tertiary); font-size: 12px; }
 .first-line-evidence { display: grid; gap: 8px; margin-top: 14px; padding: 16px; }
@@ -3461,59 +3603,138 @@ strong {
 }
 .portfolio-progress strong { font-size: 14px; }
 .portfolio-progress span { color: var(--text-secondary); font-size: 12px; }
-.portfolio-timeline { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-.portfolio-step {
+.pf-layout { display: grid; gap: 12px; margin-top: 4px; }
+
+/* 좌: 단계 타임라인. 선택한 단계의 상세가 가운데에 열립니다. */
+.pf-timeline { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; align-content: start; }
+.pf-timeline button {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 11px;
-  padding: 15px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  width: 100%;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
 }
-.portfolio-step.is-empty { background: var(--surface-soft); }
-.portfolio-step__order {
+.pf-timeline button:hover { background: var(--bg-secondary); }
+.pf-timeline button.is-active { border-color: var(--brand-violet); background: var(--brand-violet-soft); }
+.pf-timeline__dot {
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   place-items: center;
   border-radius: var(--radius-pill);
   color: var(--text-inverse);
-  background: var(--brand-mint-dark);
+  background: var(--disabled);
   font-size: 12px;
   font-weight: 820;
 }
-.portfolio-step.is-empty .portfolio-step__order { background: var(--disabled); }
-.portfolio-step__head { display: flex; align-items: center; gap: 8px; }
-.portfolio-step__head svg { color: var(--brand-purple); }
-.portfolio-step__head h2 { flex: 1; min-width: 0; font-size: 15px; }
-.portfolio-step__toggle {
-  display: inline-flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 6px;
-  padding: 0 4px;
-  cursor: pointer;
+.pf-timeline__dot.is-done { background: var(--brand-mint-dark); }
+.pf-timeline__text { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 6px; min-width: 0; }
+.pf-timeline__text svg { grid-row: span 2; align-self: center; color: var(--brand-purple); }
+.pf-timeline__text strong { font-size: 13px; }
+.pf-timeline__text small { color: var(--text-tertiary); font-size: 11px; }
+.pf-timeline__check { color: var(--brand-mint-dark); }
+
+/* 중: 선택한 단계 상세 */
+.pf-detail {
+  align-content: start;
+  padding: 18px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
-.portfolio-step__toggle input { width: 20px; height: 20px; }
-.portfolio-step__toggle span { color: var(--text-secondary); font-size: 11px; font-weight: 750; }
-.portfolio-step__hint { margin-top: 4px; color: var(--text-tertiary); font-size: 11px; }
-.portfolio-step__lines { display: grid; gap: 5px; margin: 9px 0 0; padding-left: 17px; }
-.portfolio-step__lines li { color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
-.portfolio-step__empty { margin-top: 9px; color: var(--text-tertiary); font-size: 12px; }
-.portfolio-options { display: grid; gap: 12px; margin-top: 12px; padding: 16px; }
-.portfolio-options label {
+.pf-detail > header { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; align-items: center; }
+.pf-detail__order {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  color: var(--text-inverse);
+  background: var(--brand-purple);
+  font-size: 13px;
+  font-weight: 820;
+}
+.pf-detail h2 { display: flex; align-items: center; gap: 6px; font-size: 16px; }
+.pf-detail header p { margin-top: 2px; color: var(--text-tertiary); font-size: 12px; }
+.pf-detail__lines { display: grid; gap: 7px; margin: 16px 0 0; padding-left: 17px; }
+.pf-detail__lines li { color: var(--text-secondary); font-size: 13px; line-height: 1.65; }
+
+/* 수정 전후는 좌우로 놓아야 변화가 보입니다. */
+.pf-compare { display: grid; gap: 10px; margin-top: 16px; align-items: stretch; }
+.pf-compare__side { padding: 14px; border-radius: var(--radius-md); }
+.pf-compare__side h3 { font-size: 12px; font-weight: 800; }
+.pf-compare__side ul { display: grid; gap: 6px; margin: 9px 0 0; padding-left: 16px; }
+.pf-compare__side li { font-size: 12px; line-height: 1.6; }
+.pf-compare__side--before { background: var(--bg-secondary); }
+.pf-compare__side--before h3 { color: var(--text-secondary); }
+.pf-compare__side--after { background: var(--success-soft); }
+.pf-compare__side--after h3 { color: var(--success); }
+.pf-compare__arrow { display: grid; place-items: center; color: var(--text-tertiary); }
+.pf-insight {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  /* 라벨 전체가 탭 타깃이므로 최소 44px를 유지합니다. */
+  gap: 11px;
+  margin-top: 12px;
+  padding: 15px;
+  background: var(--warning-soft);
+  border-color: rgba(178, 117, 0, 0.28);
+}
+.pf-insight svg { color: var(--warning); }
+.pf-insight strong { display: block; font-size: 13px; }
+.pf-insight p { margin-top: 4px; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+
+/* 우: 미리보기 구성 */
+.pf-preview-panel {
+  align-content: start;
+  padding: 18px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+.pf-preview-panel h2 { font-size: 15px; }
+.pf-preview-panel__lead { margin-top: 3px; color: var(--text-tertiary); font-size: 11px; }
+.pf-preview-panel__items { display: grid; gap: 2px; margin: 14px 0 0; padding: 0; list-style: none; }
+.pf-preview-panel__items label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
   min-height: 44px;
-  align-content: center;
-  gap: 3px 10px;
   cursor: pointer;
 }
-.portfolio-options input { grid-row: span 2; align-self: center; width: 20px; height: 20px; }
-.portfolio-options span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 720; }
-.portfolio-options small { color: var(--text-tertiary); font-size: 11px; }
+.pf-preview-panel__items svg { color: var(--brand-purple); }
+.pf-preview-panel__items strong { display: block; font-size: 13px; }
+.pf-preview-panel__items small { color: var(--text-tertiary); font-size: 11px; }
+.pf-preview-panel__items input { width: 20px; height: 20px; }
+.pf-preview-panel__toggles { display: grid; gap: 2px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--divider); }
+.pf-preview-panel__toggles label {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+}
+.pf-preview-panel__toggles span { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 720; }
+.pf-preview-panel__toggles input { width: 20px; height: 20px; }
+.pf-safety {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  padding: 13px;
+  background: var(--success-soft);
+  border-color: rgba(33, 138, 104, 0.26);
+}
+.pf-safety svg { color: var(--success); }
+.pf-safety p { color: var(--text-secondary); font-size: 11px; line-height: 1.55; }
+.portfolio-step__empty { margin-top: 9px; color: var(--text-tertiary); font-size: 12px; }
 .portfolio-preview {
   margin-top: 12px;
   padding: 20px;
@@ -3551,13 +3772,14 @@ strong {
   .portfolio-screen .page-header,
   .portfolio-screen .portfolio-progress,
   .portfolio-screen .section-heading,
-  .portfolio-screen .portfolio-timeline,
-  .portfolio-screen .portfolio-options,
+  .portfolio-screen .pf-layout,
   .portfolio-screen .portfolio-export,
   .portfolio-screen .status-banner,
   .portfolio-screen .data-controls,
+  .portfolio-screen .side-nav,
   .skip-link,
   .offline-notice { display: none !important; }
+  body { padding-left: 0 !important; }
   .portfolio-preview { border: 0; box-shadow: none; padding: 0; }
   .portfolio-screen .screen-content { padding: 0; }
 }
