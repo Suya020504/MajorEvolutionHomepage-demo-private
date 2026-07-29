@@ -38,6 +38,16 @@ import type {
 } from "@/lib/professor-domain";
 import { MAX_FAVORITE_PROFESSORS } from "@/lib/professor-paper-selection";
 
+/**
+ * 찾다에서 학생이 고른 탐색 조건 중 성장 포트폴리오가 쓰는 부분만 남깁니다.
+ * 폼 전체를 저장하지 않고 화면이 실제로 보여줄 것만 둡니다.
+ */
+export type ProfessorDiscoverySummary = {
+  major: string;
+  interests: string[];
+  careerConcerns: string[];
+};
+
 const MAX_INTERESTS = 3;
 const MAX_METHODS = 2;
 
@@ -119,6 +129,12 @@ type ResearchState = {
   professorMatchTopicId: string | null;
   selectedProfessorId: string | null;
   favoriteProfessorIds: string[];
+  /**
+   * 찾다에서 학생이 고른 탐색 조건.
+   * 만들다를 거치지 않고 찾다만 이용한 학생도 성장 포트폴리오의
+   * 주제 탐색 단계가 채워지도록 남깁니다.
+   */
+  professorDiscoverySummary: ProfessorDiscoverySummary | null;
   selectedProfessorPaper: ProfessorPaperSelection | null;
   knockKitDrafts: Record<string, ProfessorKnockKitDraft>;
   mentorLoopEntries: Record<string, ProfessorMentorLoopEntry>;
@@ -153,6 +169,7 @@ type ResearchState = {
   /** 진행 중인 연결 요청의 주제 ID. 저장된 주제 ID이거나 `context:`로 시작하는 임시 ID입니다. */
   setProfessorMatchLoading: (topicId: string) => void;
   setProfessorMatches: (response: ProfessorMatchResponse) => void;
+  setProfessorDiscoverySummary: (summary: ProfessorDiscoverySummary | null) => void;
   setProfessorMatchError: (topicId: string, message: string) => void;
   selectProfessor: (id: string) => void;
   toggleFavoriteProfessor: (id: string) => FavoriteProfessorToggleResult;
@@ -254,6 +271,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   professorMatchTopicId: null,
   selectedProfessorId: null,
   favoriteProfessorIds: [],
+  professorDiscoverySummary: null,
   selectedProfessorPaper: null,
   knockKitDrafts: {},
   mentorLoopEntries: {},
@@ -527,6 +545,9 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       return { mentorLoopEntries };
     }),
 
+  setProfessorDiscoverySummary: (professorDiscoverySummary) =>
+    set({ professorDiscoverySummary }),
+
   clearProfessorMatches: () =>
     set({
       professorMatches: [],
@@ -535,6 +556,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorMatchError: null,
       professorMatchTopicId: null,
       selectedProfessorId: null,
+      professorDiscoverySummary: null,
     }),
   clearKnockKitDrafts: () => set({ knockKitDrafts: {} }),
   clearMentorLoopEntries: () => set({ mentorLoopEntries: {} }),

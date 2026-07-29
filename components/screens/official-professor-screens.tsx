@@ -283,6 +283,7 @@ export function OfficialProfessorsScreen({
   const matchError = useResearchStore((state) => state.professorMatchError);
   const setLoading = useResearchStore((state) => state.setProfessorMatchLoading);
   const setMatches = useResearchStore((state) => state.setProfessorMatches);
+  const setDiscoverySummary = useResearchStore((state) => state.setProfessorDiscoverySummary);
   const setError = useResearchStore((state) => state.setProfessorMatchError);
   const clearProfessorMatches = useResearchStore((state) => state.clearProfessorMatches);
   const selectProfessor = useResearchStore((state) => state.selectProfessor);
@@ -386,6 +387,12 @@ export function OfficialProfessorsScreen({
       });
       if (activeRequestRef.current !== requestController) return;
       setMatches(response);
+      // 찾다만 이용한 학생도 성장 포트폴리오의 주제 탐색이 채워지도록 조건을 남깁니다.
+      setDiscoverySummary({
+        major: requestContext.major,
+        interests: requestContext.interests,
+        careerConcerns: requestContext.careerConcerns,
+      });
     } catch (error) {
       if (
         error instanceof ProfessorMatchRequestAbortedError
@@ -415,7 +422,16 @@ export function OfficialProfessorsScreen({
     router.push(`/professors/${match.professor.id}`);
   };
 
-  const visibleMatches = searchAttempted && isDankookUniversity(context.university)
+  /*
+   * 이전에 찾은 결과는 화면을 다시 열어도 그대로 보여줍니다.
+   *
+   * searchAttempted는 이번 방문에만 사는 값이라, 잇다에 갔다 돌아오면
+   * 저장소에 결과가 있는데도 빈 폼이 떴습니다. 즐겨찾기·논문 한입·포트폴리오가
+   * 모두 이 결과를 이어받으므로 왕복해도 끊기지 않아야 합니다.
+   * 입력을 바꾸면 markInputsChanged가 저장 결과를 지우므로 낡은 결과가 남지 않습니다.
+   */
+  const showsStoredMatches = hasHydrated && !searchAttempted && matches.length > 0;
+  const visibleMatches = (searchAttempted && isDankookUniversity(context.university)) || showsStoredMatches
     ? matches
     : [];
 
@@ -472,12 +488,18 @@ export function OfficialProfessorsScreen({
         </StatusBanner>
       )}
 
-      {!searchAttempted && !scopeNotice && (
+      {!searchAttempted && !showsStoredMatches && !scopeNotice && (
         <Card className="official-professor-empty">
           <SearchCheck size={28} />
           <h2>기본분석 5개 질문부터 시작하세요</h2>
           <p>학교·전공·현재 단계·관심 분야·진로 고민을 먼저 고르고, 선택 심층질문으로 면담 질문을 구체화할 수 있어요.</p>
         </Card>
+      )}
+
+      {showsStoredMatches && (
+        <StatusBanner icon={SearchCheck} title="지난번에 찾은 결과예요" tone="lavender">
+          위 질문에서 조건을 바꾸면 새로 찾습니다. 그때까지는 이 결과가 그대로 유지됩니다.
+        </StatusBanner>
       )}
 
       {searchAttempted && status !== "loading" && status !== "error" && visibleMatches.length === 0 && (
@@ -488,7 +510,7 @@ export function OfficialProfessorsScreen({
         </Card>
       )}
 
-      {searchAttempted && status !== "loading" && visibleMatches.length > 0 && (
+      {(searchAttempted || showsStoredMatches) && status !== "loading" && visibleMatches.length > 0 && (
         <>
           <SectionHeading
             title={`${visibleMatches.length}명의 교수님 연결`}

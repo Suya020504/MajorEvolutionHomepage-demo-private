@@ -53,6 +53,7 @@ export function PortfolioScreen() {
   const selectedProfessorId = useResearchStore((state) => state.selectedProfessorId);
   const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
   const mentorLoopEntries = useResearchStore((state) => state.mentorLoopEntries);
+  const discovery = useResearchStore((state) => state.professorDiscoverySummary);
   const questCards = useQuestStore((state) => state.cards);
 
   const [activeStep, setActiveStep] = useState<StepId>("topic");
@@ -100,9 +101,17 @@ export function PortfolioScreen() {
     : null;
 
   const content = useMemo<Record<StepId, string[]>>(() => ({
+    /*
+     * 주제 탐색은 두 흐름에서 채워집니다.
+     * 만들다를 거치면 conditions와 선택 주제가, 찾다만 이용하면
+     * 그때 고른 전공·관심 분야·진로 고민이 들어옵니다.
+     */
     topic: [
-      conditions.major ? `전공: ${conditions.major}` : "",
-      conditions.interests.length ? `관심 분야: ${conditions.interests.join(" · ")}` : "",
+      conditions.major || discovery?.major
+        ? `전공: ${conditions.major || discovery?.major}` : "",
+      conditions.interests.length || discovery?.interests.length
+        ? `관심 분야: ${(conditions.interests.length ? conditions.interests : discovery?.interests ?? []).join(" · ")}` : "",
+      discovery?.careerConcerns.length ? `진로 고민: ${discovery.careerConcerns.join(" · ")}` : "",
       topic ? `선택한 주제: ${topic.title}` : "",
       topic ? `연구질문: ${topic.question}` : "",
     ].filter(Boolean),
@@ -126,7 +135,7 @@ export function PortfolioScreen() {
       ...(loop ? loop.sevenDayActions.filter(Boolean).map((action, i) => `${i + 1}. ${action}`) : []),
       ...cardsForTool(questCards, "next-seed").map((card) => `${card.title}: ${card.body}`),
     ],
-  }), [conditions, topic, match, professorName, questCards, draft, loop, revision]);
+  }), [conditions, discovery, topic, match, professorName, questCards, draft, loop, revision]);
 
   if (!hasHydrated) {
     return (
