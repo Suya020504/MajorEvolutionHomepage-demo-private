@@ -4075,6 +4075,36 @@ strong {
   font-weight: 720;
 }
 .reader-page header button:disabled { color: var(--disabled); cursor: not-allowed; }
+/* 원본 페이지 이미지. 표·수식·단 구성을 눈으로 확인하는 용도입니다. */
+.reader-canvas {
+  margin: 0 0 14px;
+  padding: 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+.reader-canvas img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  box-shadow: var(--shadow-card);
+}
+.reader-canvas figcaption {
+  margin-top: 8px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-align: center;
+}
+.reader-figure-preview {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
 .reader-sentences { display: grid; gap: 3px; }
 /* 문장 하나가 근거 단위입니다. 눌러서 고르면 오른쪽에서 이어집니다. */
 .reader-sentences button {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BookOpen,
   Bookmark,
@@ -25,7 +25,13 @@ import {
   PrimaryButton,
   Tag,
 } from "@/components/app/primitives";
-import { extractPdfText, PdfReadError, type PdfDocument } from "@/lib/pdf-text";
+import {
+  extractPdfText,
+  PdfReadError,
+  renderPdfPage,
+  type PdfDocument,
+  type RenderedPage,
+} from "@/lib/pdf-text";
 import { requestPaperAssistStream, type PaperReaderAssist } from "@/lib/paper-reader-client";
 import { useQuestContext } from "@/lib/quest-context";
 import { useQuestStore, type SavedQuestCard } from "@/store/quest-store";
@@ -68,6 +74,9 @@ export function PaperReader() {
   const [pageNo, setPageNo] = useState(1);
   const [selected, setSelected] = useState<{ page: number; text: string } | null>(null);
 
+  /** 현재 페이지를 그린 이미지. 원문 탭 표시와 그림·표 비전 입력에 함께 씁니다. */
+  const [rendered, setRendered] = useState<RenderedPage | null>(null);
+  const [renderError, setRenderError] = useState(false);
   const [busy, setBusy] = useState<TabId | "simplify" | null>(null);
   const [streaming, setStreaming] = useState("");
   const [assistError, setAssistError] = useState<string | null>(null);
@@ -113,6 +122,7 @@ export function PaperReader() {
     target: TabId | "simplify",
     pages: Array<{ page: number; text: string }>,
     focus?: string,
+    pageImage?: string,
   ): Promise<PaperReaderAssist | null> => {
     setBusy(target);
     setAssistError(null);
@@ -121,7 +131,7 @@ export function PaperReader() {
       // 글자가 오는 대로 먼저 보여주고, 검증된 결과는 끝에서 받습니다.
       return await requestPaperAssistStream(task, pages, focus, (delta) => {
         setStreaming((current) => current + delta);
-      });
+      }, pageImage);
     } catch (error) {
       setAssistError(error instanceof Error ? error.message : "요청을 완료하지 못했습니다.");
       return null;
@@ -165,6 +175,21 @@ export function PaperReader() {
     link.click();
     URL.revokeObjectURL(url);
   };
+
+  // 페이지가 바뀌면 원본 레이아웃을 다시 그립니다. 실패해도 텍스트 읽기는 계속됩니다.
+  useEffect(() => {
+    if (!doc) return;
+    let cancelled = false;
+    setRendered(null);
+    setRenderError(false);
+    renderPdfPage(doc.bytes, pageNo, 1.6)
+      .then((image) => { if (!cancelled) setRendered(image); })
+      .catch((error) => {
+        console.error("[reader] page render failed", error);
+        if (!cancelled) setRenderError(true);
+      });
+    return () => { cancelled = true; };
+  }, [doc, pageNo]);
 
   const toggleChecked = (id: string) =>
     setChecked((current) => {
@@ -265,6 +290,19 @@ export function PaperReader() {
                 <button type="button" disabled={pageNo >= doc.pageCount} onClick={() => setPageNo((n) => n + 1)}>다음</button>
               </div>
             </header>
+            {/* 원본 레이아웃. 표·수식·단 구성을 눈으로 확인하는 용도입니다. */}
+            <figure className="reader-canvas">
+              {rendered ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={rendered.dataUrl} alt={`${pageNo}쪽 원본 이미지`} width={rendered.width} height={rendered.height} />
+              ) : renderError ? (
+                <p className="reader-empty">원본 이미지를 그리지 못했어요. 아래 문장으로 읽어 주세요.</p>
+              ) : (
+                <p className="reader-busy"><LoaderCircle className="spin" size={15} /> 원본을 그리는 중</p>
+              )}
+              <figcaption>원본 그대로 보기 · 아래에서 문장을 골라 근거로 남깁니다</figcaption>
+            </figure>
+
             {page && page.sentences.length > 0 ? (
               <div className="reader-sentences">
                 {page.sentences.map((sentence, index) => (
@@ -475,19 +513,24 @@ export function PaperReader() {
             <FileImage size={24} aria-hidden="true" />
             <h2>그림·표 해설</h2>
             <p>
-              현재 페이지의 텍스트에서 확인되는 범위만 설명합니다. 그림 자체를 이미지로
-              분석하지는 않으므로, 캡션과 본문 설명이 있는 페이지에서 사용하세요.
+              현재 페이지를 이미지로 함께 보내 그림과 표를 직접 보고 설명합니다.
+              이미지에서 읽히지 않는 수치는 추측하지 않습니다.
             </p>
+            {rendered && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="reader-figure-preview" src={rendered.dataUrl} alt={`${pageNo}쪽 미리보기`} />
+            )}
             <PrimaryButton
-              disabled={busy !== null || !page?.text}
+              disabled={busy !== null || !rendered}
               onClick={async () => {
-                if (!page) return;
+                if (!page || !rendered) return;
                 const r = await runAssist("figure", "figure", [{ page: page.page, text: page.text }],
-                  "이 페이지의 그림 또는 표를 축·범례·비교 대상·주의할 해석으로 나누어 설명해 주세요.");
+                  "이 페이지의 그림 또는 표를 한눈에 보기·축과 범례·비교 대상·주의할 해석으로 나누어 설명해 주세요.",
+                  rendered.dataUrl);
                 if (r) setFigure(r);
               }}
             >
-              {busy === "figure" ? <><LoaderCircle className="spin" size={16} /> 해설 중…</> : `p.${pageNo} 그림·표 해설 만들기`}
+              {rendered ? `p.${pageNo} 그림·표 해설 만들기` : "원본을 그리는 중…"}
             </PrimaryButton>
           </Card>
           {busy === "figure" && <StreamingAnswer />}

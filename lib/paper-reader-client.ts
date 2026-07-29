@@ -25,13 +25,15 @@ export async function requestPaperAssistStream(
   pages: Array<{ page: number; text: string }>,
   focus: string | undefined,
   onDelta: (text: string) => void,
+  /** 그림·표 해설에서만 씁니다. 캔버스로 그린 현재 페이지 이미지. */
+  pageImage?: string,
 ): Promise<PaperReaderAssist> {
   let response: Response;
   try {
     response = await fetch("/api/ai/paper-reader?stream=1", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ task, pages, focus }),
+      body: JSON.stringify({ task, pages, focus, pageImage }),
     });
   } catch {
     return requestPaperAssist(task, pages, focus);

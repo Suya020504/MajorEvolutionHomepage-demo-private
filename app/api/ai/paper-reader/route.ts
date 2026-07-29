@@ -12,7 +12,8 @@ export const dynamic = "force-dynamic";
 
 const TASKS: PaperReaderTask[] = ["translate", "qa", "figure", "simplify"];
 /** 페이지 텍스트를 통째로 보내면 비용이 커지므로 요청 크기를 제한합니다. */
-const MAX_BODY_BYTES = 200_000;
+/** 그림·표 해설은 페이지 이미지를 함께 받으므로 여유를 둡니다. */
+const MAX_BODY_BYTES = 3_500_000;
 
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? "0");
