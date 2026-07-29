@@ -102,6 +102,10 @@ type ResearchState = {
   saveKnockKitDraft: (key: string, draft: ProfessorKnockKitDraft) => void;
   saveMentorLoopEntry: (key: string, entry: ProfessorMentorLoopEntry) => void;
   deleteMentorLoopEntry: (key: string) => void;
+  /** 데이터 종류별 삭제. 학생이 각각 지울 수 있어야 합니다. */
+  clearProfessorMatches: () => void;
+  clearKnockKitDrafts: () => void;
+  clearMentorLoopEntries: () => void;
   reset: () => void;
 };
 
@@ -302,6 +306,18 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       delete mentorLoopEntries[key];
       return { mentorLoopEntries };
     }),
+
+  clearProfessorMatches: () =>
+    set({
+      professorMatches: [],
+      professorCoverage: null,
+      professorMatchStatus: "idle",
+      professorMatchError: null,
+      professorMatchTopicId: null,
+      selectedProfessorId: null,
+    }),
+  clearKnockKitDrafts: () => set({ knockKitDrafts: {} }),
+  clearMentorLoopEntries: () => set({ mentorLoopEntries: {} }),
 
   reset: () =>
     set({

@@ -22,6 +22,7 @@ import {
   SectionHeading,
   StatusBanner,
 } from "@/components/app/primitives";
+import { DataControls } from "@/components/screens/data-controls";
 import { cardsForTool, useQuestStore } from "@/store/quest-store";
 import { useResearchStore } from "@/store/research-store";
 
@@ -250,6 +251,8 @@ export function PortfolioScreen() {
         포트폴리오는 이 브라우저에 저장된 기록으로만 만들어지고, 내보내기는 학생이 직접 진행합니다.
         서버로 전송하지 않습니다.
       </StatusBanner>
+
+      <DataControls />
     </AppShell>
   );
 }

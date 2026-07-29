@@ -40,6 +40,8 @@ type Tool = {
   output: string;
   icon: string;
   href: string | null;
+  /** 아직 결과가 온전히 나오지 않는 도구에 붙이는 솔직한 상태 문구. */
+  note?: string;
 };
 
 const TOOLS: Tool[] = [
@@ -52,6 +54,7 @@ const TOOLS: Tool[] = [
     output: "페이지 근거가 붙은 4카드",
     icon: questIcon.paperBite,
     href: "/paper/reader?mode=bite",
+    note: "논문 분석 모듈 연결 전이라 지금은 화면 구조만 볼 수 있어요.",
   },
   {
     id: "first-line",
@@ -165,6 +168,7 @@ export function QuestHubScreen() {
               </div>
               <p className="quest-tool__summary">{tool.summary}</p>
               <p className="quest-tool__output"><span>결과</span> {tool.output}</p>
+              {tool.note && <p className="quest-tool__note">{tool.note}</p>}
               {ready ? (
                 <button type="button" onClick={() => router.push(tool.href!)}>
                   시작하기 <ArrowRight size={16} />

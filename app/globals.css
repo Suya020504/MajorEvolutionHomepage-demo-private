@@ -2758,6 +2758,7 @@ strong {
 }
 .match-card__source {
   display: inline-flex;
+  min-height: 44px;
   align-items: center;
   gap: 5px;
   color: var(--text-link);
@@ -3223,7 +3224,15 @@ strong {
 .portfolio-step__head { display: flex; align-items: center; gap: 8px; }
 .portfolio-step__head svg { color: var(--brand-purple); }
 .portfolio-step__head h2 { flex: 1; min-width: 0; font-size: 15px; }
-.portfolio-step__toggle { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.portfolio-step__toggle {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.portfolio-step__toggle input { width: 20px; height: 20px; }
 .portfolio-step__toggle span { color: var(--text-secondary); font-size: 11px; font-weight: 750; }
 .portfolio-step__hint { margin-top: 4px; color: var(--text-tertiary); font-size: 11px; }
 .portfolio-step__lines { display: grid; gap: 5px; margin: 9px 0 0; padding-left: 17px; }
@@ -3233,6 +3242,9 @@ strong {
 .portfolio-options label {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
+  /* 라벨 전체가 탭 타깃이므로 최소 44px를 유지합니다. */
+  min-height: 44px;
+  align-content: center;
   gap: 3px 10px;
   cursor: pointer;
 }
@@ -3253,6 +3265,22 @@ strong {
 .portfolio-preview ul { display: grid; gap: 5px; margin: 8px 0 0; padding-left: 17px; }
 .portfolio-preview li { font-size: 12px; line-height: 1.65; }
 .portfolio-export { width: 100%; margin: 16px 0; }
+.data-controls { display: grid; gap: 0; padding: 4px 16px; }
+.data-controls__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0;
+}
+.data-controls__row + .data-controls__row { border-top: 1px solid var(--divider); }
+.data-controls__row strong { font-size: 14px; }
+.data-controls__row p { margin-top: 3px; color: var(--text-secondary); font-size: 12px; }
+.data-controls__row .quest-saved__delete:disabled {
+  cursor: not-allowed;
+  color: var(--disabled);
+  background: var(--bg-secondary);
+}
 
 /* 브라우저 인쇄 대화상자로 PDF를 만듭니다. 미리보기만 남기고 나머지는 숨깁니다. */
 @media print {
@@ -3264,6 +3292,7 @@ strong {
   .portfolio-screen .portfolio-options,
   .portfolio-screen .portfolio-export,
   .portfolio-screen .status-banner,
+  .portfolio-screen .data-controls,
   .skip-link,
   .offline-notice { display: none !important; }
   .portfolio-preview { border: 0; box-shadow: none; padding: 0; }
@@ -3319,6 +3348,16 @@ strong {
   background: var(--brand-purple);
   font-size: 13px;
   font-weight: 780;
+}
+.quest-tool__note {
+  display: flex;
+  gap: 6px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  color: var(--warning);
+  background: var(--warning-soft);
+  font-size: 11px;
+  line-height: 1.5;
 }
 .quest-tool__pending {
   padding: 13px 0;
@@ -3376,8 +3415,12 @@ strong {
 .quest-saved p { margin-top: 4px; color: var(--text-secondary); font-size: 12px; line-height: 1.55; }
 .quest-saved small { display: block; margin-top: 6px; color: var(--text-tertiary); font-size: 11px; }
 .quest-saved__delete {
+  display: grid;
   align-self: start;
-  padding: 9px;
+  /* 모바일 최소 탭 타깃 44px */
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--error);
