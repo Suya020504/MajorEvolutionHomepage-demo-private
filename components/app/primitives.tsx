@@ -251,7 +251,14 @@ export function AppShell({
           </div>
         </header>
       )}
-      <main id="main-content" className={cx("screen-content", Boolean(stickyAction) && "has-sticky-action", Boolean(bottomNav) && "has-bottom-nav")}>
+      <main
+        id="main-content"
+        className={cx(
+          "screen-content",
+          Boolean(stickyAction) && "has-sticky-action",
+          Boolean(bottomNav) && "has-bottom-nav",
+        )}
+      >
         <div className="screen-enter">{children}</div>
       </main>
       {stickyAction && <div className="sticky-action">{stickyAction}</div>}

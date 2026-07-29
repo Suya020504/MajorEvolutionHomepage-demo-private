@@ -1,5 +1,5 @@
-import { SplashScreen } from "@/components/screens/entry-screens";
+import { UnifiedHomeScreen } from "@/components/screens/unified-home-screen";
 
 export default function Page() {
-  return <SplashScreen />;
+  return <UnifiedHomeScreen />;
 }

@@ -102,7 +102,7 @@ export function UnifiedHomeScreen() {
         : "/research";
 
   return (
-    <AppShell title="너의 교수님은?" backHref="/" className="unified-home-screen">
+    <AppShell title="너의 교수님은?" className="unified-home-screen">
       <SceneBanner
         scene={brandScene.home}
         alt="교수 탐색, 전공 아이디어, 교수 만남으로 이어지는 서비스 여정"

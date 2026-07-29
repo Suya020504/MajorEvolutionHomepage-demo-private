@@ -3,19 +3,23 @@
 // 각 후보는 조건별로 확인됨 / 조건부 / 확인 필요 상태와 근거 문장을 가진다.
 
 import {
-  MAJORS,
   TOPICS,
   periodWeeks,
   type CheckStatus,
   type DataAccess,
   type ExperienceLevel,
-  type Major,
   type PeriodLabel,
   type ResearchTopic,
 } from "@/data/research-mvp";
+import {
+  normalizeAcademicInput,
+  type MajorArea,
+} from "@/data/academic-options";
 
 export type Conditions = {
-  major: Major | null;
+  school: string; // 선택
+  majorArea: MajorArea | null;
+  major: string | null;
   interests: string[]; // 1~3
   experience: ExperienceLevel | null;
   methods: string[]; // 1~2
@@ -25,6 +29,8 @@ export type Conditions = {
 };
 
 export const emptyConditions: Conditions = {
+  school: "",
+  majorArea: null,
   major: null,
   interests: [],
   experience: null,
@@ -37,7 +43,7 @@ export const emptyConditions: Conditions = {
 export type CriterionKey = "personalLink" | "dataAccess" | "method" | "period" | "uncertainty";
 
 export const CRITERION_LABELS: Record<CriterionKey, string> = {
-  personalLink: "개인 경험 연결",
+  personalLink: "관심·경험 연결",
   dataAccess: "데이터 접근",
   method: "방법 준비",
   period: "기간·범위",
@@ -56,15 +62,15 @@ export type TopicWithChecks = {
 export type RecommendResult =
   | { kind: "ok"; candidates: [TopicWithChecks, TopicWithChecks] }
   | { kind: "insufficient"; candidate: TopicWithChecks } // 유효 후보 1개
-  | { kind: "empty" } // 0개
-  | { kind: "unsupported-major" }; // 지원하지 않는 전공
+  | { kind: "empty" }; // 0개
 
 const overlap = (a: string[], b: string[]) => a.filter((x) => b.includes(x));
 
 // 필수값이 모두 채워졌는지
 export function missingRequired(c: Conditions): CriterionKey[] | string[] {
   const missing: string[] = [];
-  if (!c.major) missing.push("major");
+  if (!c.majorArea) missing.push("majorArea");
+  if (!c.major?.trim()) missing.push("major");
   if (c.interests.length === 0) missing.push("interests");
   if (!c.experience) missing.push("experience");
   if (c.methods.length === 0) missing.push("methods");
@@ -141,9 +147,7 @@ export function compareTopicPair(
   c: Conditions,
   topics: [ResearchTopic, ResearchTopic],
 ): RecommendResult {
-  const ordered = [...topics].sort((a, b) =>
-    (a.variant === "안전 축소형" ? -1 : 1) -
-    (b.variant === "안전 축소형" ? -1 : 1));
+  const ordered = orderPairVariants(topics[0], topics[1]);
   return {
     kind: "ok",
     candidates: [
@@ -153,44 +157,247 @@ export function compareTopicPair(
   };
 }
 
-// 관심·방법 우선 정렬 점수 (내부용, 사용자에게 노출하지 않음)
-function rankScore(t: ResearchTopic, c: Conditions): number {
-  return overlap(c.interests, t.interests).length * 2 + overlap(c.methods, t.methods).length;
+type RecommendationEvidence = {
+  interestMatched: boolean;
+  methodMatched: boolean;
+  dataAccessMatched: boolean;
+  periodMatched: boolean;
+};
+
+function recommendationEvidence(
+  topic: ResearchTopic,
+  conditions: Conditions,
+): RecommendationEvidence {
+  return {
+    interestMatched: overlap(conditions.interests, topic.interests).length > 0,
+    methodMatched: overlap(conditions.methods, topic.methods).length > 0,
+    dataAccessMatched: Boolean(
+      conditions.dataAccess
+      && topic.goodDataAccess.includes(conditions.dataAccess),
+    ),
+    periodMatched: Boolean(
+      conditions.period
+      && topic.minWeeks <= periodWeeks(conditions.period),
+    ),
+  };
+}
+
+function compareByEvidence(
+  left: ResearchTopic,
+  right: ResearchTopic,
+  conditions: Conditions,
+): number {
+  const leftEvidence = recommendationEvidence(left, conditions);
+  const rightEvidence = recommendationEvidence(right, conditions);
+  const rules: Array<(evidence: RecommendationEvidence) => boolean> = [
+    (evidence) => evidence.interestMatched,
+    (evidence) => evidence.methodMatched,
+    (evidence) => evidence.dataAccessMatched,
+    (evidence) => evidence.periodMatched,
+  ];
+
+  for (const rule of rules) {
+    const leftMatches = rule(leftEvidence);
+    const rightMatches = rule(rightEvidence);
+    if (leftMatches !== rightMatches) return leftMatches ? -1 : 1;
+  }
+  return left.id.localeCompare(right.id);
+}
+
+function orderPairVariants(
+  left: ResearchTopic,
+  right: ResearchTopic,
+): [ResearchTopic, ResearchTopic] {
+  if (left.variant === "안전 축소형" && right.variant !== "안전 축소형") {
+    return [left, right];
+  }
+  if (right.variant === "안전 축소형" && left.variant !== "안전 축소형") {
+    return [right, left];
+  }
+  return left.id.localeCompare(right.id) <= 0 ? [left, right] : [right, left];
 }
 
 export type RecommendOptions = { excludeIds?: string[] };
 
+function normalizedMajor(value: string): string {
+  return normalizeAcademicInput(value, 80).replace(/\s+/g, "").toLocaleLowerCase("ko-KR");
+}
+
+function majorNamesOverlap(left: string, right: string): boolean {
+  const normalizedLeft = normalizedMajor(left);
+  const normalizedRight = normalizedMajor(right);
+  return Boolean(
+    normalizedLeft
+    && normalizedRight
+    && (
+      normalizedLeft.includes(normalizedRight)
+      || normalizedRight.includes(normalizedLeft)
+    )
+  );
+}
+
+function availableMethods(conditions: Conditions): string[] {
+  const selected = conditions.methods.filter((method) => method !== "아직 정하지 못함");
+  return selected.length > 0 ? selected.slice(0, 2) : ["문헌조사"];
+}
+
+function fallbackDataOptions(
+  conditions: Conditions,
+): ResearchTopic["dataOptions"] {
+  if (conditions.dataAccess === "공개 데이터") {
+    return [
+      { name: "공개 통계·보고서·학술자료 후보", status: "조건부" },
+      { name: "학과·전공 관련 공개 사례", status: "확인 필요" },
+    ];
+  }
+  if (conditions.dataAccess === "직접 수집 가능") {
+    return [
+      { name: "소규모 관찰·설문·인터뷰 자료", status: "조건부" },
+      { name: "공개 자료와 직접 수집 자료의 비교", status: "확인 필요" },
+    ];
+  }
+  return [
+    { name: "접근 가능한 공개 자료", status: "확인 필요" },
+    { name: "학교·학과에서 이용 가능한 자료", status: "확인 필요" },
+  ];
+}
+
+/**
+ * AI를 사용할 수 없고 검수된 전공별 주제가 없는 경우에도,
+ * 학생이 입력한 사실만 조합해 비교 가능한 두 개의 범용 시작안을 만든다.
+ */
+export function buildUniversalFallbackTopics(
+  conditions: Conditions,
+): [ResearchTopic, ResearchTopic] | null {
+  const major = normalizeAcademicInput(conditions.major, 80);
+  const majorArea = conditions.majorArea;
+  const interests = conditions.interests
+    .map((interest) => normalizeAcademicInput(interest, 60))
+    .filter(Boolean)
+    .slice(0, 3);
+  if (!major || !majorArea || interests.length === 0) return null;
+
+  const primaryInterest = interests[0];
+  const secondInterest = interests[1] ?? `${majorArea}의 실제 사례`;
+  const methods = availableMethods(conditions);
+  const dataOptions = fallbackDataOptions(conditions);
+  const pairId = `universal-${majorArea}`;
+  const period = conditions.period ?? "선택 기간";
+  const schoolContext = normalizeAcademicInput(conditions.school, 80);
+  const context = schoolContext
+    ? `${schoolContext}의 수업·학과 맥락`
+    : "학교와 관계없이 확인할 수 있는 대학생 맥락";
+  const evidence = [
+    {
+      id: "student-selected-major",
+      title: `${majorArea} · ${major}`,
+      type: "사용자 입력",
+      verifiedAt: "현재 세션",
+    },
+    {
+      id: "student-selected-interests",
+      title: interests.join(" · "),
+      type: "사용자 입력",
+      verifiedAt: "현재 세션",
+    },
+  ];
+
+  return [
+    {
+      id: `${pairId}-safe`,
+      pairId,
+      variant: "안전 축소형",
+      title: `${major}에서 ${primaryInterest} 문제 지도 만들기`,
+      majors: [major],
+      interests,
+      methods,
+      minWeeks: 4,
+      goodDataAccess: conditions.dataAccess ? [conditions.dataAccess] : ["아직 모름"],
+      avoidTags: [],
+      problem: `${context}에서 ${primaryInterest}와 연결된 문제를 먼저 좁혀야 합니다.`,
+      question: `${major} 분야에서 ${primaryInterest}와 관련해 한 학기 안에 확인할 수 있는 문제는 무엇일까?`,
+      reason: `${majorArea} 계열과 선택한 관심 분야를 직접 연결하되, 새로운 사실을 가정하지 않는 시작안입니다.`,
+      userConfirmed: [major, ...interests],
+      aiProposed: ["공개 자료로 확인 가능한 작은 범위부터 시작"],
+      dataOptions: dataOptions.map((option) => ({ ...option })),
+      methodDetail: `${methods.join("·")}로 문제와 근거 후보를 정리`,
+      scope: `${period} 동안 대상 1개와 핵심 질문 1개로 범위를 제한`,
+      uncertainties: [
+        "실제 학과 커리큘럼과 교수 연구분야의 공식 근거를 추가로 확인해야 합니다.",
+      ],
+      firstAction: `${major} 학과 페이지나 공개 강의계획서에서 ${primaryInterest} 관련 표현 3개 찾기`,
+      evidence: evidence.map((source) => ({ ...source })),
+    },
+    {
+      id: `${pairId}-deep`,
+      pairId,
+      variant: "차별 심화형",
+      title: `${major} × ${secondInterest} 비교 프로젝트`,
+      majors: [major],
+      interests,
+      methods,
+      minWeeks: 8,
+      goodDataAccess: conditions.dataAccess ? [conditions.dataAccess] : ["아직 모름"],
+      avoidTags: [],
+      problem: `${primaryInterest}를 ${secondInterest}와 비교할 기준과 자료가 필요합니다.`,
+      question: `${major} 관점에서 ${primaryInterest}의 결과는 ${secondInterest}라는 조건에 따라 어떻게 달라질까?`,
+      reason: `같은 입력에서 비교 대상을 하나 더 두어 차이를 설명하는 심화안입니다.`,
+      userConfirmed: [major, ...interests],
+      aiProposed: ["비교 대상·시점·자료 조건을 하나씩 추가"],
+      dataOptions: dataOptions.map((option) => ({ ...option })),
+      methodDetail: `${methods.join("·")}로 두 대상의 공통 기준을 비교`,
+      scope: `${period} 동안 비교 대상 2개와 공통 지표 2~3개를 검토`,
+      uncertainties: [
+        "두 대상을 같은 기준으로 비교할 수 있는 자료가 실제로 존재하는지 확인해야 합니다.",
+      ],
+      firstAction: `${primaryInterest}와 ${secondInterest}를 함께 다룬 공개 사례 2개 찾아 비교표 만들기`,
+      evidence: evidence.map((source) => ({ ...source })),
+    },
+  ];
+}
+
 export function recommend(c: Conditions, opts: RecommendOptions = {}): RecommendResult {
-  if (!c.major || !MAJORS.includes(c.major)) return { kind: "unsupported-major" };
+  const major = normalizeAcademicInput(c.major, 80);
+  if (!major || !c.majorArea) return { kind: "empty" };
   const exclude = new Set(opts.excludeIds ?? []);
 
-  // 1) 전공 지원 → 2) 피하고 싶은 방식 충돌 제외 → 3) 이미 본 후보 제외
-  const pool = TOPICS.filter(
+  // 1) 검수된 전공별 후보 → 2) 피하고 싶은 방식 충돌 제외 → 3) 이미 본 후보 제외
+  let pool = TOPICS.filter(
     (t) =>
-      t.majors.includes(c.major as Major) &&
+      t.majors.some((topicMajor) => majorNamesOverlap(topicMajor, major)) &&
       overlap(t.avoidTags, c.avoid).length === 0 &&
       !exclude.has(t.id),
   );
 
+  // 검수된 전공별 후보가 없으면 사용자 입력만 사용한 범용 비교쌍으로 이어 간다.
+  if (pool.length === 0) {
+    const fallback = buildUniversalFallbackTopics(c);
+    pool = fallback?.filter((topic) => !exclude.has(topic.id)) ?? [];
+  }
+
   if (pool.length === 0) return { kind: "empty" };
 
-  // 관심·방법 우선 정렬
-  const ranked = [...pool].sort((a, b) => rankScore(b, c) - rankScore(a, c));
+  // 관심 → 방법 → 데이터 접근 → 기간 → 안정적 ID 순서의 명시적 근거 규칙
+  const orderedPool = [...pool].sort((left, right) =>
+    compareByEvidence(left, right, c));
 
   // 비교 가치가 있는 서로 다른 2개: 같은 pairId의 안전형↔심화형을 우선
-  const top = ranked[0];
-  const partner = ranked.find((t) => t.pairId === top.pairId && t.id !== top.id);
+  const top = orderedPool[0];
+  const partner = orderedPool.find((t) => t.pairId === top.pairId && t.id !== top.id);
   let picked: ResearchTopic[];
   if (partner) {
     picked = [top, partner];
   } else {
-    const other = ranked.find((t) => t.pairId !== top.pairId);
+    const other = orderedPool.find((t) => t.pairId !== top.pairId);
     picked = other ? [top, other] : [top];
   }
 
   if (picked.length < 2) return { kind: "insufficient", candidate: buildChecks(picked[0], c) };
 
   // 안전 축소형을 A, 차별 심화형을 B로 정렬
-  picked.sort((a, b) => (a.variant === "안전 축소형" ? -1 : 1) - (b.variant === "안전 축소형" ? -1 : 1));
-  return { kind: "ok", candidates: [buildChecks(picked[0], c), buildChecks(picked[1], c)] };
+  const orderedPair = orderPairVariants(picked[0], picked[1]);
+  return {
+    kind: "ok",
+    candidates: [buildChecks(orderedPair[0], c), buildChecks(orderedPair[1], c)],
+  };
 }

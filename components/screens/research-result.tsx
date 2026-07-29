@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUpRight,
   CircleAlert,
@@ -28,13 +28,16 @@ import {
   PROFESSOR_DISCLAIMER,
   type CheckStatus,
 } from "@/data/research-mvp";
+import { isDankookUniversity } from "@/lib/professor-discovery-client";
 import { requestProfessorMatches } from "@/lib/professor-client";
+import { ProfessorMatchRequestAbortedError } from "@/lib/professor-match-http";
 import type {
   ProfessorMatch,
   ProfessorMatchResponse,
   ProfessorMatchRole,
   ProfessorMatchStrength,
 } from "@/lib/professor-domain";
+import { resolveProfessorPortrait } from "@/lib/professor-photo";
 import { CRITERION_LABELS, type CriterionKey, type TopicWithChecks } from "@/lib/recommend";
 import { useResearchStore } from "@/store/research-store";
 
@@ -356,6 +359,7 @@ function ProfessorBlock({
   coverage,
   status,
   error,
+  scopeMessage,
   onLoad,
   onSelectProfessor,
 }: {
@@ -367,9 +371,28 @@ function ProfessorBlock({
   > | null;
   status: "idle" | "loading" | "success" | "error";
   error: string | null;
+  scopeMessage: string | null;
   onLoad: () => void;
   onSelectProfessor: (id: string) => void;
 }) {
+  if (scopeMessage) {
+    return (
+      <section id="professor-connection" className="prof-block">
+        <div className="section-heading"><h2>교수 공식 정보 연결</h2></div>
+        <Card className="prof-note prof-note--pending">
+          <span><CircleAlert size={18} /></span>
+          <div>
+            <strong>현재 단국대학교 교수 데이터 파일럿이에요</strong>
+            <p>{scopeMessage}</p>
+            <Link href="/professors" className="prof-load-button">
+              <ShieldCheck size={16} /> 교수 찾기에서 학교 확인하기
+            </Link>
+          </div>
+        </Card>
+        <p className="prof-disclaimer">{PROFESSOR_DISCLAIMER}</p>
+      </section>
+    );
+  }
   if (status === "idle" || status === "loading" || status === "error") {
     return (
       <section id="professor-connection" className="prof-block">
@@ -385,11 +408,11 @@ function ProfessorBlock({
                   : "선택한 주제와 공식 교수 데이터를 연결할 수 있어요"}
             </strong>
             <p>
-              {error ?? "교수의 우열을 점수로 매기지 않고, 주제·방법·응용 맥락 역할과 공식 근거 ID를 연결합니다."}
+              {error ?? "주제·방법·확장 관점별 연결 이유와 공식 근거 ID를 확인합니다."}
             </p>
             {status !== "loading" && (
               <button type="button" className="prof-load-button" onClick={onLoad}>
-                <ShieldCheck size={16} /> {status === "error" ? "다시 연결하기" : "공식 교수 2명 찾기"}
+                <ShieldCheck size={16} /> {status === "error" ? "다시 연결하기" : "세 관점의 교수님 찾기"}
               </button>
             )}
           </div>
@@ -409,19 +432,43 @@ function ProfessorBlock({
         </div>
       </Card>
       <div className="official-match-grid">
-      {matches.map((match, index) => {
+      {matches.map((match) => {
         const professor = match.professor;
+        const portrait = resolveProfessorPortrait({
+          professorId: professor.id,
+          professorName: professor.name,
+          variant: match.role,
+        });
         return (
         <article key={professor.id} className="prof-card official-match-card">
           <div className="prof-card__top">
-            <div>
-              <span className="official-match-order">{index === 0 ? "연결 후보" : "대안 후보"}</span>
-              <h3>{professor.name} {professor.title}</h3>
-              <small>{professor.university} · {professor.department}</small>
+            <div className="prof-card__identity">
+              <div className="official-professor-avatar" title={portrait.sourceLabel}>
+                <Image
+                  src={portrait.src}
+                  alt={portrait.alt}
+                  width={48}
+                  height={48}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    borderRadius: "inherit",
+                  }}
+                />
+              </div>
+              <div>
+                <span className="official-match-order">{ROLE_LABEL[match.role]}</span>
+                <h3>{professor.name} {professor.title}</h3>
+                <small>{professor.university} · {professor.department}</small>
+              </div>
             </div>
             <Tag tone={match.strength === "LIMITED" ? "warning" : "mint"}>{ROLE_LABEL[match.role]}</Tag>
           </div>
           <div className="tag-row">
+            <Tag tone={portrait.isActualProfessorPhoto ? "mint" : "violet"}>
+              {portrait.badgeLabel}
+            </Tag>
             <Tag tone={match.strength === "LIMITED" ? "warning" : "blue"}>{STRENGTH_LABEL[match.strength]}</Tag>
             {professor.researchFields.map((field) => <Tag key={field}>{field}</Tag>)}
           </div>
@@ -497,6 +544,11 @@ export function ResearchResultScreen() {
 
   const [loading, setLoading] = useState(true);
   const [cooldown, setCooldown] = useState(false);
+  const professorRequestRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => {
+    professorRequestRef.current?.abort();
+  }, []);
 
   useEffect(() => {
     if (hasHydrated && result === null) {
@@ -519,14 +571,35 @@ export function ResearchResultScreen() {
   };
 
   const loadProfessorMatches = async (topic: TopicWithChecks["topic"]) => {
+    if (!isDankookUniversity(conditions.school)) return;
+    professorRequestRef.current?.abort();
+    const requestController = new AbortController();
+    professorRequestRef.current = requestController;
     setProfessorMatchLoading(topic.id);
     try {
-      const response = await requestProfessorMatches(topic, conditions.major ?? "");
+      const response = await requestProfessorMatches(
+        topic,
+        conditions.major ?? "",
+        conditions.school,
+        { signal: requestController.signal },
+      );
+      if (professorRequestRef.current !== requestController) return;
       setProfessorMatches(response);
     } catch (matchError) {
+      if (
+        matchError instanceof ProfessorMatchRequestAbortedError
+        || professorRequestRef.current !== requestController
+      ) {
+        return;
+      }
       setProfessorMatchError(
+        topic.id,
         matchError instanceof Error ? matchError.message : "공식 교수 데이터를 연결하지 못했습니다.",
       );
+    } finally {
+      if (professorRequestRef.current === requestController) {
+        professorRequestRef.current = null;
+      }
     }
   };
 
@@ -561,6 +634,11 @@ export function ResearchResultScreen() {
     conditions.period,
     conditions.dataAccess,
   ].filter(Boolean) as string[];
+  const professorScopeMessage = !conditions.school.trim()
+    ? "학교는 아이디어 생성에서는 선택 정보이지만, 교수 연결에서는 공식 데이터 범위를 확인해야 합니다. 현재는 학교가 선택되지 않았어요."
+    : !isDankookUniversity(conditions.school)
+      ? `${conditions.school} 학생도 연구 아이디어 기능은 이용할 수 있지만, 교수 연결 데이터는 아직 단국대학교 1,051명만 지원합니다.`
+      : null;
 
   const stickyAction = (
     <>
@@ -614,10 +692,6 @@ export function ResearchResultScreen() {
               </details>
             )}
           </div>
-
-          {result.kind === "unsupported-major" && (
-            <EmptyBlock icon={CircleAlert} title="현재 파일럿에서는 이 전공을 아직 지원하지 않아요." desc="지원 전공을 선택해 다시 시도해 주세요." onChange={() => router.push("/research")} />
-          )}
 
           {result.kind === "empty" && (
             <EmptyBlock icon={CircleAlert} title="현재 조건에 맞는 연구주제를 찾지 못했어요." desc="관심 분야나 준비 조건을 바꿔 다시 시도해 주세요." onChange={() => router.push("/research")} onRetry={onReRecommend} />
@@ -695,6 +769,7 @@ export function ResearchResultScreen() {
                 coverage={professorCoverage}
                 status={professorMatchStatus}
                 error={professorMatchError}
+                scopeMessage={professorScopeMessage}
                 onLoad={() => void loadProfessorMatches(chosen.topic)}
                 onSelectProfessor={selectProfessor}
               />

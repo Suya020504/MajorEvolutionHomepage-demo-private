@@ -2,19 +2,17 @@
 // USER_FLOW.md §7(조건), §8(추천 규칙), §9(카드 필드), §12.8(교수 공식 정보) 반영.
 // 원칙: 실시간 AI 생성이 아니라 검수된 로컬 데이터 필터링. 0~100 점수·순위 없음.
 
-export const MAJORS = ["수학", "식품자원경제학", "통계학", "컴퓨터공학", "경제학"] as const;
-export type Major = (typeof MAJORS)[number];
+import {
+  LEGACY_MAJORS,
+  UNIVERSAL_INTEREST_TAGS,
+} from "@/data/academic-options";
 
-export const INTEREST_TAGS = [
-  "데이터 분석",
-  "AI·머신러닝",
-  "ESG·지속가능성",
-  "소비자 행동",
-  "식품 소비",
-  "가격·시장",
-  "정책 효과",
-  "텍스트 분석",
-] as const;
+/** 기존 검수 주제와의 호환을 위한 파일럿 전공 목록. 신규 입력은 자유 문자열을 사용한다. */
+export const MAJORS = LEGACY_MAJORS;
+export type Major = string;
+
+/** 기존 import 경로를 유지하면서 보편 관심 태그를 제공한다. */
+export const INTEREST_TAGS = UNIVERSAL_INTEREST_TAGS;
 
 export const EXPERIENCE_LEVELS = ["경험 없음", "관련 수업 수강", "과제·프로젝트 경험"] as const;
 export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
@@ -65,20 +63,6 @@ export type ResearchTopic = {
   uncertainties: string[]; // 주요 불확실성 또는 확인할 사항
   firstAction: string; // 첫 30분 확인 행동
   evidence: EvidenceSource[]; // 근거 자료와 최근 확인일
-  professorIds: string[]; // 연결 교수
-};
-
-export type Professor = {
-  id: string;
-  name: string;
-  affiliation: string; // 대학·학과·연구실
-  role: string; // 연결 역할 (연구 주제 / 방법론 / 학습·기회)
-  fields: string[]; // 공식 연구 분야
-  matchReasons: { reason: string; source: string }[]; // 연결 근거 + 출처
-  relatedCourses: string[]; // 공식 강의
-  verifiedAt: string; // 최근 확인일
-  officialContactUrl: string; // 학교·학과·연구실 공식 문의 URL
-  availabilityUnknown: true; // 실제 모집·면담 가능 여부는 항상 미확인
 };
 
 // 교수 공식 정보 고지 문구 (USER_FLOW §12.8)
@@ -87,72 +71,6 @@ export const PROFESSOR_DISCLAIMER =
 
 export const PROFESSOR_DATA_NOTE =
   "대학 공식 프로필의 이름·소속·연구분야·논문 목록만 앱에 사용합니다. 이메일·전화는 저장하지 않고, 사진은 이용 허가 확인 전 표시하지 않습니다.";
-
-// ─────────────────────────────────────────────────────────
-// 교수 (프로토타입용 가상 데이터, 공식 링크는 예시 URL)
-// ─────────────────────────────────────────────────────────
-export const PROFESSORS: Professor[] = [
-  {
-    id: "prof-consumer",
-    name: "김소비 교수님",
-    affiliation: "가상대학교 식품자원경제학과 · 소비자행동 연구실",
-    role: "연구 주제 연결",
-    fields: ["소비자 행동", "식품경제", "지불의사 분석"],
-    matchReasons: [
-      { reason: "소비자 신뢰와 지불의사 연구가 선택한 연구주제의 핵심 질문과 연결돼요.", source: "공식 연구실 소개" },
-      { reason: "친환경 표시·식품 소비 관련 공식 프로젝트를 진행한 이력이 있어요.", source: "공식 프로젝트 페이지" },
-    ],
-    relatedCourses: ["소비자경제 분석", "식품시장 조사"],
-    verifiedAt: "2026.07.01",
-    officialContactUrl: "https://university.example/dept/food-econ/faculty/consumer",
-    availabilityUnknown: true,
-  },
-  {
-    id: "prof-data",
-    name: "이데이터 교수님",
-    affiliation: "가상대학교 데이터사이언스학과 · 텍스트마이닝 연구실",
-    role: "방법론 연결",
-    fields: ["텍스트 분석", "머신러닝", "데이터 시각화"],
-    matchReasons: [
-      { reason: "텍스트 분석·회귀 분석 방법론이 이 주제의 분석 단계와 맞닿아 있어요.", source: "공식 교수 소개" },
-      { reason: "제품 설명·리뷰 텍스트를 다룬 공개 프로젝트가 방법 참고가 돼요.", source: "공식 프로젝트 페이지" },
-    ],
-    relatedCourses: ["텍스트 데이터 분석", "머신러닝 입문"],
-    verifiedAt: "2026.06.18",
-    officialContactUrl: "https://university.example/dept/data-science/faculty/data",
-    availabilityUnknown: true,
-  },
-  {
-    id: "prof-policy",
-    name: "박정책 교수님",
-    affiliation: "가상대학교 식품자원경제학과 · ESG·공공정책 연구실",
-    role: "학습·기회 연결",
-    fields: ["ESG", "정책 효과", "공공데이터"],
-    matchReasons: [
-      { reason: "분석 결과를 정책·제도 함의로 확장하는 관점이 심화 방향과 연결돼요.", source: "공식 강의계획서" },
-      { reason: "ESG 공시·표시 규제 관련 공개 자료를 다뤄 확인 질문을 준비하기 좋아요.", source: "공식 연구실 소개" },
-    ],
-    relatedCourses: ["ESG와 공공정책", "식품정책 세미나"],
-    verifiedAt: "2026.04.02",
-    officialContactUrl: "https://university.example/dept/food-econ/faculty/policy",
-    availabilityUnknown: true,
-  },
-  {
-    id: "prof-stats",
-    name: "최통계 교수님",
-    affiliation: "가상대학교 통계학과 · 시계열예측 연구실",
-    role: "방법론 연결",
-    fields: ["시계열", "예측 모델", "통계 추론"],
-    matchReasons: [
-      { reason: "시계열·수급 데이터 분석 방법이 가격 변동 주제의 핵심 방법과 맞아요.", source: "공식 교수 소개" },
-      { reason: "공공 가격·기상 데이터를 활용한 공개 프로젝트가 참고가 돼요.", source: "공식 프로젝트 페이지" },
-    ],
-    relatedCourses: ["시계열 분석", "예측 방법론"],
-    verifiedAt: "2026.06.24",
-    officialContactUrl: "https://university.example/dept/statistics/faculty/stats",
-    availabilityUnknown: true,
-  },
-];
 
 // ─────────────────────────────────────────────────────────
 // 검수된 연구주제 (연구형만, 안전 축소형 ↔ 차별 심화형 3쌍)
@@ -187,7 +105,6 @@ export const TOPICS: ResearchTopic[] = [
       { id: "src-gw-1", title: "친환경 표시와 소비자 신뢰 연구", type: "공식 논문", verifiedAt: "2026.06" },
       { id: "src-gw-2", title: "식품 라벨 표현 분류 프로젝트", type: "공식 프로젝트", verifiedAt: "2026.06" },
     ],
-    professorIds: ["prof-consumer", "prof-data"],
   },
   {
     id: "topic-greenwash-deep",
@@ -217,7 +134,6 @@ export const TOPICS: ResearchTopic[] = [
       { id: "src-gw-3", title: "그린워싱 텍스트 신호 연구", type: "공식 논문", verifiedAt: "2026.05" },
       { id: "src-gw-2", title: "식품 라벨 표현 분류 프로젝트", type: "공식 프로젝트", verifiedAt: "2026.06" },
     ],
-    professorIds: ["prof-data", "prof-policy"],
   },
 
   // 쌍 2 — 농식품 가격 변동
@@ -249,7 +165,6 @@ export const TOPICS: ResearchTopic[] = [
       { id: "src-pr-1", title: "농식품 가격 변동 요인 분석", type: "공식 논문", verifiedAt: "2026.05" },
       { id: "src-pr-2", title: "공공 가격 데이터 대시보드", type: "공식 프로젝트", verifiedAt: "2026.06" },
     ],
-    professorIds: ["prof-stats", "prof-data"],
   },
   {
     id: "topic-price-deep",
@@ -279,7 +194,6 @@ export const TOPICS: ResearchTopic[] = [
       { id: "src-pr-3", title: "가격 조기경보 지표 연구", type: "공식 논문", verifiedAt: "2026.04" },
       { id: "src-pr-2", title: "공공 가격 데이터 대시보드", type: "공식 프로젝트", verifiedAt: "2026.06" },
     ],
-    professorIds: ["prof-stats", "prof-policy"],
   },
 
   // 쌍 3 — 소비자 지불의사 (설문 기반)
@@ -310,7 +224,6 @@ export const TOPICS: ResearchTopic[] = [
     evidence: [
       { id: "src-wtp-1", title: "친환경 속성 지불의사 연구", type: "공식 논문", verifiedAt: "2026.06" },
     ],
-    professorIds: ["prof-consumer"],
   },
   {
     id: "topic-wtp-deep",
@@ -339,13 +252,8 @@ export const TOPICS: ResearchTopic[] = [
     evidence: [
       { id: "src-wtp-2", title: "선택실험 기반 속성 가치 연구", type: "공식 논문", verifiedAt: "2026.05" },
     ],
-    professorIds: ["prof-consumer", "prof-policy"],
   },
 ];
-
-export function findProfessor(id: string): Professor | undefined {
-  return PROFESSORS.find((p) => p.id === id);
-}
 
 export function periodWeeks(label: PeriodLabel): 4 | 8 | 16 {
   return PERIODS.find((p) => p.label === label)?.weeks ?? 4;

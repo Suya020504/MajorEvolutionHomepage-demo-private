@@ -1,6 +1,6 @@
-import { PaperScreen } from "@/components/screens/paper-screen";
+import { redirect } from "next/navigation";
 
 export default function PaperPage() {
-  return <PaperScreen />;
+  redirect("/paper/reader?mode=bite");
 }
 

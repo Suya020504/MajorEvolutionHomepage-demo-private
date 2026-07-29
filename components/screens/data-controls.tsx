@@ -23,9 +23,11 @@ type Category = {
 
 export function DataControls() {
   const matches = useResearchStore((state) => state.professorMatches);
+  const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
   const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
   const mentorLoopEntries = useResearchStore((state) => state.mentorLoopEntries);
   const clearProfessorMatches = useResearchStore((state) => state.clearProfessorMatches);
+  const clearFavoriteProfessors = useResearchStore((state) => state.clearFavoriteProfessors);
   const clearKnockKitDrafts = useResearchStore((state) => state.clearKnockKitDrafts);
   const clearMentorLoopEntries = useResearchStore((state) => state.clearMentorLoopEntries);
   const cards = useQuestStore((state) => state.cards);
@@ -41,6 +43,13 @@ export function DataControls() {
       describe: (n) => `연결한 교수 ${n}명과 연결 근거`,
       count: matches.length,
       clear: clearProfessorMatches,
+    },
+    {
+      id: "favorites",
+      label: "교수 즐겨찾기",
+      describe: (n) => `즐겨찾는 교수 ${n}명`,
+      count: favoriteProfessorIds.length,
+      clear: clearFavoriteProfessors,
     },
     {
       id: "quest",
