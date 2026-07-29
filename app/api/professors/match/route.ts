@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { matchOfficialProfessors } from "@/lib/professor-data.server";
 import {
   PROFESSOR_MATCH_POLICY,
+  SUPPORTED_PROFESSOR_UNIVERSITY,
   type ProfessorMatchTopic,
 } from "@/lib/professor-domain";
 
@@ -28,11 +29,26 @@ function normalizeTopic(value: unknown): ProfessorMatchTopic | null {
     question: stringValue(raw.question, 260),
     methodDetail: stringValue(raw.methodDetail, 260),
     scope: stringValue(raw.scope, 220),
-    interests: stringArray(raw.interests, 6, 80),
+    interests: stringArray(raw.interests, 3, 60),
     methods: stringArray(raw.methods, 5, 80),
     major: stringValue(raw.major, 80),
+    university: stringValue(raw.university, 80),
+    goal: stringValue(raw.goal, 120),
+    careerGoal: stringValue(raw.careerGoal, 160),
+    meetingSituation: stringValue(raw.meetingSituation, 120),
+    additionalContext: stringValue(raw.additionalContext, 300),
   };
   return topic.id && topic.title && topic.question ? topic : null;
+}
+
+function isDankookUniversity(value: string): boolean {
+  const normalized = value.toLocaleLowerCase("ko-KR").replace(/\s+/g, "");
+  return new Set([
+    "단국대",
+    "단국대학교",
+    "dankook",
+    "dankookuniversity",
+  ]).has(normalized);
 }
 
 export async function POST(request: Request) {
@@ -54,6 +70,26 @@ export async function POST(request: Request) {
   if (!topic) {
     return NextResponse.json({ error: "선택한 연구주제 정보가 부족합니다." }, { status: 400 });
   }
+  const university = stringValue(raw?.university, 80) || topic.university || "";
+  if (!university) {
+    return NextResponse.json(
+      {
+        code: "UNIVERSITY_REQUIRED",
+        error: "교수님 연결에 사용할 학교를 먼저 선택해 주세요.",
+      },
+      { status: 400 },
+    );
+  }
+  if (!isDankookUniversity(university)) {
+    return NextResponse.json(
+      {
+        code: "UNIVERSITY_OUT_OF_SCOPE",
+        error: `현재 교수님 연결은 ${SUPPORTED_PROFESSOR_UNIVERSITY} 공식 데이터 파일럿만 지원합니다.`,
+      },
+      { status: 422 },
+    );
+  }
+  topic.university = SUPPORTED_PROFESSOR_UNIVERSITY;
   // 학생이 거절한 교수는 다시 찾을 때 후보에서 뺍니다.
   const excludeIds = stringArray(raw?.excludeIds, 20, 64);
 

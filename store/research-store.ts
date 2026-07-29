@@ -9,10 +9,15 @@ import {
   type ConfirmedAnswer,
   type IdeaMode,
 } from "@/data/co-design";
+import {
+  inferMajorArea,
+  isMajorArea,
+  normalizeAcademicInput,
+  type MajorArea,
+} from "@/data/academic-options";
 import type {
   DataAccess,
   ExperienceLevel,
-  Major,
   PeriodLabel,
   ResearchTopic,
 } from "@/data/research-mvp";
@@ -48,6 +53,8 @@ const toggle = (list: string[], value: string, max: number) => {
   return [...list, value];
 };
 
+export type InterestAddResult = "added" | "duplicate" | "empty" | "full";
+
 type ResearchState = {
   hasHydrated: boolean;
   conditions: Conditions;
@@ -77,8 +84,11 @@ type ResearchState = {
 
   setHasHydrated: (value: boolean) => void;
   setIdeaMode: (mode: IdeaMode) => void;
-  setMajor: (m: Major) => void;
+  setSchool: (school: string) => void;
+  setMajorArea: (area: MajorArea) => void;
+  setMajor: (major: string) => void;
   toggleInterest: (tag: string) => void;
+  addInterest: (tag: string) => InterestAddResult;
   setExperience: (e: ExperienceLevel) => void;
   toggleMethod: (tag: string) => void;
   setPeriod: (p: PeriodLabel) => void;
@@ -97,7 +107,7 @@ type ResearchState = {
   /** 진행 중인 연결 요청의 주제 ID. 저장된 주제 ID이거나 `context:`로 시작하는 임시 ID입니다. */
   setProfessorMatchLoading: (topicId: string) => void;
   setProfessorMatches: (response: ProfessorMatchResponse) => void;
-  setProfessorMatchError: (message: string) => void;
+  setProfessorMatchError: (topicId: string, message: string) => void;
   selectProfessor: (id: string) => void;
   saveKnockKitDraft: (key: string, draft: ProfessorKnockKitDraft) => void;
   saveMentorLoopEntry: (key: string, entry: ProfessorMentorLoopEntry) => void;
@@ -108,6 +118,68 @@ type ResearchState = {
   clearMentorLoopEntries: () => void;
   reset: () => void;
 };
+
+const invalidatedResearchState = () => ({
+  coDesignStep: 0,
+  coDesignAnswers: [] as ConfirmedAnswer[],
+  result: null,
+  resultOrigin: null,
+  groundingNote: null,
+  selectedTopicId: null,
+  professorMatches: [] as ProfessorMatch[],
+  professorCoverage: null,
+  professorMatchStatus: "idle" as const,
+  professorMatchError: null,
+  professorMatchTopicId: null,
+  selectedProfessorId: null,
+  seenIds: [] as string[],
+  reRecommendNote: null,
+});
+
+export function migrateResearchState(
+  persistedState: unknown,
+  _persistedVersion: number,
+): Partial<ResearchState> {
+  const state = persistedState && typeof persistedState === "object"
+    ? persistedState as Partial<ResearchState>
+    : {};
+  const rawConditions = state.conditions && typeof state.conditions === "object"
+    ? state.conditions as Partial<Conditions>
+    : {};
+  const major = normalizeAcademicInput(rawConditions.major, 80) || null;
+  const interests = Array.isArray(rawConditions.interests)
+    ? Array.from(new Set(
+      rawConditions.interests
+        .map((interest) => normalizeAcademicInput(interest, 60))
+        .filter(Boolean),
+    )).slice(0, MAX_INTERESTS)
+    : [];
+  const methods = Array.isArray(rawConditions.methods)
+    ? rawConditions.methods.slice(0, MAX_METHODS)
+    : [];
+  const conditions: Conditions = {
+    ...emptyConditions,
+    ...rawConditions,
+    school: normalizeAcademicInput(rawConditions.school, 80),
+    majorArea: isMajorArea(rawConditions.majorArea)
+      ? rawConditions.majorArea
+      : major
+        ? inferMajorArea(major)
+        : null,
+    major,
+    interests,
+    methods,
+    avoid: Array.isArray(rawConditions.avoid) ? rawConditions.avoid : [],
+  };
+
+  return {
+    ...state,
+    conditions,
+    interestsFull: interests.length >= MAX_INTERESTS,
+    methodsFull: methods.length >= MAX_METHODS,
+    ...invalidatedResearchState(),
+  };
+}
 
 export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   hasHydrated: false,
@@ -137,33 +209,88 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   setIdeaMode: (ideaMode) =>
     set({
       ideaMode,
-      coDesignStep: 0,
-      coDesignAnswers: [],
-      result: null,
-      resultOrigin: null,
-      groundingNote: null,
-      selectedTopicId: null,
-      professorMatches: [],
-      professorCoverage: null,
-      professorMatchStatus: "idle",
-      professorMatchError: null,
-      selectedProfessorId: null,
+      ...invalidatedResearchState(),
     }),
-  setMajor: (m) => set((s) => ({ conditions: { ...s.conditions, major: m } })),
+  setSchool: (school) =>
+    set((state) => ({
+      conditions: { ...state.conditions, school: school.slice(0, 80) },
+      ...invalidatedResearchState(),
+    })),
+  setMajorArea: (majorArea) =>
+    set((state) => ({
+      conditions: {
+        ...state.conditions,
+        majorArea,
+        major: state.conditions.majorArea === majorArea ? state.conditions.major : null,
+      },
+      ...invalidatedResearchState(),
+    })),
+  setMajor: (major) =>
+    set((state) => ({
+      conditions: { ...state.conditions, major: major.slice(0, 80) },
+      ...invalidatedResearchState(),
+    })),
   toggleInterest: (tag) =>
-    set((s) => {
-      const interests = toggle(s.conditions.interests, tag, MAX_INTERESTS);
-      return { conditions: { ...s.conditions, interests }, interestsFull: interests.length >= MAX_INTERESTS };
+    set((state) => {
+      const normalized = normalizeAcademicInput(tag, 60);
+      if (!normalized) return state;
+      const interests = toggle(state.conditions.interests, normalized, MAX_INTERESTS);
+      if (interests === state.conditions.interests) return state;
+      return {
+        conditions: { ...state.conditions, interests },
+        interestsFull: interests.length >= MAX_INTERESTS,
+        ...invalidatedResearchState(),
+      };
     }),
-  setExperience: (e) => set((s) => ({ conditions: { ...s.conditions, experience: e } })),
+  addInterest: (tag) => {
+    const normalized = normalizeAcademicInput(tag, 60);
+    if (!normalized) return "empty";
+    const { conditions } = get();
+    if (conditions.interests.includes(normalized)) return "duplicate";
+    if (conditions.interests.length >= MAX_INTERESTS) return "full";
+    set((state) => ({
+      conditions: {
+        ...state.conditions,
+        interests: [...state.conditions.interests, normalized],
+      },
+      interestsFull: state.conditions.interests.length + 1 >= MAX_INTERESTS,
+      ...invalidatedResearchState(),
+    }));
+    return "added";
+  },
+  setExperience: (experience) =>
+    set((state) => ({
+      conditions: { ...state.conditions, experience },
+      ...invalidatedResearchState(),
+    })),
   toggleMethod: (tag) =>
-    set((s) => {
-      const methods = toggle(s.conditions.methods, tag, MAX_METHODS);
-      return { conditions: { ...s.conditions, methods }, methodsFull: methods.length >= MAX_METHODS };
+    set((state) => {
+      const methods = toggle(state.conditions.methods, tag, MAX_METHODS);
+      if (methods === state.conditions.methods) return state;
+      return {
+        conditions: { ...state.conditions, methods },
+        methodsFull: methods.length >= MAX_METHODS,
+        ...invalidatedResearchState(),
+      };
     }),
-  setPeriod: (p) => set((s) => ({ conditions: { ...s.conditions, period: p } })),
-  setDataAccess: (d) => set((s) => ({ conditions: { ...s.conditions, dataAccess: d } })),
-  toggleAvoid: (tag) => set((s) => ({ conditions: { ...s.conditions, avoid: toggle(s.conditions.avoid, tag, 99) } })),
+  setPeriod: (period) =>
+    set((state) => ({
+      conditions: { ...state.conditions, period },
+      ...invalidatedResearchState(),
+    })),
+  setDataAccess: (dataAccess) =>
+    set((state) => ({
+      conditions: { ...state.conditions, dataAccess },
+      ...invalidatedResearchState(),
+    })),
+  toggleAvoid: (tag) =>
+    set((state) => ({
+      conditions: {
+        ...state.conditions,
+        avoid: toggle(state.conditions.avoid, tag, 99),
+      },
+      ...invalidatedResearchState(),
+    })),
 
   submit: () => {
     const { conditions, ideaMode } = get();
@@ -291,8 +418,11 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorMatchError: null,
       selectedProfessorId: null,
     })),
-  setProfessorMatchError: (professorMatchError) =>
-    set({ professorMatchStatus: "error", professorMatchError }),
+  setProfessorMatchError: (topicId, professorMatchError) =>
+    set((state) => topicId !== state.professorMatchTopicId ? state : ({
+      professorMatchStatus: "error",
+      professorMatchError,
+    })),
   selectProfessor: (selectedProfessorId) => set({ selectedProfessorId }),
   saveKnockKitDraft: (key, draft) =>
     set((state) => ({ knockKitDrafts: { ...state.knockKitDrafts, [key]: draft } })),
@@ -341,7 +471,8 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     }),
 }), {
   name: "major-evolution-research-v1",
-  version: 1,
+  version: 2,
+  migrate: migrateResearchState,
   storage: createJSONStorage(() => localStorage),
   skipHydration: true,
   partialize: ({

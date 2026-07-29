@@ -5,13 +5,17 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { Brain, Check, CircleAlert, Compass, GitCompareArrows, ScanSearch, Sparkles } from "lucide-react";
 import { AppLogo, AppShell, Card, PageHeader, PrimaryButton, cx } from "@/components/app/primitives";
+import {
+  MAJOR_AREAS,
+  MAJOR_SUGGESTIONS,
+  UNIVERSITY_SUGGESTIONS,
+  UNIVERSAL_INTEREST_TAGS,
+} from "@/data/academic-options";
 import { IDEA_MODES, type IdeaMode } from "@/data/co-design";
 import {
   AVOID_TAGS,
   DATA_ACCESS,
   EXPERIENCE_LEVELS,
-  INTEREST_TAGS,
-  MAJORS,
   METHOD_TAGS,
   PERIODS,
 } from "@/data/research-mvp";
@@ -19,16 +23,18 @@ import { useResearchStore } from "@/store/research-store";
 
 const CHIP = (selected: boolean, disabled = false) =>
   cx("choice-chip", selected && "is-selected", disabled && "");
+const INTEREST_TAG_SET = new Set<string>(UNIVERSAL_INTEREST_TAGS);
 
 export function ConditionSelectScreen() {
   const router = useRouter();
   const c = useResearchStore((s) => s.conditions);
   const ideaMode = useResearchStore((s) => s.ideaMode);
-  const interestsFull = useResearchStore((s) => s.interestsFull);
-  const methodsFull = useResearchStore((s) => s.methodsFull);
   const setIdeaMode = useResearchStore((s) => s.setIdeaMode);
+  const setSchool = useResearchStore((s) => s.setSchool);
+  const setMajorArea = useResearchStore((s) => s.setMajorArea);
   const setMajor = useResearchStore((s) => s.setMajor);
   const toggleInterest = useResearchStore((s) => s.toggleInterest);
+  const addInterest = useResearchStore((s) => s.addInterest);
   const setExperience = useResearchStore((s) => s.setExperience);
   const toggleMethod = useResearchStore((s) => s.toggleMethod);
   const setPeriod = useResearchStore((s) => s.setPeriod);
@@ -37,8 +43,11 @@ export function ConditionSelectScreen() {
   const submit = useResearchStore((s) => s.submit);
 
   const [errors, setErrors] = useState<string[]>([]);
+  const [customInterest, setCustomInterest] = useState("");
+  const [interestInputError, setInterestInputError] = useState<string | null>(null);
   const refs: Record<string, React.RefObject<HTMLDivElement | null>> = {
     ideaMode: useRef(null),
+    majorArea: useRef(null),
     major: useRef(null),
     interests: useRef(null),
     experience: useRef(null),
@@ -47,6 +56,28 @@ export function ConditionSelectScreen() {
     dataAccess: useRef(null),
   };
   const hasError = (k: string) => errors.includes(k);
+  const interestsFull = c.interests.length >= 3;
+  const methodsFull = c.methods.length >= 2;
+  const majorSuggestions = c.majorArea ? MAJOR_SUGGESTIONS[c.majorArea] : [];
+  const customInterests = c.interests.filter((interest) => !INTEREST_TAG_SET.has(interest));
+
+  const onAddInterest = () => {
+    const result = addInterest(customInterest);
+    if (result === "added") {
+      setCustomInterest("");
+      setInterestInputError(null);
+      return;
+    }
+    if (result === "duplicate") {
+      setInterestInputError("이미 선택한 관심 분야예요.");
+      return;
+    }
+    if (result === "full") {
+      setInterestInputError("관심 분야는 최대 3개까지 선택할 수 있어요.");
+      return;
+    }
+    setInterestInputError("관심 분야를 입력해 주세요.");
+  };
 
   const onSubmit = () => {
     const missing = submit();
@@ -116,24 +147,81 @@ export function ConditionSelectScreen() {
         {hasError("ideaMode") && <p className="field-error">아이디어 탐색 방식을 선택해 주세요.</p>}
       </div>
 
-      {/* 학과·전공 */}
-      <div ref={refs.major} className={cx("cond-group", hasError("major") && "has-error")}>
-        <div className="field-label">학과·전공 <small>필수</small></div>
+      {/* 학교 — 추천 범위를 뜻하지 않는 선택 맥락 */}
+      <div className="cond-group">
+        <label htmlFor="school-input" className="field-label">
+          학교
+          <small>선택 · 직접 입력 가능</small>
+        </label>
+        <input
+          id="school-input"
+          className="input"
+          type="text"
+          list="university-options"
+          value={c.school}
+          maxLength={80}
+          placeholder="예) 단국대학교"
+          onChange={(event) => setSchool(event.target.value)}
+        />
+        <datalist id="university-options">
+          {UNIVERSITY_SUGGESTIONS.map((university) => (
+            <option key={university} value={university} />
+          ))}
+        </datalist>
+        <p className="field-help">학교를 입력하지 않아도 이용할 수 있으며, 교수 데이터 범위가 자동으로 넓어지는 것은 아니에요.</p>
+      </div>
+
+      {/* 보편 전공 계열 */}
+      <div ref={refs.majorArea} className={cx("cond-group", hasError("majorArea") && "has-error")}>
+        <div className="field-label">전공 계열 <small>필수 · 1개</small></div>
         <div className="chip-grid">
-          {MAJORS.map((m) => (
-            <button key={m} type="button" className={CHIP(c.major === m)} onClick={() => setMajor(m)} aria-pressed={c.major === m}>
-              {m}
+          {MAJOR_AREAS.map((area) => (
+            <button
+              key={area}
+              type="button"
+              className={CHIP(c.majorArea === area)}
+              onClick={() => setMajorArea(area)}
+              aria-pressed={c.majorArea === area}
+            >
+              {area}
             </button>
           ))}
         </div>
-        {hasError("major") && <p className="field-error">전공을 선택해 주세요.</p>}
+        {hasError("majorArea") && <p className="field-error">전공 계열을 선택해 주세요.</p>}
+      </div>
+
+      {/* 검색 또는 직접 입력하는 실제 학과·전공 */}
+      <div ref={refs.major} className={cx("cond-group", hasError("major") && "has-error")}>
+        <label htmlFor="major-input" className="field-label">
+          학과·전공
+          <small>필수 · 검색 또는 직접 입력</small>
+        </label>
+        <input
+          id="major-input"
+          className="input"
+          type="text"
+          list="major-options"
+          value={c.major ?? ""}
+          maxLength={80}
+          disabled={!c.majorArea}
+          placeholder={c.majorArea ? "예) 컴퓨터공학과" : "먼저 전공 계열을 선택해 주세요"}
+          onChange={(event) => setMajor(event.target.value)}
+          aria-invalid={hasError("major")}
+        />
+        <datalist id="major-options">
+          {majorSuggestions.map((major) => (
+            <option key={major} value={major} />
+          ))}
+        </datalist>
+        <p className="field-help">목록에 없는 학과·학부·전공도 직접 입력할 수 있어요.</p>
+        {hasError("major") && <p className="field-error">학과·전공을 입력해 주세요.</p>}
       </div>
 
       {/* 관심 연구 분야 1~3 */}
       <div ref={refs.interests} className={cx("cond-group", hasError("interests") && "has-error")}>
-        <div className="field-label">관심 연구 분야 <small>필수 · 최대 3개</small></div>
+        <div className="field-label">관심 연구 분야 <small>필수 · 직접 입력 가능 · 최대 3개</small></div>
         <div className="chip-grid">
-          {INTEREST_TAGS.map((t) => {
+          {UNIVERSAL_INTEREST_TAGS.map((t) => {
             const on = c.interests.includes(t);
             return (
               <button key={t} type="button" className={CHIP(on)} disabled={!on && interestsFull} onClick={() => toggleInterest(t)} aria-pressed={on}>
@@ -141,7 +229,47 @@ export function ConditionSelectScreen() {
               </button>
             );
           })}
+          {customInterests.map((interest) => (
+            <button
+              key={interest}
+              type="button"
+              className={CHIP(true)}
+              onClick={() => toggleInterest(interest)}
+              aria-pressed={true}
+              aria-label={`${interest} 관심 분야 해제`}
+            >
+              {interest} ×
+            </button>
+          ))}
         </div>
+        <label htmlFor="custom-interest-input" className="field-help">목록에 없는 관심 분야 직접 입력</label>
+        <input
+          id="custom-interest-input"
+          className="input"
+          type="text"
+          value={customInterest}
+          maxLength={60}
+          disabled={interestsFull}
+          placeholder="예) 우주산업, 고전문학, 스포츠과학"
+          onChange={(event) => {
+            setCustomInterest(event.target.value);
+            setInterestInputError(null);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            onAddInterest();
+          }}
+        />
+        <button
+          type="button"
+          className="choice-chip"
+          disabled={interestsFull || !customInterest.trim()}
+          onClick={onAddInterest}
+        >
+          입력한 관심 분야 추가
+        </button>
+        {interestInputError && <p className="field-error" role="alert">{interestInputError}</p>}
         {interestsFull && <p className="cond-hint">최대 3개를 골랐어요. 바꾸려면 하나를 해제하세요.</p>}
         {hasError("interests") && <p className="field-error">관심 분야를 1개 이상 골라 주세요.</p>}
       </div>

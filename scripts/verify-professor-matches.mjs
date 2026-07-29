@@ -2,13 +2,13 @@
 import assert from "node:assert/strict";
 
 const baseUrl = process.argv[2] ?? "http://127.0.0.1:3000";
-const EXPECTED_POLICY = "OFFICIAL_EVIDENCE_RULES_V2";
+const EXPECTED_POLICY = "OFFICIAL_EVIDENCE_RULES_V3";
 
-async function requestMatches(topic, excludeIds = []) {
+async function requestMatches(topic, excludeIds = [], university = "단국대학교") {
   const response = await fetch(`${baseUrl}/api/professors/match`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ topic, excludeIds }),
+    body: JSON.stringify({ university, topic, excludeIds }),
   });
   assert.equal(response.status, 200, `${topic.id} API status`);
   assert.equal(
@@ -32,6 +32,13 @@ function assertDecisionContract(match, testCaseId) {
   assert.equal(typeof match.decisionBasis?.sources?.officialProfile, "boolean");
   assert.equal(typeof match.decisionBasis?.sources?.researchFields, "boolean");
   assert.equal(typeof match.decisionBasis?.sources?.matchedPublication, "boolean");
+  assert.equal(match.decisionBasis.sources.officialProfile, true);
+  assert.ok(
+    match.decisionBasis.sources.researchFields
+      || match.decisionBasis.sources.matchedPublication,
+    `${testCaseId} match lacks official research evidence`,
+  );
+  assert.equal(typeof match.professor?.officialProfileUrl, "string");
 }
 
 const cases = [
@@ -46,6 +53,9 @@ const cases = [
       interests: ["소비자 행동", "ESG", "식품 소비"],
       methods: ["설문", "회귀 분석"],
       major: "경제학",
+      university: "단국대학교",
+      goal: "대학원·연구실 탐색",
+      meetingSituation: "오피스아워",
     },
     verify(matches) {
       assert.ok(
@@ -66,6 +76,9 @@ const cases = [
       interests: ["농식품 가격", "데이터 분석", "정책"],
       methods: ["시계열", "회귀 분석"],
       major: "경제학",
+      university: "단국대학교",
+      goal: "수업·연구 주제 탐색",
+      meetingSituation: "수업 후 질문",
     },
     verify(matches) {
       assert.ok(
@@ -85,6 +98,9 @@ const cases = [
       interests: ["AI", "텍스트 분석", "ESG"],
       methods: ["머신러닝", "분류"],
       major: "경제학",
+      university: "단국대학교",
+      goal: "프로젝트·학부연구 참여",
+      meetingSituation: "연구실 방문",
     },
     verify(matches) {
       assert.ok(
@@ -99,17 +115,82 @@ const cases = [
       );
     },
   },
+  {
+    id: "goal-and-meeting-context",
+    topic: {
+      id: "goal-and-meeting-context",
+      title: "AI 기반 대학생 연구 프로젝트",
+      question: "AI 프로젝트를 학부연구로 발전시키려면 무엇을 확인해야 하는가",
+      methodDetail: "머신러닝",
+      scope: "학부 프로젝트",
+      interests: ["AI·데이터"],
+      methods: ["머신러닝"],
+      major: "소프트웨어학",
+      university: "단국대학교",
+      goal: "프로젝트·학부연구 참여",
+      meetingSituation: "오피스아워",
+    },
+    verify(matches) {
+      const concepts = matches.flatMap(
+        (match) => match.decisionBasis.matchedConcepts,
+      );
+      assert.ok(
+        concepts.includes("프로젝트·실무 연결"),
+        "goal field must participate in the context rules",
+      );
+      assert.ok(
+        concepts.includes("교수와의 만남 상황"),
+        "meetingSituation field must participate in the context rules",
+      );
+    },
+  },
+  {
+    id: "dance-performance-project",
+    topic: {
+      id: "dance-performance-project",
+      title: "무용 공연 데이터 프로젝트",
+      question: "공연 데이터를 활용해 무용 관객 경험을 탐색할 수 있는가",
+      methodDetail: "",
+      scope: "학부 프로젝트",
+      interests: ["예술·디자인", "공연 데이터"],
+      methods: [],
+      major: "무용학과",
+      university: "단국대학교",
+      goal: "프로젝트·학부연구 참여",
+      meetingSituation: "연구실 방문",
+    },
+    verify(matches) {
+      assert.deepEqual(
+        matches.map((match) => match.role),
+        ["TOPIC", "METHOD", "CONTEXT"],
+        "sparse evidence must still return one honest card per role",
+      );
+      const limitedRole = matches.find((match) => match.strength === "LIMITED");
+      if (limitedRole) {
+        assert.match(
+          limitedRole.reason,
+          /직접 일치.+근거.+확인되지 않았습니다/,
+          "fallback role must state its evidence limitation",
+        );
+      }
+    },
+  },
 ];
 
 const results = [];
 for (const testCase of cases) {
   const payload = await requestMatches(testCase.topic);
   assert.ok(payload.officialRecordCount >= 1_000, "full DKU runtime was not loaded");
-  assert.equal(payload.matches.length, 2, `${testCase.id} match count`);
+  assert.equal(payload.matches.length, 3, `${testCase.id} match count`);
+  assert.deepEqual(
+    payload.matches.map((match) => match.role),
+    ["TOPIC", "METHOD", "CONTEXT"],
+    `${testCase.id} role contract`,
+  );
   payload.matches.forEach((match) => assertDecisionContract(match, testCase.id));
-  assert.notEqual(
-    payload.matches[0].professor.id,
-    payload.matches[1].professor.id,
+  assert.equal(
+    new Set(payload.matches.map((match) => match.professor.id)).size,
+    payload.matches.length,
     `${testCase.id} duplicate professor`,
   );
   assert.ok(
@@ -177,5 +258,24 @@ for (const testCase of cases) {
     })),
   });
 }
+
+const outOfScopeResponse = await fetch(`${baseUrl}/api/professors/match`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ university: "단국대아님", topic: cases[0].topic }),
+});
+assert.equal(outOfScopeResponse.status, 422, "non-DKU university must be out of scope");
+const outOfScopePayload = await outOfScopeResponse.json();
+assert.equal(outOfScopePayload.code, "UNIVERSITY_OUT_OF_SCOPE");
+assert.equal("matches" in outOfScopePayload, false, "out-of-scope request leaked matches");
+
+const missingUniversityResponse = await fetch(`${baseUrl}/api/professors/match`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ topic: { ...cases[0].topic, university: "" } }),
+});
+assert.equal(missingUniversityResponse.status, 400, "missing university must be rejected");
+const missingUniversityPayload = await missingUniversityResponse.json();
+assert.equal(missingUniversityPayload.code, "UNIVERSITY_REQUIRED");
 
 console.log(JSON.stringify({ valid: true, results }, null, 2));

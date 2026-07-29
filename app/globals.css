@@ -2197,6 +2197,8 @@ strong {
 .prof-note--pending > span { color: var(--warning); background: rgba(169, 102, 8, 0.12); }
 .prof-card { display: grid; gap: 11px; margin-bottom: 12px; padding: 16px; border: 1px solid var(--border-default); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-card); }
 .prof-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.prof-card__identity { display: flex; min-width: 0; flex: 1 1 auto; align-items: flex-start; gap: 10px; }
+.prof-card__identity > div:last-child { min-width: 0; }
 .prof-card__top h3 { font-size: 17px; }
 .prof-card__top small { display: block; margin-top: 3px; color: var(--text-secondary); font-size: 12px; line-height: 1.4; }
 .prof-reasons { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
@@ -2463,6 +2465,30 @@ strong {
   border-left: 4px solid var(--brand-mint);
 }
 .context-panel h2 { font-size: 15px; }
+.context-panel > section {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+.context-panel > section h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.context-panel > section > span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+.context-panel > section .choice-chip {
+  min-height: 40px;
+}
 .context-panel label { display: grid; gap: 5px; }
 .context-panel label > span { color: var(--text-secondary); font-size: 12px; font-weight: 700; }
 .context-panel input {
@@ -2471,11 +2497,15 @@ strong {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   background: var(--surface-soft);
-  font-size: 14px;
+  font-size: 16px;
 }
-.context-panel input:focus { border-color: var(--brand-mint); outline: none; }
+.context-panel input:focus-visible {
+  border-color: var(--brand-mint);
+  outline: 3px solid rgba(40, 180, 155, 0.22);
+  outline-offset: 2px;
+}
 .context-panel__error { color: var(--error); font-size: 12px; font-weight: 700; }
-.context-panel__submit { justify-content: center; }
+.context-panel__submit { justify-content: center; margin-top: 2px; }
 .context-panel__reset {
   padding: 8px;
   border-radius: var(--radius-sm);

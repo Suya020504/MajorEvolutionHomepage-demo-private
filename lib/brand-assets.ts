@@ -84,6 +84,20 @@ export const guideCharacter = {
   nextSeed: `${ROOT}/characters/guide01/nyp-char-q-seed-guide01-q-seed-alpha-512-v01.webp`,
 } as const;
 
+/**
+ * 교수 추천 카드의 대체 이미지.
+ *
+ * 실제 교수 사진이 아니며, 공식 사진의 이용 허가가 확인되지 않았거나 사진이
+ * 없는 경우에만 씁니다. 서로 다른 추천 역할을 구분할 수 있도록 세 가지 포즈를
+ * 제공하지만 모두 동일한 가상 브랜드 캐릭터입니다.
+ */
+export const professorCharacter = {
+  topic: `${ROOT}/characters/professor01/nyp-char-find-professor01-lecture-alpha-512-v01.webp`,
+  method: `${ROOT}/characters/professor01/nyp-char-connect-professor01-answer-alpha-512-v01.webp`,
+  perspective: `${ROOT}/characters/professor01/nyp-char-connect-professor01-listen-alpha-512-v01.webp`,
+  profile: `${ROOT}/characters/professor01/nyp-char-connect-professor01-welcome-alpha-512-v01.webp`,
+} as const;
+
 /** 배경 장식. 전부 alpha PNG이며 alt=""와 aria-hidden으로 씁니다. */
 export const brandDecoration = {
   radarRings: `${ROOT}/decorations/nyp-deco-all-radar-rings-alpha-1024-v01.png`,

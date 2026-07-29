@@ -2,19 +2,17 @@
 // USER_FLOW.md §7(조건), §8(추천 규칙), §9(카드 필드), §12.8(교수 공식 정보) 반영.
 // 원칙: 실시간 AI 생성이 아니라 검수된 로컬 데이터 필터링. 0~100 점수·순위 없음.
 
-export const MAJORS = ["수학", "식품자원경제학", "통계학", "컴퓨터공학", "경제학"] as const;
-export type Major = (typeof MAJORS)[number];
+import {
+  LEGACY_MAJORS,
+  UNIVERSAL_INTEREST_TAGS,
+} from "@/data/academic-options";
 
-export const INTEREST_TAGS = [
-  "데이터 분석",
-  "AI·머신러닝",
-  "ESG·지속가능성",
-  "소비자 행동",
-  "식품 소비",
-  "가격·시장",
-  "정책 효과",
-  "텍스트 분석",
-] as const;
+/** 기존 검수 주제와의 호환을 위한 파일럿 전공 목록. 신규 입력은 자유 문자열을 사용한다. */
+export const MAJORS = LEGACY_MAJORS;
+export type Major = string;
+
+/** 기존 import 경로를 유지하면서 보편 관심 태그를 제공한다. */
+export const INTEREST_TAGS = UNIVERSAL_INTEREST_TAGS;
 
 export const EXPERIENCE_LEVELS = ["경험 없음", "관련 수업 수강", "과제·프로젝트 경험"] as const;
 export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];

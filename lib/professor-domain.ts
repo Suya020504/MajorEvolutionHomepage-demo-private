@@ -7,7 +7,8 @@ export type ProfessorDataStatus =
 
 export type ProfessorMatchRole = "TOPIC" | "METHOD" | "CONTEXT";
 export type ProfessorMatchStrength = "DIRECT" | "RELATED" | "LIMITED";
-export const PROFESSOR_MATCH_POLICY = "OFFICIAL_EVIDENCE_RULES_V2" as const;
+export const PROFESSOR_MATCH_POLICY = "OFFICIAL_EVIDENCE_RULES_V3" as const;
+export const SUPPORTED_PROFESSOR_UNIVERSITY = "단국대학교" as const;
 
 export type ProfessorMatchDecisionBasis = {
   matchedConcepts: string[];
@@ -76,6 +77,12 @@ export type ProfessorMatchTopic = {
   interests: string[];
   methods: string[];
   major: string;
+  /** 기존 만들다 → 찾다 호출과 호환하기 위해 선택 필드로 둡니다. API는 별도로 학교를 검증합니다. */
+  university?: string;
+  goal?: string;
+  careerGoal?: string;
+  meetingSituation?: string;
+  additionalContext?: string;
 };
 
 export type ProfessorCoverageGap = {

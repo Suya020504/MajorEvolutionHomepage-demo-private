@@ -71,7 +71,15 @@ const matchingConcepts: Array<{
 }> = [
   {
     label: "AI·텍스트 분석",
-    topicTerms: ["ai", "인공지능", "머신러닝", "분류", "예측", "텍스트 분석"],
+    topicTerms: [
+      "ai",
+      "인공지능",
+      "머신러닝",
+      "딥러닝",
+      "자연어",
+      "텍스트 분석",
+      "분류 모델",
+    ],
     evidenceTerms: [
       "ai",
       "인공지능",
@@ -148,6 +156,24 @@ const matchingConcepts: Array<{
     topicTerms: ["고전", "소설", "설화", "서사", "문학", "시가", "시조", "한시"],
     evidenceTerms: ["고전", "소설", "설화", "서사", "문학", "시가", "시조", "한시"],
     role: "TOPIC",
+  },
+  {
+    label: "프로젝트·실무 연결",
+    topicTerms: ["프로젝트", "학부연구", "연구 참여", "실무 경험", "산학"],
+    evidenceTerms: ["프로젝트", "융합", "응용", "산학", "현장", "실무"],
+    role: "CONTEXT",
+  },
+  {
+    label: "대학원·학술 탐색",
+    topicTerms: ["대학원", "연구실", "학술", "논문 준비"],
+    evidenceTerms: ["대학원", "연구실", "학술", "세미나", "논문"],
+    role: "CONTEXT",
+  },
+  {
+    label: "교수와의 만남 상황",
+    topicTerms: ["수업 후", "오피스아워", "이메일", "연구실 방문", "면담"],
+    evidenceTerms: ["교육", "학생", "상담", "멘토링", "지도", "세미나"],
+    role: "CONTEXT",
   },
 ];
 
@@ -269,6 +295,10 @@ type EvaluatedProfessor = {
   match: ProfessorMatch;
   hasRelevantEvidence: boolean;
   matchedConcepts: Set<string>;
+  researchFieldConcepts: Set<string>;
+  publicationConcepts: Set<string>;
+  researchFieldRoles: Set<ProfessorMatchRole>;
+  publicationRoles: Set<ProfessorMatchRole>;
 };
 
 const rolePreference: ProfessorMatchRole[] = ["TOPIC", "METHOD", "CONTEXT"];
@@ -322,12 +352,6 @@ function compareEvaluatedProfessors(
     || left.match.professor.id.localeCompare(right.match.professor.id);
 }
 
-function complementaryRoles(primaryRole: ProfessorMatchRole): ProfessorMatchRole[] {
-  if (primaryRole === "TOPIC") return ["METHOD", "CONTEXT"];
-  if (primaryRole === "METHOD") return ["TOPIC", "CONTEXT"];
-  return ["TOPIC", "METHOD"];
-}
-
 function evaluateProfessor(
   professor: OfficialProfessor,
   topic: ProfessorMatchTopic,
@@ -338,6 +362,10 @@ function evaluateProfessor(
     topic.methodDetail,
     topic.scope,
     topic.major,
+    topic.goal,
+    topic.careerGoal,
+    topic.meetingSituation,
+    topic.additionalContext,
     ...topic.interests,
     ...topic.methods,
   ].join(" "));
@@ -347,20 +375,27 @@ function evaluateProfessor(
   const directTerms = fieldTerms.filter(
     (term) => !genericTerms.has(term) && containsTerm(topicText, term),
   );
-  const professorEvidence = normalize([
+  const professorFieldEvidence = normalize([
     professor.department,
     ...professor.researchFields,
+  ].join(" "));
+  const professorPublicationEvidence = normalize([
     ...professor.publications.map((publication) => publication.title),
   ].join(" "));
   const conceptMatches = matchingConcepts
     .map((concept) => {
       const topicHits = concept.topicTerms.filter((term) =>
         containsTerm(topicText, term));
-      const evidenceHits = concept.evidenceTerms.filter((term) =>
-        containsTerm(professorEvidence, term));
+      const fieldHits = concept.evidenceTerms.filter((term) =>
+        containsTerm(professorFieldEvidence, term));
+      const publicationHits = concept.evidenceTerms.filter((term) =>
+        containsTerm(professorPublicationEvidence, term));
+      const evidenceHits = unique([...fieldHits, ...publicationHits]);
       return {
         ...concept,
         topicHits,
+        fieldHits,
+        publicationHits,
         evidenceHits,
       };
     })
@@ -368,10 +403,22 @@ function evaluateProfessor(
   const roleMatches = new Set<ProfessorMatchRole>(
     conceptMatches.map((concept) => concept.role),
   );
+  const researchFieldRoles = new Set<ProfessorMatchRole>(
+    conceptMatches
+      .filter((concept) => concept.fieldHits.length > 0)
+      .map((concept) => concept.role),
+  );
+  const publicationRoles = new Set<ProfessorMatchRole>(
+    conceptMatches
+      .filter((concept) => concept.publicationHits.length > 0)
+      .map((concept) => concept.role),
+  );
   const methodDirectTerms = directTerms.filter((term) =>
     topic.methods.some((method) => containsTerm(method, term)));
   if (directTerms.length > 0) {
-    roleMatches.add(methodDirectTerms.length > 0 ? "METHOD" : "TOPIC");
+    const directRole = methodDirectTerms.length > 0 ? "METHOD" : "TOPIC";
+    roleMatches.add(directRole);
+    researchFieldRoles.add(directRole);
   }
   const hasRelevantEvidence = roleMatches.size > 0;
   const publication = hasRelevantEvidence
@@ -430,9 +477,8 @@ function evaluateProfessor(
       officialProfile: professor.status === "FOUND"
         && Boolean(professor.officialProfileUrl)
         && Boolean(professor.sourceUrl),
-      researchFields: professor.researchFieldsStatus === "FOUND"
-        && professor.researchFields.length > 0,
-      matchedPublication: Boolean(publication),
+      researchFields: researchFieldRoles.size > 0,
+      matchedPublication: Boolean(publication) || publicationRoles.size > 0,
     },
   };
 
@@ -455,6 +501,125 @@ function evaluateProfessor(
     },
     hasRelevantEvidence,
     matchedConcepts: new Set(conceptMatches.map((concept) => concept.label)),
+    researchFieldConcepts: new Set(
+      conceptMatches
+        .filter((concept) => concept.fieldHits.length > 0)
+        .map((concept) => concept.label),
+    ),
+    publicationConcepts: new Set(
+      conceptMatches
+        .filter((concept) => concept.publicationHits.length > 0)
+        .map((concept) => concept.label),
+    ),
+    researchFieldRoles,
+    publicationRoles,
+  };
+}
+
+const roleDecisionKey: Record<
+  ProfessorMatchRole,
+  keyof ProfessorMatchDecisionBasis["roleMatches"]
+> = {
+  TOPIC: "topic",
+  METHOD: "method",
+  CONTEXT: "context",
+};
+
+function hasOfficialMatchEvidence(candidate: EvaluatedProfessor): boolean {
+  const sources = candidate.match.decisionBasis.sources;
+  return candidate.hasRelevantEvidence
+    && sources.officialProfile
+    && (sources.researchFields || sources.matchedPublication);
+}
+
+function compareForRole(
+  role: ProfessorMatchRole,
+  left: EvaluatedProfessor,
+  right: EvaluatedProfessor,
+): number {
+  if (role === "CONTEXT") {
+    const leftSharesCore = left.match.decisionBasis.roleMatches.topic
+      || left.match.decisionBasis.roleMatches.method;
+    const rightSharesCore = right.match.decisionBasis.roleMatches.topic
+      || right.match.decisionBasis.roleMatches.method;
+    if (leftSharesCore !== rightSharesCore) return leftSharesCore ? -1 : 1;
+    if (
+      left.match.decisionBasis.departmentMatchesMajor
+      !== right.match.decisionBasis.departmentMatchesMajor
+    ) {
+      return left.match.decisionBasis.departmentMatchesMajor ? -1 : 1;
+    }
+  }
+  const leftHasFieldEvidence = left.researchFieldRoles.has(role);
+  const rightHasFieldEvidence = right.researchFieldRoles.has(role);
+  if (leftHasFieldEvidence !== rightHasFieldEvidence) {
+    return leftHasFieldEvidence ? -1 : 1;
+  }
+  const leftHasPublicationEvidence = left.publicationRoles.has(role);
+  const rightHasPublicationEvidence = right.publicationRoles.has(role);
+  if (leftHasPublicationEvidence !== rightHasPublicationEvidence) {
+    return leftHasPublicationEvidence ? -1 : 1;
+  }
+  for (const concept of conceptsForRole(role)) {
+    const leftFieldMatch = left.researchFieldConcepts.has(concept.label);
+    const rightFieldMatch = right.researchFieldConcepts.has(concept.label);
+    if (leftFieldMatch !== rightFieldMatch) return leftFieldMatch ? -1 : 1;
+    const leftPublicationMatch = left.publicationConcepts.has(concept.label);
+    const rightPublicationMatch = right.publicationConcepts.has(concept.label);
+    if (leftPublicationMatch !== rightPublicationMatch) return leftPublicationMatch ? -1 : 1;
+  }
+  if (
+    left.match.decisionBasis.departmentMatchesMajor
+    !== right.match.decisionBasis.departmentMatchesMajor
+  ) {
+    return left.match.decisionBasis.departmentMatchesMajor ? -1 : 1;
+  }
+  return compareDecisionBasis(left.match.decisionBasis, right.match.decisionBasis)
+    || left.match.professor.id.localeCompare(right.match.professor.id);
+}
+
+function presentAsRole(
+  candidate: EvaluatedProfessor,
+  role: ProfessorMatchRole,
+): ProfessorMatch {
+  if (candidate.match.role === role) return candidate.match;
+
+  const roleHasDirectEvidence =
+    candidate.match.decisionBasis.roleMatches[roleDecisionKey[role]];
+  const roleConcepts = conceptsForRole(role)
+    .filter((concept) => candidate.matchedConcepts.has(concept.label))
+    .map((concept) => concept.label);
+  const roleLabel = role === "TOPIC"
+    ? "연구 내용"
+    : role === "METHOD"
+      ? "연구 방법"
+      : "확장 맥락";
+  const evidenceTerms = (
+    roleConcepts.length > 0 ? roleConcepts : candidate.match.matchedTerms
+  ).slice(0, 3);
+  if (evidenceTerms.length === 0) {
+    evidenceTerms.push(
+      candidate.match.professor.researchFields[0] ?? candidate.match.professor.department,
+    );
+  }
+  if (!roleHasDirectEvidence) {
+    return {
+      ...candidate.match,
+      role,
+      strength: "LIMITED",
+      matchedTerms: evidenceTerms,
+      reason: `공식 프로필의 ‘${evidenceTerms.join(", ")}’ 연구를 ${roleLabel}을 넓혀 볼 참고 근거로 연결했습니다. 다만 입력 조건과 직접 일치하는 ${roleLabel} 근거는 현재 공식 프로필에서 확인되지 않았습니다.`,
+      doesNotEstablish: [
+        ...candidate.match.doesNotEstablish,
+        `입력 조건과 이 교수의 ${roleLabel} 직접 일치`,
+      ],
+    };
+  }
+  return {
+    ...candidate.match,
+    role,
+    matchedTerms: evidenceTerms,
+    reason: `공식 프로필에서 확인한 ‘${evidenceTerms.join(", ")}’ 근거가 입력한 조건의 ${roleLabel}과 연결됩니다.`,
   };
 }
 
@@ -476,31 +641,35 @@ export function matchOfficialProfessors(
     .filter((professor) => !excluded.has(professor.id))
     .map((professor) => evaluateProfessor(professor, topic))
     .sort(compareEvaluatedProfessors);
-  const primary =
-    evaluated.find((candidate) => candidate.hasRelevantEvidence) ??
-    evaluated[0];
-  const alternative =
-    complementaryRoles(primary?.match.role ?? "TOPIC")
-      .map((role) =>
-        evaluated.find(
-          (candidate) =>
-            candidate.match.professor.id !== primary?.match.professor.id &&
-            candidate.match.role === role &&
-            candidate.hasRelevantEvidence,
-        ))
-      .find((candidate): candidate is EvaluatedProfessor => Boolean(candidate)) ??
-    evaluated.find(
-      (candidate) =>
-        candidate.match.professor.id !== primary?.match.professor.id &&
-        candidate.hasRelevantEvidence,
-    ) ??
-    evaluated.find(
-      (candidate) =>
-        candidate.match.professor.id !== primary?.match.professor.id,
+  const officialCandidates = evaluated.filter(hasOfficialMatchEvidence);
+  const usedProfessorIds = new Set<string>();
+  const matchByRole = new Map<ProfessorMatchRole, ProfessorMatch>();
+
+  // 세 역할을 우열 없이 한 명씩 먼저 찾고, 근거가 부족한 역할은 다른 공식 근거 후보로 채웁니다.
+  for (const role of ["TOPIC", "METHOD", "CONTEXT"] as const) {
+    const roleKey = roleDecisionKey[role];
+    const candidate = officialCandidates
+      .filter((item) =>
+        !usedProfessorIds.has(item.match.professor.id)
+        && item.match.decisionBasis.roleMatches[roleKey])
+      .sort((left, right) => compareForRole(role, left, right))[0];
+    if (!candidate) continue;
+    usedProfessorIds.add(candidate.match.professor.id);
+    matchByRole.set(role, presentAsRole(candidate, role));
+  }
+
+  for (const role of ["TOPIC", "METHOD", "CONTEXT"] as const) {
+    if (matchByRole.has(role)) continue;
+    const candidate = officialCandidates.find(
+      (item) => !usedProfessorIds.has(item.match.professor.id),
     );
-  const matches = [primary, alternative]
-    .filter((candidate): candidate is EvaluatedProfessor => Boolean(candidate))
-    .map((candidate) => candidate.match);
+    if (!candidate) continue;
+    usedProfessorIds.add(candidate.match.professor.id);
+    matchByRole.set(role, presentAsRole(candidate, role));
+  }
+  const matches = (["TOPIC", "METHOD", "CONTEXT"] as const)
+    .map((role) => matchByRole.get(role))
+    .filter((match): match is ProfessorMatch => Boolean(match));
 
   return {
     topicId: topic.id,
@@ -510,6 +679,6 @@ export function matchOfficialProfessors(
     officialRecordCount: dataset.official_record_count,
     scopeStatus: dataset.scope_status,
     coverageGaps,
-    note: `${dataset.note} 교수 선택은 주제·방법·맥락의 공식 근거, 출처 완전성, 안정적 교수 ID 순서의 결정적 규칙으로 수행합니다.`,
+    note: `${dataset.note} 단국대학교 공식 교수 ${dataset.official_record_count.toLocaleString("ko-KR")}명 안에서 주제 연결형·방법 연결형·확장 관점형을 먼저 찾고, 공식 근거와 안정적 교수 ID 순서의 결정적 규칙으로 선택합니다.`,
   };
 }
