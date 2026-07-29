@@ -380,8 +380,14 @@ export function getOfficialProfessors(): OfficialProfessor[] {
   return officialProfessors;
 }
 
-export function matchOfficialProfessors(topic: ProfessorMatchTopic): ProfessorMatchResponse {
+export function matchOfficialProfessors(
+  topic: ProfessorMatchTopic,
+  /** 학생이 거절한 교수. 다시 찾을 때 후보에서 제외합니다. */
+  options: { excludeIds?: string[] } = {},
+): ProfessorMatchResponse {
+  const excluded = new Set(options.excludeIds ?? []);
   const ranked = officialProfessors
+    .filter((professor) => !excluded.has(professor.id))
     .map((professor) => evaluateProfessor(professor, topic))
     .sort((left, right) =>
       right.rank - left.rank

@@ -17,20 +17,29 @@ import type {
   ReactNode,
 } from "react";
 import { forwardRef } from "react";
+import { brandLogo } from "@/lib/brand-assets";
 
 export function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
 export function AppLogo({ compact = false }: { compact?: boolean }) {
+  const markSize = compact ? 34 : 42;
   return (
     <span className={cx("app-logo", compact && "app-logo--compact")}>
-      <span className="app-logo__mark" aria-hidden="true">
-        전
-      </span>
+      <Image
+        className="app-logo__mark"
+        src={brandLogo.mark}
+        alt=""
+        aria-hidden="true"
+        width={markSize}
+        height={markSize}
+        priority
+        unoptimized
+      />
       <span>
-        <strong>전공진화소</strong>
-        {!compact && <small>AI 연구·교수 연결</small>}
+        <strong>너의 교수님은?</strong>
+        {!compact && <small>찾다 · 만들다 · 잇다</small>}
       </span>
     </span>
   );

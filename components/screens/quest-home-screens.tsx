@@ -283,7 +283,7 @@ const exploreItems = [
   { href: "/mentoring", icon: Sparkles, title: "교수 연결 여정", description: "찾기·준비하기·피드백 반영 3단계 보기", tone: "violet" },
   { href: "/research", icon: Lightbulb, title: "연구 주제 공동설계", description: "질문을 통해 전략이 다른 후보 2개 비교", tone: "mint" },
   { href: "/paper", icon: FileText, title: "논문 이해", description: "초록과 본문을 질문·방법·결과·한계로 나눠 읽기", tone: "violet" },
-  { href: "/professors", icon: GraduationCap, title: "교수 레이더", description: "선택한 주제와 공식 연구 정보의 연결 근거 보기", tone: "blue" },
+  { href: "/professors", icon: GraduationCap, title: "나의 교수님 — 찾다", description: "선택한 주제와 공식 연구 정보의 연결 근거 보기", tone: "blue" },
 ];
 
 export function ExploreScreen() {
@@ -377,7 +377,7 @@ export function ProfileScreen() {
       <SectionHeading title="데이터와 설정" />
       <StatusBanner icon={ShieldCheck} title="API 키는 서버에서만 사용해요" tone="success">분석할 때 입력 정보가 OpenAI API로 전송되며, 결과와 진행 상태는 이 브라우저에 저장돼요.</StatusBanner>
       <button type="button" className="reset-button" onClick={() => setResetOpen(true)}><RotateCcw size={18} /><span><strong>데모 초기화</strong><small>입력, 저장, 진행 상태를 처음으로 되돌려요.</small></span><ChevronRight size={18} /></button>
-      <p className="app-version">전공진화소 Prototype v1.0</p>
+      <p className="app-version">너의 교수님은? Prototype v1.0</p>
 
       <BottomSheet
         open={resetOpen}

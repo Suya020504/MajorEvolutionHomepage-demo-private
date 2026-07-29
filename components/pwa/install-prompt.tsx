@@ -109,7 +109,7 @@ export function InstallPrompt() {
       case "android-install":
         return {
           title: "홈 화면에 앱으로 설치",
-          desc: "한 번 누르면 전공진화소를 앱처럼 바로 열 수 있어요.",
+          desc: "한 번 누르면 너의 교수님은?을 앱처럼 바로 열 수 있어요.",
           cta: { label: "설치하기", icon: <Download size={18} />, onClick: install },
         };
       case "android-menu":

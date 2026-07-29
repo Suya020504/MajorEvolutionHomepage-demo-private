@@ -1,5 +1,5 @@
-import { ProfessorJourneyScreen } from "@/components/screens/professor-journey-screen";
+import { UnifiedHomeScreen } from "@/components/screens/unified-home-screen";
 
 export default function Page() {
-  return <ProfessorJourneyScreen />;
+  return <UnifiedHomeScreen />;
 }

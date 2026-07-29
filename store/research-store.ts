@@ -65,6 +65,7 @@ type ResearchState = {
   > | null;
   professorMatchStatus: "idle" | "loading" | "success" | "error";
   professorMatchError: string | null;
+  professorMatchTopicId: string | null;
   selectedProfessorId: string | null;
   knockKitDrafts: Record<string, ProfessorKnockKitDraft>;
   mentorLoopEntries: Record<string, ProfessorMentorLoopEntry>;
@@ -93,7 +94,8 @@ type ResearchState = {
   ) => void;
   reRecommend: () => void;
   selectTopic: (id: string) => void;
-  setProfessorMatchLoading: () => void;
+  /** 진행 중인 연결 요청의 주제 ID. 저장된 주제 ID이거나 `context:`로 시작하는 임시 ID입니다. */
+  setProfessorMatchLoading: (topicId: string) => void;
   setProfessorMatches: (response: ProfessorMatchResponse) => void;
   setProfessorMatchError: (message: string) => void;
   selectProfessor: (id: string) => void;
@@ -117,6 +119,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   professorCoverage: null,
   professorMatchStatus: "idle",
   professorMatchError: null,
+  professorMatchTopicId: null,
   selectedProfessorId: null,
   knockKitDrafts: {},
   mentorLoopEntries: {},
@@ -268,10 +271,11 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     professorMatchError: null,
     selectedProfessorId: null,
   }),
-  setProfessorMatchLoading: () =>
-    set({ professorMatchStatus: "loading", professorMatchError: null }),
+  setProfessorMatchLoading: (professorMatchTopicId) =>
+    set({ professorMatchStatus: "loading", professorMatchError: null, professorMatchTopicId }),
+  // 늦게 도착한 이전 요청의 응답이 현재 결과를 덮지 않도록, 진행 중인 요청의 주제와만 대조합니다.
   setProfessorMatches: (response) =>
-    set((state) => response.topicId !== state.selectedTopicId ? state : ({
+    set((state) => response.topicId !== state.professorMatchTopicId ? state : ({
       professorMatches: response.matches,
       professorCoverage: {
         officialRecordCount: response.officialRecordCount,

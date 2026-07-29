@@ -2,13 +2,13 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "전공진화소",
-    short_name: "전공진화소",
-    description: "전공을 연구 아이디어와 교수님, 첫 실행으로 연결하는 대학생 연구 여정 앱",
+    name: "너의 교수님은?",
+    short_name: "너의 교수님은?",
+    description: "전공과 진로의 갈림길에서, 교수님을 찾고 만들고 잇는 대학생 연구 여정 앱",
     start_url: "/",
     display: "standalone",
-    background_color: "#F7F9FF",
-    theme_color: "#7658F5",
+    background_color: "#F5F7FC",
+    theme_color: "#7557F6",
     lang: "ko-KR",
     orientation: "portrait",
     icons: [

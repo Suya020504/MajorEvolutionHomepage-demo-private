@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { StoreHydrator } from "@/components/app/store-hydrator";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
+import { brandScene } from "@/lib/brand-assets";
 import "./globals.css";
 
 const pretendard = localFont({
@@ -12,33 +13,34 @@ const pretendard = localFont({
   preload: true,
 });
 
-const title = "전공진화소 - AI 연구·교수 연결";
+const title = "너의 교수님은? - 교수님을 찾고 만들고 잇다";
 const description =
-  "전공과 관심사를 연구 아이디어로 확장하고, 공개 근거를 바탕으로 교수님과 첫 실행 계획까지 연결하는 대학생 연구 여정 앱";
+  "전공과 진로의 갈림길에서, 공식 근거로 교수님을 찾고 전공을 확장한 아이디어를 만들고 첫 대화부터 다음 만남까지 이어주는 대학생 연구 여정 앱";
+const ogImage = brandScene.home.og ?? brandScene.home.w1440;
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title,
   description,
-  applicationName: "전공진화소",
+  applicationName: "너의 교수님은?",
   appleWebApp: {
     capable: true,
-    title: "전공진화소",
+    title: "너의 교수님은?",
     statusBarStyle: "default",
   },
-  keywords: ["전공 탐색", "연구 아이디어", "교수 연결", "대학생 프로젝트", "AI 연구"],
+  keywords: ["교수 찾기", "전공 탐색", "연구 아이디어", "면담 준비", "대학생 프로젝트"],
   openGraph: {
     title,
     description,
     locale: "ko_KR",
     type: "website",
-    images: ["/major-evolution-assets/02_EXACT_CROPS/02_splash_hero_composite.png"],
+    images: [ogImage],
   },
   twitter: {
     card: "summary_large_image",
     title,
     description,
-    images: ["/major-evolution-assets/02_EXACT_CROPS/02_splash_hero_composite.png"],
+    images: [ogImage],
   },
 };
 
@@ -46,7 +48,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#F7F9FF",
+  themeColor: "#F5F7FC",
   colorScheme: "light",
 };
 

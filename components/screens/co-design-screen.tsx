@@ -138,7 +138,7 @@ export function CoDesignScreen() {
 
   return (
     <AppShell
-      title="전공진화소"
+      title="전공 진화 실험실 — 만들다"
       onBack={() => router.push("/research")}
       step={{ current: step + 1, total: questions.length }}
       className="research-screen co-design-screen"

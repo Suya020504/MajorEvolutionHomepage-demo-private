@@ -429,7 +429,7 @@ export function ResearchResultScreen() {
   };
 
   const loadProfessorMatches = async (topic: TopicWithChecks["topic"]) => {
-    setProfessorMatchLoading();
+    setProfessorMatchLoading(topic.id);
     try {
       const response = await requestProfessorMatches(topic, conditions.major ?? "");
       setProfessorMatches(response);

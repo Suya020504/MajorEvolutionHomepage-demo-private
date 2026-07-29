@@ -44,15 +44,17 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: "요청 형식을 확인해 주세요." }, { status: 400 });
   }
-  const rawTopic = body && typeof body === "object" && !Array.isArray(body)
-    ? (body as Record<string, unknown>).topic
+  const raw = body && typeof body === "object" && !Array.isArray(body)
+    ? (body as Record<string, unknown>)
     : null;
-  const topic = normalizeTopic(rawTopic);
+  const topic = normalizeTopic(raw?.topic);
   if (!topic) {
     return NextResponse.json({ error: "선택한 연구주제 정보가 부족합니다." }, { status: 400 });
   }
+  // 학생이 거절한 교수는 다시 찾을 때 후보에서 뺍니다.
+  const excludeIds = stringArray(raw?.excludeIds, 20, 64);
 
-  return NextResponse.json(matchOfficialProfessors(topic), {
+  return NextResponse.json(matchOfficialProfessors(topic, { excludeIds }), {
     headers: { "Cache-Control": "no-store" },
   });
 }

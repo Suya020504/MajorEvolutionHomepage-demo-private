@@ -90,7 +90,7 @@ ${professor.name} ${professor.title}님께,
 }
 
 function toMarkdown(entry: ProfessorMentorLoopEntry, match: ProfessorMatch, topic: ResearchTopic) {
-  return `# Mentor Loop - ${topic.title}
+  return `# 다음 만남 씨앗 - ${topic.title}
 
 - 교수: ${match.professor.name} ${match.professor.title}
 - 소속: ${match.professor.university} ${match.professor.department}
@@ -225,19 +225,19 @@ function MentorLoopEditor({
     anchor.download = `mentor-loop-${topic.id}.md`;
     anchor.click();
     URL.revokeObjectURL(url);
-    setStatus("Mentor Loop 기록을 Markdown 파일로 내려받았습니다.");
+    setStatus("다음 만남 씨앗 기록을 Markdown 파일로 내려받았습니다.");
   };
 
   const removeCurrentEntry = () => {
-    if (!window.confirm("이 교수와 주제의 Mentor Loop 기록을 이 브라우저에서 삭제할까요?")) return;
+    if (!window.confirm("이 교수와 주제의 다음 만남 씨앗 기록을 이 브라우저에서 삭제할까요?")) return;
     deleteEntry(key);
     setEntry(createEntry(topic, match));
     setError("");
-    setStatus("저장된 Mentor Loop 기록을 삭제했습니다.");
+    setStatus("저장된 다음 만남 씨앗 기록을 삭제했습니다.");
   };
 
   return (
-    <AppShell title="Mentor Loop" backHref="/quest" className="mentor-loop-screen">
+    <AppShell title="다음 만남 씨앗" backHref="/quest" className="mentor-loop-screen">
       <PageHeader
         title="조언을 받은 뒤, 행동으로 답하세요"
         description={`${match.professor.name} ${match.professor.title}님과의 면담 피드백을 연구 수정과 다음 약속으로 연결합니다.`}
@@ -344,7 +344,7 @@ export function MentorLoopScreen() {
     return (
       <div className="research-loading">
         <LoaderCircle className="spin" />
-        <p>저장된 Mentor Loop를 불러오고 있어요.</p>
+        <p>저장된 다음 만남 씨앗를 불러오고 있어요.</p>
       </div>
     );
   }
@@ -353,8 +353,8 @@ export function MentorLoopScreen() {
   const match = matches.find((item) => item.professor.id === selectedProfessorId);
   if (!topic || !match) {
     return (
-      <AppShell title="Mentor Loop" backHref="/mentoring" className="mentor-loop-screen">
-        <PageHeader title="먼저 교수와 연구주제를 연결해 주세요" description="교수 레이더와 Knock Kit를 거치면 면담 피드백을 같은 맥락에서 기록할 수 있습니다." />
+      <AppShell title="다음 만남 씨앗" backHref="/mentoring" className="mentor-loop-screen">
+        <PageHeader title="먼저 교수와 연구주제를 연결해 주세요" description="나의 교수님과 교수님 퀘스트를 거치면 면담 피드백을 같은 맥락에서 기록할 수 있습니다." />
         <PrimaryButton onClick={() => router.push("/mentoring")}>
           교수 연결 3단계로 이동 <ArrowRight size={17} />
         </PrimaryButton>

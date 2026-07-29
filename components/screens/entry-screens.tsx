@@ -397,7 +397,7 @@ export function AnalyzingScreen() {
       <div className="analyzing-layout">
         <div className="analysis-mascot">
           <span className="analysis-pulse" />
-          <Image src="/mvp-assets/robot-pose-2.png" alt="분석 중인 전공진화소 로봇" width={88} height={88} priority />
+          <Image src="/mvp-assets/robot-pose-2.png" alt="분석 중인 너의 교수님은? AI 도우미" width={88} height={88} priority />
         </div>
         <div className="analyzing-title">
           <Tag tone="violet">AI 분석 중</Tag>

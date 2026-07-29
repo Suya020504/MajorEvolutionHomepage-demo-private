@@ -47,12 +47,12 @@ const serviceSteps = [
   {
     number: "03",
     title: "면담 준비하기",
-    description: "읽은 근거를 교수님께 물어볼 질문과 Knock Kit로 옮깁니다.",
+    description: "읽은 근거를 교수님께 물어볼 질문과 교수님 퀘스트로 옮깁니다.",
   },
   {
     number: "04",
     title: "성장 기록하기",
-    description: "면담 피드백과 다음 행동을 Mentor Loop에 남깁니다.",
+    description: "면담 피드백과 다음 행동을 다음 만남 씨앗에 남깁니다.",
   },
 ] as const;
 
@@ -62,7 +62,7 @@ export function PaperReaderShell() {
       <PageHeader
         eyebrow="통합 준비 화면"
         title="교수님의 논문을 내 언어로 읽어요"
-        description="팀원이 완성할 논문 리더가 전공진화소 안에서 바로 이어지도록 화면과 데이터 경계를 먼저 준비했습니다."
+        description="팀원이 완성할 논문 리더가 너의 교수님은? 안에서 바로 이어지도록 화면과 데이터 경계를 먼저 준비했습니다."
       />
 
       <StatusBanner icon={Sparkles} title="현재는 통합 셸 단계" tone="lavender">

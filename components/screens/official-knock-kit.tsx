@@ -102,8 +102,8 @@ export function OfficialKnockKitScreen({
 
   return (
     <AppShell
-      title="교수 Knock Kit"
-      backHref={`/professors/${professor.id}`}
+      title="메일 흑역사 방지기"
+      backHref="/quest"
       stickyAction={(
         <PrimaryButton onClick={() => router.push("/mentor-loop")}>
           면담 후 피드백 기록 <ArrowRight size={17} />
