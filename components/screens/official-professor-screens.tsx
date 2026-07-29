@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   BookOpenCheck,
+  CalendarClock,
   CircleAlert,
   ExternalLink,
   GraduationCap,
@@ -19,14 +20,15 @@ import {
 import {
   AppShell,
   Card,
-  PageHeader,
   PrimaryButton,
   SectionHeading,
   StatusBanner,
   Tag,
 } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
 import { ProfessorDiscoveryForm } from "@/components/screens/professor-discovery-form";
 import type { ResearchTopic } from "@/data/research-mvp";
+import { brandScene } from "@/lib/brand-assets";
 import {
   findAcademicSelection,
   type ProfessorAcademicTaxonomy,
@@ -418,10 +420,14 @@ export function OfficialProfessorsScreen({
     : [];
 
   return (
-    <AppShell title="나의 교수님 — 찾다" backHref="/" className="find-professor-screen">
-      <PageHeader
+    <AppShell title="나의 교수님 — 찾다" backHref="/mentoring" className="find-professor-screen">
+      <SceneBanner
+        scene={brandScene.find}
+        alt="공식 자료로 관심 분야에 맞는 교수님을 찾는 장면"
+        eyebrow="CORE 01"
         title="나의 교수님 — 찾다"
         description="전공·관심 분야와 취업·진로 고민을 나눠 입력하면, 공식 근거와 함께 서로 다른 세 관점의 교수님을 찾아드려요."
+        priority
       />
 
       <StatusBanner icon={ShieldCheck} title="현재 연결 범위: 단국대학교 공식 교수 1,051명" tone="info">
@@ -572,6 +578,16 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
           이 주소로 직접 들어왔기 때문에 선택 주제와의 연결 이유는 표시하지 않습니다. 연구 결과 화면에서 다시 연결해 주세요.
         </StatusBanner>
       )}
+
+      <SectionHeading title="공식 강의정보" description="대학이 공개한 강의·시간표를 확인합니다." />
+      <Link className="official-courses-link" href={`/professors/${professor.id}/courses`}>
+        <CalendarClock size={18} aria-hidden="true" />
+        <div>
+          <strong>공식 강의정보 보기</strong>
+          <p>학기별 강의명·시간·강의실과 공식 시간표 링크</p>
+        </div>
+        <ArrowRight size={16} aria-hidden="true" />
+      </Link>
 
       <SectionHeading title="공식 프로필의 연구분야" />
       <Card className="official-field-list">

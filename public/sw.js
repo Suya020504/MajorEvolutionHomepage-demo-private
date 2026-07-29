@@ -52,9 +52,14 @@ self.addEventListener("fetch", (event) => {
     caches.match(request).then((cached) => {
       if (cached) return cached;
       return fetch(request).then((response) => {
+        // 내용이 바뀌지 않는 응답만 저장한다.
+        // 프로덕션 빌드의 _next/static은 immutable이라 안전하지만,
+        // 개발 서버는 같은 주소로 내용이 바뀌므로 캐시하면 옛 번들을 물고 있게 된다.
+        const immutable = (response.headers.get("cache-control") || "").includes("immutable");
         const cacheable =
           response.ok &&
-          (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/"));
+          ((url.pathname.startsWith("/_next/static/") && immutable) ||
+            url.pathname.startsWith("/brand/"));
         if (cacheable) {
           const copy = response.clone();
           caches.open(CACHE).then((cache) => cache.put(request, copy)).catch(() => {});

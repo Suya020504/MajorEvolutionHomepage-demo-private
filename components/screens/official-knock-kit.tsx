@@ -23,7 +23,9 @@ import {
   StatusBanner,
   Tag,
 } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
 import type { ResearchTopic } from "@/data/research-mvp";
+import { brandScene } from "@/lib/brand-assets";
 import type {
   ProfessorKnockKitDraft,
   ProfessorMatch,
@@ -110,10 +112,13 @@ export function OfficialKnockKitScreen({
         </PrimaryButton>
       )}
     >
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.emailGuard}
+        alt="보내기 전 메일 초안을 다시 읽어 보는 장면"
         eyebrow={`${professor.name} ${professor.title} · ${professor.university}`}
         title="준비된 상태로 면담을 요청하세요"
         description="공식 프로필 근거와 선택한 연구주제를 바탕으로 소개·질문·안건·이메일을 한곳에서 준비합니다."
+        priority
       />
       <StatusBanner icon={ShieldCheck} title="자동 발송하지 않습니다" tone="lavender">
         이메일과 질문은 초안입니다. 사용자가 검토한 뒤 복사하거나 대학 공식 페이지를 직접 엽니다.

@@ -25,6 +25,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AppShell,
   Card,
+  LinkButton,
   PageHeader,
   PrimaryButton,
   SecondaryButton,
@@ -33,8 +34,10 @@ import {
   Tag,
   TextButton,
 } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
 import { FavoriteProfessorPaperPicker } from "@/components/paper-reader/favorite-professor-paper-picker";
 import { requestPaperAnalysis } from "@/lib/ai-client";
+import { brandScene } from "@/lib/brand-assets";
 import type { PaperAnalysisResult } from "@/lib/paper-analysis";
 import type { ProfessorPaperSelection } from "@/lib/professor-domain";
 import { requestFavoriteProfessorPaperCatalog } from "@/lib/professor-paper-client";
@@ -596,10 +599,13 @@ export function PaperReaderShell({
 
   return (
     <AppShell title="Q01 논문 한입" backHref="/quest" className="paper-bite-screen">
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.paperBite}
+        alt="교수님의 논문을 읽고 질문을 정리하는 장면"
         eyebrow="교수님 퀘스트 · 만나기 전"
         title="논문을 읽고 온 학생의 3분 준비 카드"
-        description="교수님의 논문 초록이나 본문을 붙여 넣으면 문제·방법·결과·한계·질문 카드로 나눠 드려요."
+        description="즐겨찾은 교수님의 공식 논문을 고르고, 초록이나 본문을 문제·방법·결과·한계·질문 카드로 정리해요."
+        priority
       />
 
       <StatusBanner icon={Sparkles} title="원문을 대신하지 않는 읽기 보조 도구" tone="lavender">
@@ -753,10 +759,10 @@ function FollowUpModules() {
   return (
     <section className="paper-bite-follow-up" aria-labelledby="paper-follow-up-title">
       <SectionHeading
-        title="PDF 통합 리더는 다음 단계"
-        description="지금 동작하는 텍스트 요약과 아직 연결되지 않은 기능을 구분했어요."
+        title="PDF 6탭 리더로 더 깊게 읽기"
+        description="3분 준비 카드와 별도로, PDF 원문·번역·요약·질문·그림·메모 기능도 같은 서비스에서 사용할 수 있어요."
       />
-      <h2 className="sr-only" id="paper-follow-up-title">후속 논문 리더 모듈</h2>
+      <h2 className="sr-only" id="paper-follow-up-title">PDF 논문 리더 기능</h2>
       <div className="paper-reader-capabilities">
         {FOLLOW_UP_CAPABILITIES.map((capability) => {
           const Icon = capabilityIcons[capability.id] ?? BookOpen;
@@ -767,15 +773,20 @@ function FollowUpModules() {
                 <h3>{capability.label}</h3>
                 <p>{capability.description}</p>
               </div>
-              <small>후속 모듈</small>
+              <small>PDF 리더 제공</small>
             </article>
           );
         })}
       </div>
+      <div className="paper-reader-actions">
+        <LinkButton href="/paper/reader">
+          <BookOpen size={17} aria-hidden="true" /> PDF 6탭 리더 열기
+        </LinkButton>
+      </div>
       <div className="paper-reader-safety">
         <PencilLine size={18} aria-hidden="true" />
         <p>
-          PDF 업로드·전체 번역·근거 기반 자유 질의응답·그림 해설은 현재 MVP에서 동작하지 않습니다.
+          PDF 파일은 브라우저에서 열고, AI 요청에는 현재 확인 중인 페이지 텍스트만 전송합니다.
         </p>
       </div>
     </section>

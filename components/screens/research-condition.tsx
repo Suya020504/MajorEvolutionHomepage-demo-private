@@ -11,6 +11,7 @@ import {
   UNIVERSITY_SUGGESTIONS,
   UNIVERSAL_INTEREST_TAGS,
 } from "@/data/academic-options";
+import { guideCharacter } from "@/lib/brand-assets";
 import { IDEA_MODES, type IdeaMode } from "@/data/co-design";
 import {
   AVOID_TAGS,
@@ -103,7 +104,7 @@ export function ConditionSelectScreen() {
     >
       <div className="research-brand">
         <AppLogo />
-        <Image src="/mvp-assets/robot-flag.png" alt="" width={64} height={62} priority />
+        <Image src={guideCharacter.questFlag} alt="" width={64} height={62} priority unoptimized />
       </div>
 
       <PageHeader

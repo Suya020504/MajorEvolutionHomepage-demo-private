@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Ban, HandHeart, LoaderCircle, Trash2 } from "lucide-react";
+import { ArrowRight, Ban, HandHeart, LoaderCircle, Sparkles, Trash2 } from "lucide-react";
 import {
   AppShell,
   Card,
@@ -12,7 +12,8 @@ import {
   SectionHeading,
   Tag,
 } from "@/components/app/primitives";
-import { questIcon } from "@/lib/brand-assets";
+import { SceneBanner } from "@/components/app/scene-banner";
+import { brandScene, questIcon } from "@/lib/brand-assets";
 import { cardsForTool, useQuestStore, type QuestToolId } from "@/store/quest-store";
 import { useResearchStore } from "@/store/research-store";
 
@@ -134,10 +135,13 @@ export function QuestHubScreen() {
   return (
     <AppShell title="교수님 퀘스트 — 잇다" backHref="/" className="quest-hub-screen">
       {/* 브랜드 위계: 퀘스트 내부에서는 CTA를 서비스·기능명보다 먼저 보여줍니다. */}
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.connect}
+        alt="연구실 문 앞에서 교수님께 첫 대화를 준비하는 장면"
         eyebrow="교수님, 말 걸어도 돼요?"
         title="교수님 퀘스트 — 잇다"
         description="만나기 전·대화 중·만난 후의 작은 도구를 한 허브에서 제공합니다."
+        priority
       />
 
       <div className="filter-scroll quest-hub-filter">
@@ -189,6 +193,15 @@ export function QuestHubScreen() {
           );
         })}
       </div>
+
+      <button type="button" className="official-courses-link quest-hub-mini" onClick={() => router.push("/quest/mini-tools")}>
+        <Sparkles size={18} aria-hidden="true" />
+        <div>
+          <strong>교수님과 친해지기 미니도구</strong>
+          <p>논문 한 줄 리액션 · 용어 번역 카드 · 키워드 빙고 · 첫 질문 셔플</p>
+        </div>
+        <ArrowRight size={16} aria-hidden="true" />
+      </button>
 
       <Card className="quest-hub-note">
         <HandHeart size={18} aria-hidden="true" />

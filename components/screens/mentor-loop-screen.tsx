@@ -26,6 +26,8 @@ import type {
   ProfessorMatch,
   ProfessorMentorLoopEntry,
 } from "@/lib/professor-domain";
+import { SceneBanner } from "@/components/app/scene-banner";
+import { brandScene } from "@/lib/brand-assets";
 import { useResearchStore } from "@/store/research-store";
 
 function getSelectedTopic(): ResearchTopic | null {
@@ -238,9 +240,13 @@ function MentorLoopEditor({
 
   return (
     <AppShell title="다음 만남 씨앗" backHref="/quest" className="mentor-loop-screen">
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.nextSeed}
+        alt="면담에서 받은 조언을 다음 행동으로 옮기는 장면"
+        eyebrow="교수님, 말 걸어도 돼요?"
         title="조언을 받은 뒤, 행동으로 답하세요"
         description={`${match.professor.name} ${match.professor.title}님과의 면담 피드백을 연구 수정과 다음 약속으로 연결합니다.`}
+        priority
       />
       <StatusBanner icon={ShieldCheck} title="면담 메모는 이 브라우저에만 저장" tone="lavender">
         미공개 연구 아이디어나 개인정보는 필요한 만큼만 적으세요. 자동 전송하지 않으며, 직접 내보내거나 삭제할 수 있습니다.

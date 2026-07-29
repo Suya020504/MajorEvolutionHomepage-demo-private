@@ -4,8 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, LoaderCircle, NotebookPen, Route } from "lucide-react";
-import { AppShell, Card, PageHeader, PrimaryButton, Tag } from "@/components/app/primitives";
-import { coreIcon } from "@/lib/brand-assets";
+import type { CSSProperties } from "react";
+import { AppShell, Card, PrimaryButton, Tag } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
+import { brandDecoration, brandScene, coreIcon } from "@/lib/brand-assets";
 import { useResearchStore } from "@/store/research-store";
 
 /**
@@ -26,6 +28,8 @@ const CORE_CARDS: Array<{
   description: string;
   href: string;
   icon: string;
+  /** 카드 뒤에 옅게 깔리는 장식. 의미 전달용이 아니라 분위기용입니다. */
+  decoration: string;
 }> = [
   {
     key: "find",
@@ -35,6 +39,7 @@ const CORE_CARDS: Array<{
     description: "진로·관심 분야를 잘 아는 교수님을 공식 근거와 함께 발견한다.",
     href: "/professors",
     icon: coreIcon.find,
+    decoration: brandDecoration.radarRings,
   },
   {
     key: "make",
@@ -44,6 +49,7 @@ const CORE_CARDS: Array<{
     description: "내 전공 / 전공+AI / 전공+타 전공으로 실행 가능한 프로젝트를 만든다.",
     href: "/research",
     icon: coreIcon.make,
+    decoration: brandDecoration.seedGrowth,
   },
   {
     key: "connect",
@@ -53,6 +59,7 @@ const CORE_CARDS: Array<{
     description: "교수님을 찾아가기 전부터 만난 후까지 대화와 다음 행동을 이어준다.",
     href: "/quest",
     icon: coreIcon.connect,
+    decoration: brandDecoration.questConfetti,
   },
 ];
 
@@ -96,9 +103,12 @@ export function UnifiedHomeScreen() {
 
   return (
     <AppShell title="너의 교수님은?" className="unified-home-screen">
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.home}
+        alt="교수 탐색, 전공 아이디어, 교수 만남으로 이어지는 서비스 여정"
         title="오늘은 어디서 시작할까요?"
         description="전공과 진로의 갈림길에서, 교수님을 찾고 만들고 잇다."
+        priority
       />
 
       <div className="core-card-grid">
@@ -108,6 +118,7 @@ export function UnifiedHomeScreen() {
             href={card.href}
             className={`core-card core-card--${card.key}`}
             aria-label={`${card.name} ${card.verb} — ${card.description}`}
+            style={{ "--core-deco": `url(${card.decoration})` } as CSSProperties}
           >
             <div className="core-card__head">
               <span className="core-card__index">{card.index}</span>

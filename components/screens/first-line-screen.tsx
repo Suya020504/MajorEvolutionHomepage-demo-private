@@ -13,6 +13,8 @@ import {
   StatusBanner,
   Tag,
 } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
+import { brandScene } from "@/lib/brand-assets";
 import {
   buildFirstLines,
   PURPOSES,
@@ -91,10 +93,13 @@ export function FirstLineScreen() {
 
   return (
     <AppShell title="첫마디 랜덤박스" backHref="/quest" className="first-line-screen">
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.firstLine}
+        alt="수업이 끝난 뒤 교수님께 첫마디를 건네는 장면"
         eyebrow="교수님, 말 걸어도 돼요?"
         title="첫마디 랜덤박스"
         description="상황과 목적을 고르면 목적은 같고 표현이 다른 첫 문장 3개를 만듭니다."
+        priority
       />
 
       <StatusBanner icon={CircleAlert} title="추정하지 않는 것" tone="lavender">
