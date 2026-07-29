@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img">
+<title>너의 교수님은?</title>
+<desc>교수 연결을 상징하는 레이더와 사람, 반짝임 마크</desc>
+<circle cx="31" cy="32" r="20" fill="#FFFFFF" stroke="#0B173F" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 18.876 25 A 14 14 0 1 1 19.532 40.03" fill="none" stroke="#0B173F" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="31" cy="27" r="5" fill="#0B173F"/>
+<path d="M 21.341 39.929 A 10 8 0 0 1 40.659 39.929" fill="none" stroke="#0B173F" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="44,42 52,50" fill="none" stroke="#0B173F" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="49,11.2 50.6,14.4 53.8,16 50.6,17.6 49,20.8 47.4,17.6 44.2,16 47.4,14.4" fill="#0B173F"/>
+</svg>

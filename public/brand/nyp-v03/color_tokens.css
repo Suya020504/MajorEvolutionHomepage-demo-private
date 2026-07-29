@@ -1,0 +1,34 @@
+:root {
+  --nyp-font-ui: 'Pretendard Variable', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --nyp-color-navy: #0B173F;
+  --nyp-color-text: #18213D;
+  --nyp-color-muted: #65708A;
+  --nyp-color-white: #FFFFFF;
+  --nyp-color-background: #F5F7FC;
+  --nyp-color-border: #D9E0EF;
+  --nyp-color-violet: #7557F6;
+  --nyp-color-violet-dark: #5E43D9;
+  --nyp-color-violet-soft: #EEE9FF;
+  --nyp-color-mint: #31C9AE;
+  --nyp-color-mint-dark: #168B78;
+  --nyp-color-mint-soft: #E6F9F5;
+  --nyp-color-blue: #3E70E8;
+  --nyp-color-blue-soft: #EAF0FF;
+  --nyp-color-amber: #B27500;
+  --nyp-color-amber-soft: #FFF4D9;
+  --nyp-color-red: #B44747;
+  --nyp-color-red-soft: #FFECEC;
+  --nyp-color-green: #218A68;
+  --nyp-color-green-soft: #E6F7F0;
+  --nyp-radius-sm: 8px;
+  --nyp-radius-md: 16px;
+  --nyp-radius-lg: 24px;
+  --nyp-radius-pill: 999px;
+}
+
+.nyp-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+}

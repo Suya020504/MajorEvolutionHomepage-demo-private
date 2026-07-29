@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img">
+<title>너의 교수님은? 나의 교수님</title>
+<desc>진로와 관심 분야에 맞는 교수님 찾기</desc>
+<circle cx="32" cy="32" r="29" fill="#E6F9F5" opacity="0.94"/>
+<circle cx="32" cy="32" r="28.5" fill="none" stroke="#FFFFFF" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+<circle cx="27" cy="27" r="11" fill="none" stroke="#168B78" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="35,35 45,45" fill="none" stroke="#168B78" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="27" cy="25.04" r="3.24" fill="#0B173F"/>
+<path d="M 21.436 31.656 A 5.76 5.04 0 0 1 32.564 31.656" fill="none" stroke="#0B173F" stroke-width="2.304" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="45,13.8 46.4,16.6 49.2,18 46.4,19.4 45,22.2 43.6,19.4 40.8,18 43.6,16.6" fill="#31C9AE"/>
+</svg>

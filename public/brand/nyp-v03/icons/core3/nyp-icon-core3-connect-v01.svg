@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img">
+<title>너의 교수님은? 교수님 퀘스트</title>
+<desc>준비부터 후속 행동까지 관계를 이어가기</desc>
+<circle cx="32" cy="32" r="29" fill="#EAF0FF" opacity="0.94"/>
+<circle cx="32" cy="32" r="28.5" fill="none" stroke="#FFFFFF" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+<circle cx="22" cy="22.94" r="4.14" fill="#3E70E8"/>
+<path d="M 14.891 31.393 A 7.36 6.44 0 0 1 29.109 31.393" fill="none" stroke="#3E70E8" stroke-width="2.944" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="42" cy="22.94" r="4.14" fill="#31C9AE"/>
+<path d="M 34.891 31.393 A 7.36 6.44 0 0 1 49.109 31.393" fill="none" stroke="#31C9AE" stroke-width="2.944" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="25,43 30,48 39,39" fill="none" stroke="#0B173F" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="32" cy="44" r="13" fill="none" stroke="#0B173F" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+</svg>

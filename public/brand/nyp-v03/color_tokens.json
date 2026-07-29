@@ -1,0 +1,129 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "brand": "너의 교수님은?",
+  "version": "v01",
+  "source": "V2 palette retained for V3",
+  "color": {
+    "navy": {
+      "$type": "color",
+      "$value": "#0B173F"
+    },
+    "text": {
+      "$type": "color",
+      "$value": "#18213D"
+    },
+    "muted": {
+      "$type": "color",
+      "$value": "#65708A"
+    },
+    "white": {
+      "$type": "color",
+      "$value": "#FFFFFF"
+    },
+    "background": {
+      "$type": "color",
+      "$value": "#F5F7FC"
+    },
+    "border": {
+      "$type": "color",
+      "$value": "#D9E0EF"
+    },
+    "violet": {
+      "$type": "color",
+      "$value": "#7557F6"
+    },
+    "violet_dark": {
+      "$type": "color",
+      "$value": "#5E43D9"
+    },
+    "violet_soft": {
+      "$type": "color",
+      "$value": "#EEE9FF"
+    },
+    "mint": {
+      "$type": "color",
+      "$value": "#31C9AE"
+    },
+    "mint_dark": {
+      "$type": "color",
+      "$value": "#168B78"
+    },
+    "mint_soft": {
+      "$type": "color",
+      "$value": "#E6F9F5"
+    },
+    "blue": {
+      "$type": "color",
+      "$value": "#3E70E8"
+    },
+    "blue_soft": {
+      "$type": "color",
+      "$value": "#EAF0FF"
+    },
+    "amber": {
+      "$type": "color",
+      "$value": "#B27500"
+    },
+    "amber_soft": {
+      "$type": "color",
+      "$value": "#FFF4D9"
+    },
+    "red": {
+      "$type": "color",
+      "$value": "#B44747"
+    },
+    "red_soft": {
+      "$type": "color",
+      "$value": "#FFECEC"
+    },
+    "green": {
+      "$type": "color",
+      "$value": "#218A68"
+    },
+    "green_soft": {
+      "$type": "color",
+      "$value": "#E6F7F0"
+    }
+  },
+  "font": {
+    "uiFallback": {
+      "$type": "fontFamily",
+      "$value": [
+        "Pretendard Variable",
+        "Noto Sans KR",
+        "Malgun Gothic",
+        "sans-serif"
+      ]
+    }
+  },
+  "radius": {
+    "sm": {
+      "$type": "dimension",
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      }
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      }
+    },
+    "pill": {
+      "$type": "dimension",
+      "$value": {
+        "value": 999,
+        "unit": "px"
+      }
+    }
+  }
+}

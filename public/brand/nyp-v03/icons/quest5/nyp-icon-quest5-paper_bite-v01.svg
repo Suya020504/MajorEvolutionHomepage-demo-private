@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img">
+<title>너의 교수님은? 논문 한입</title>
+<desc>논문 핵심과 질문을 짧게 준비</desc>
+<circle cx="32" cy="32" r="29" fill="#E6F9F5" opacity="0.94"/>
+<circle cx="32" cy="32" r="28.5" fill="none" stroke="#FFFFFF" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+<rect x="18" y="13" width="28" height="38" rx="3" fill="#FFFFFF" stroke="#168B78" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="37,13 46,22 37,22" fill="#31C9AE" opacity="0.75"/>
+<polyline points="24,29 39,29" fill="none" stroke="#0B173F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="24,36 36,36" fill="none" stroke="#0B173F" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="45" cy="45" r="4" fill="#FFFFFF"/>
+<circle cx="40" cy="49" r="3.4" fill="#FFFFFF"/>
+</svg>

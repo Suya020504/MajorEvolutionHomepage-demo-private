@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img">
+<title>너의 교수님은? 전공 진화 실험실</title>
+<desc>전공과 AI 또는 타 전공을 엮어 아이디어 만들기</desc>
+<circle cx="32" cy="32" r="29" fill="#EEE9FF" opacity="0.94"/>
+<circle cx="32" cy="32" r="28.5" fill="none" stroke="#FFFFFF" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+<circle cx="30" cy="27" r="11" fill="none" stroke="#7557F6" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="25,39 35,39" fill="none" stroke="#7557F6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="27,44 33,44" fill="none" stroke="#7557F6" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="30,10 30,6" fill="none" stroke="#31C9AE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="16,16 13,13" fill="none" stroke="#31C9AE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="44,16 47,13" fill="none" stroke="#31C9AE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="14,29 9,29" fill="none" stroke="#31C9AE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polyline points="46,29 51,29" fill="none" stroke="#31C9AE" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="45,39.4 46.2,41.8 48.6,43 46.2,44.2 45,46.6 43.8,44.2 41.4,43 43.8,41.8" fill="#31C9AE"/>
+</svg>
