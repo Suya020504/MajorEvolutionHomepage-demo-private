@@ -1,5 +1,5 @@
-import { PaperReaderShell } from "@/components/paper-reader/paper-reader-shell";
+import { PaperReader } from "@/components/paper-reader/paper-reader";
 
 export default function PaperReaderPage() {
-  return <PaperReaderShell />;
+  return <PaperReader />;
 }
