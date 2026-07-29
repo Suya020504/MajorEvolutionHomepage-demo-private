@@ -1,5 +1,5 @@
-import { ProfileScreen } from "@/components/screens/quest-home-screens";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <ProfileScreen />;
+  redirect("/portfolio");
 }

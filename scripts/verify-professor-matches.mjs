@@ -2,6 +2,38 @@
 import assert from "node:assert/strict";
 
 const baseUrl = process.argv[2] ?? "http://127.0.0.1:3000";
+const EXPECTED_POLICY = "OFFICIAL_EVIDENCE_RULES_V2";
+
+async function requestMatches(topic, excludeIds = []) {
+  const response = await fetch(`${baseUrl}/api/professors/match`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ topic, excludeIds }),
+  });
+  assert.equal(response.status, 200, `${topic.id} API status`);
+  assert.equal(
+    response.headers.get("x-professor-match-policy"),
+    EXPECTED_POLICY,
+    `${topic.id} policy header`,
+  );
+  const payload = await response.json();
+  assert.equal(payload.selectionPolicy, EXPECTED_POLICY, `${topic.id} policy`);
+  return payload;
+}
+
+function assertDecisionContract(match, testCaseId) {
+  assert.equal("score" in match, false, `${testCaseId} leaked score`);
+  assert.equal("rank" in match, false, `${testCaseId} leaked rank`);
+  assert.ok(Array.isArray(match.decisionBasis?.matchedConcepts));
+  assert.equal(typeof match.decisionBasis?.departmentMatchesMajor, "boolean");
+  assert.equal(typeof match.decisionBasis?.roleMatches?.topic, "boolean");
+  assert.equal(typeof match.decisionBasis?.roleMatches?.method, "boolean");
+  assert.equal(typeof match.decisionBasis?.roleMatches?.context, "boolean");
+  assert.equal(typeof match.decisionBasis?.sources?.officialProfile, "boolean");
+  assert.equal(typeof match.decisionBasis?.sources?.researchFields, "boolean");
+  assert.equal(typeof match.decisionBasis?.sources?.matchedPublication, "boolean");
+}
+
 const cases = [
   {
     id: "consumer-value",
@@ -71,15 +103,10 @@ const cases = [
 
 const results = [];
 for (const testCase of cases) {
-  const response = await fetch(`${baseUrl}/api/professors/match`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ topic: testCase.topic }),
-  });
-  assert.equal(response.status, 200, `${testCase.id} API status`);
-  const payload = await response.json();
+  const payload = await requestMatches(testCase.topic);
   assert.ok(payload.officialRecordCount >= 1_000, "full DKU runtime was not loaded");
   assert.equal(payload.matches.length, 2, `${testCase.id} match count`);
+  payload.matches.forEach((match) => assertDecisionContract(match, testCase.id));
   assert.notEqual(
     payload.matches[0].professor.id,
     payload.matches[1].professor.id,
@@ -91,6 +118,29 @@ for (const testCase of cases) {
         match.professor.officialProfileUrl,
       )),
     `${testCase.id} official source URL`,
+  );
+  const repeated = await requestMatches(testCase.topic);
+  assert.deepEqual(
+    repeated.matches.map(({ professor, decisionBasis, role, strength }) => ({
+      professorId: professor.id,
+      decisionBasis,
+      role,
+      strength,
+    })),
+    payload.matches.map(({ professor, decisionBasis, role, strength }) => ({
+      professorId: professor.id,
+      decisionBasis,
+      role,
+      strength,
+    })),
+    `${testCase.id} deterministic decision`,
+  );
+  const excludedId = payload.matches[0].professor.id;
+  const excluded = await requestMatches(testCase.topic, [excludedId]);
+  assert.equal(
+    excluded.matches.some((match) => match.professor.id === excludedId),
+    false,
+    `${testCase.id} excluded professor returned`,
   );
   try {
     testCase.verify(payload.matches);

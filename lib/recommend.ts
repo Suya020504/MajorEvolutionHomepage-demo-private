@@ -141,9 +141,7 @@ export function compareTopicPair(
   c: Conditions,
   topics: [ResearchTopic, ResearchTopic],
 ): RecommendResult {
-  const ordered = [...topics].sort((a, b) =>
-    (a.variant === "안전 축소형" ? -1 : 1) -
-    (b.variant === "안전 축소형" ? -1 : 1));
+  const ordered = orderPairVariants(topics[0], topics[1]);
   return {
     kind: "ok",
     candidates: [
@@ -153,9 +151,64 @@ export function compareTopicPair(
   };
 }
 
-// 관심·방법 우선 정렬 점수 (내부용, 사용자에게 노출하지 않음)
-function rankScore(t: ResearchTopic, c: Conditions): number {
-  return overlap(c.interests, t.interests).length * 2 + overlap(c.methods, t.methods).length;
+type RecommendationEvidence = {
+  interestMatched: boolean;
+  methodMatched: boolean;
+  dataAccessMatched: boolean;
+  periodMatched: boolean;
+};
+
+function recommendationEvidence(
+  topic: ResearchTopic,
+  conditions: Conditions,
+): RecommendationEvidence {
+  return {
+    interestMatched: overlap(conditions.interests, topic.interests).length > 0,
+    methodMatched: overlap(conditions.methods, topic.methods).length > 0,
+    dataAccessMatched: Boolean(
+      conditions.dataAccess
+      && topic.goodDataAccess.includes(conditions.dataAccess),
+    ),
+    periodMatched: Boolean(
+      conditions.period
+      && topic.minWeeks <= periodWeeks(conditions.period),
+    ),
+  };
+}
+
+function compareByEvidence(
+  left: ResearchTopic,
+  right: ResearchTopic,
+  conditions: Conditions,
+): number {
+  const leftEvidence = recommendationEvidence(left, conditions);
+  const rightEvidence = recommendationEvidence(right, conditions);
+  const rules: Array<(evidence: RecommendationEvidence) => boolean> = [
+    (evidence) => evidence.interestMatched,
+    (evidence) => evidence.methodMatched,
+    (evidence) => evidence.dataAccessMatched,
+    (evidence) => evidence.periodMatched,
+  ];
+
+  for (const rule of rules) {
+    const leftMatches = rule(leftEvidence);
+    const rightMatches = rule(rightEvidence);
+    if (leftMatches !== rightMatches) return leftMatches ? -1 : 1;
+  }
+  return left.id.localeCompare(right.id);
+}
+
+function orderPairVariants(
+  left: ResearchTopic,
+  right: ResearchTopic,
+): [ResearchTopic, ResearchTopic] {
+  if (left.variant === "안전 축소형" && right.variant !== "안전 축소형") {
+    return [left, right];
+  }
+  if (right.variant === "안전 축소형" && left.variant !== "안전 축소형") {
+    return [right, left];
+  }
+  return left.id.localeCompare(right.id) <= 0 ? [left, right] : [right, left];
 }
 
 export type RecommendOptions = { excludeIds?: string[] };
@@ -174,23 +227,27 @@ export function recommend(c: Conditions, opts: RecommendOptions = {}): Recommend
 
   if (pool.length === 0) return { kind: "empty" };
 
-  // 관심·방법 우선 정렬
-  const ranked = [...pool].sort((a, b) => rankScore(b, c) - rankScore(a, c));
+  // 관심 → 방법 → 데이터 접근 → 기간 → 안정적 ID 순서의 명시적 근거 규칙
+  const orderedPool = [...pool].sort((left, right) =>
+    compareByEvidence(left, right, c));
 
   // 비교 가치가 있는 서로 다른 2개: 같은 pairId의 안전형↔심화형을 우선
-  const top = ranked[0];
-  const partner = ranked.find((t) => t.pairId === top.pairId && t.id !== top.id);
+  const top = orderedPool[0];
+  const partner = orderedPool.find((t) => t.pairId === top.pairId && t.id !== top.id);
   let picked: ResearchTopic[];
   if (partner) {
     picked = [top, partner];
   } else {
-    const other = ranked.find((t) => t.pairId !== top.pairId);
+    const other = orderedPool.find((t) => t.pairId !== top.pairId);
     picked = other ? [top, other] : [top];
   }
 
   if (picked.length < 2) return { kind: "insufficient", candidate: buildChecks(picked[0], c) };
 
   // 안전 축소형을 A, 차별 심화형을 B로 정렬
-  picked.sort((a, b) => (a.variant === "안전 축소형" ? -1 : 1) - (b.variant === "안전 축소형" ? -1 : 1));
-  return { kind: "ok", candidates: [buildChecks(picked[0], c), buildChecks(picked[1], c)] };
+  const orderedPair = orderPairVariants(picked[0], picked[1]);
+  return {
+    kind: "ok",
+    candidates: [buildChecks(orderedPair[0], c), buildChecks(orderedPair[1], c)],
+  };
 }

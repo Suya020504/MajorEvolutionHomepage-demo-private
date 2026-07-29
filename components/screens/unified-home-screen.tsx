@@ -95,7 +95,7 @@ export function UnifiedHomeScreen() {
         : "/research";
 
   return (
-    <AppShell title="너의 교수님은?" backHref="/" className="unified-home-screen">
+    <AppShell title="너의 교수님은?" className="unified-home-screen">
       <PageHeader
         title="오늘은 어디서 시작할까요?"
         description="전공과 진로의 갈림길에서, 교수님을 찾고 만들고 잇다."

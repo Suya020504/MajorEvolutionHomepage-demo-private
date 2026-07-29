@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { matchOfficialProfessors } from "@/lib/professor-data.server";
-import type { ProfessorMatchTopic } from "@/lib/professor-domain";
+import {
+  PROFESSOR_MATCH_POLICY,
+  type ProfessorMatchTopic,
+} from "@/lib/professor-domain";
 
 const MAX_BODY_BYTES = 12_000;
 
@@ -55,6 +58,9 @@ export async function POST(request: Request) {
   const excludeIds = stringArray(raw?.excludeIds, 20, 64);
 
   return NextResponse.json(matchOfficialProfessors(topic, { excludeIds }), {
-    headers: { "Cache-Control": "no-store" },
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Professor-Match-Policy": PROFESSOR_MATCH_POLICY,
+    },
   });
 }

@@ -82,7 +82,6 @@ export function candidatesToTopics(
       type: source.type,
       verifiedAt: source.verifiedAt,
     })),
-    professorIds: [],
   }));
 
   return [topics[0], topics[1]];

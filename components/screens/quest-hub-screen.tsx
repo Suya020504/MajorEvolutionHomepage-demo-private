@@ -51,10 +51,10 @@ const TOOLS: Tool[] = [
     name: "논문 한입",
     timings: ["before"],
     summary: "문제·방법·결과·질문을 3분 카드로 정리",
-    output: "페이지 근거가 붙은 4카드",
+    output: "문제·방법·결과·한계·질문 5카드",
     icon: questIcon.paperBite,
     href: "/paper/reader?mode=bite",
-    note: "논문 분석 모듈 연결 전이라 지금은 화면 구조만 볼 수 있어요.",
+    note: "텍스트 분석은 지금 사용할 수 있어요. PDF 페이지 근거는 후속 모듈이에요.",
   },
   {
     id: "first-line",
@@ -129,7 +129,7 @@ export function QuestHubScreen() {
     : TOOLS.filter((tool) => tool.timings.includes(timing));
 
   return (
-    <AppShell title="교수님 퀘스트 — 잇다" backHref="/mentoring" className="quest-hub-screen">
+    <AppShell title="교수님 퀘스트 — 잇다" backHref="/" className="quest-hub-screen">
       {/* 브랜드 위계: 퀘스트 내부에서는 CTA를 서비스·기능명보다 먼저 보여줍니다. */}
       <PageHeader
         eyebrow="교수님, 말 걸어도 돼요?"

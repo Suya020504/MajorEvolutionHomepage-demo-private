@@ -220,7 +220,7 @@ export function OfficialProfessorsScreen() {
   const limitedEvidence = matches.length > 0 && matches.every((m) => m.strength === "LIMITED");
 
   return (
-    <AppShell title="나의 교수님 — 찾다" backHref="/mentoring" className="find-professor-screen">
+    <AppShell title="나의 교수님 — 찾다" backHref="/" className="find-professor-screen">
       <PageHeader
         title="나의 교수님 — 찾다"
         description="점수 대신 연결 근거와 직접 확인할 점을 보여줍니다."

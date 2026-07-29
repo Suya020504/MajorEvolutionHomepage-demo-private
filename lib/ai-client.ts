@@ -1,7 +1,4 @@
-import type { AiIdeasRequest, AiJourneyRequest, AiJourneyResult } from "@/lib/ai-journey";
-import type { Idea } from "@/data/prototype";
 import type { PaperAnalysisRequest, PaperAnalysisResult } from "@/lib/paper-analysis";
-import type { AiCoachRequest, AiCoachResult } from "@/lib/ai-coach";
 import type {
   CoDesignRequest,
   CoDesignResponse,
@@ -20,20 +17,8 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
   return payload;
 }
 
-export function requestAiJourney(body: AiJourneyRequest): Promise<AiJourneyResult> {
-  return postJson<AiJourneyResult>("/api/ai/journey", body);
-}
-
-export function requestAiIdeas(body: AiIdeasRequest): Promise<{ ideas: Idea[]; generatedAt: string; model: string }> {
-  return postJson<{ ideas: Idea[]; generatedAt: string; model: string }>("/api/ai/ideas", body);
-}
-
 export function requestPaperAnalysis(body: PaperAnalysisRequest): Promise<PaperAnalysisResult> {
   return postJson<PaperAnalysisResult>("/api/ai/paper", body);
-}
-
-export function requestAiCoach(body: AiCoachRequest): Promise<AiCoachResult> {
-  return postJson<AiCoachResult>("/api/ai/coach", body);
 }
 
 export function requestCoDesignCandidates(body: CoDesignRequest): Promise<CoDesignResponse> {

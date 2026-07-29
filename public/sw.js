@@ -1,7 +1,7 @@
 // 너의 교수님은? 서비스워커 — 설치 가능 조건(fetch 핸들러) 충족 + 앱 셸 오프라인 폴백
-const CACHE = "nyp-shell-v4";
+const CACHE = "nyp-shell-v5";
 // 침묵 구조대는 면담 중 인터넷 없이 열려야 하므로 셸에 미리 담아 둡니다(AC-006).
-const SHELL = ["/", "/research", "/mentoring", "/quest", "/quest/silence-rescue"];
+const SHELL = ["/", "/research", "/quest", "/quest/silence-rescue"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

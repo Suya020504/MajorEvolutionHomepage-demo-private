@@ -7,6 +7,22 @@ export type ProfessorDataStatus =
 
 export type ProfessorMatchRole = "TOPIC" | "METHOD" | "CONTEXT";
 export type ProfessorMatchStrength = "DIRECT" | "RELATED" | "LIMITED";
+export const PROFESSOR_MATCH_POLICY = "OFFICIAL_EVIDENCE_RULES_V2" as const;
+
+export type ProfessorMatchDecisionBasis = {
+  matchedConcepts: string[];
+  departmentMatchesMajor: boolean;
+  roleMatches: {
+    topic: boolean;
+    method: boolean;
+    context: boolean;
+  };
+  sources: {
+    officialProfile: boolean;
+    researchFields: boolean;
+    matchedPublication: boolean;
+  };
+};
 
 export type OfficialPublication = {
   id: string;
@@ -48,6 +64,7 @@ export type ProfessorMatch = {
   evidenceIds: string[];
   matchedTerms: string[];
   doesNotEstablish: string[];
+  decisionBasis: ProfessorMatchDecisionBasis;
 };
 
 export type ProfessorMatchTopic = {
@@ -73,6 +90,7 @@ export type ProfessorCoverageGap = {
 export type ProfessorMatchResponse = {
   topicId: string;
   matches: ProfessorMatch[];
+  selectionPolicy: typeof PROFESSOR_MATCH_POLICY;
   generatedAt: string;
   officialRecordCount: number;
   scopeStatus: "SAMPLE" | "PARTIAL" | "COMPLETE";

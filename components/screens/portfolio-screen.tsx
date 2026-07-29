@@ -155,7 +155,7 @@ export function PortfolioScreen() {
   const recordedCount = STEP_META.filter((step) => content[step.id].lines.length > 0).length;
 
   return (
-    <AppShell title="성장 포트폴리오" backHref="/mentoring" className="portfolio-screen">
+    <AppShell title="성장 포트폴리오" backHref="/" className="portfolio-screen">
       <PageHeader
         title="성장 포트폴리오"
         description="교수님을 만난 결과가 아니라, 내가 준비하고 바뀐 과정을 기록해요."

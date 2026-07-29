@@ -1,5 +1,5 @@
-import { DnaScreen } from "@/components/screens/entry-screens";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <DnaScreen />;
+  redirect("/");
 }

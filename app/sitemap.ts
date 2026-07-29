@@ -2,7 +2,23 @@ import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  return ["", "/mentoring", "/research", "/co-design", "/result", "/paper", "/paper/reader", "/professors", "/quest", "/mentor-loop"].map((path) => ({
+  const canonicalPaths = [
+    "",
+    "/research",
+    "/co-design",
+    "/result",
+    "/paper",
+    "/paper/reader",
+    "/professors",
+    "/quest",
+    "/quest/first-line",
+    "/quest/silence-rescue",
+    "/quest/email-guard",
+    "/mentor-loop",
+    "/portfolio",
+  ];
+
+  return canonicalPaths.map((path) => ({
     url: `${base}${path}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,

@@ -1,5 +1,5 @@
-import { AnalyzingScreen } from "@/components/screens/entry-screens";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <AnalyzingScreen />;
+  redirect("/");
 }

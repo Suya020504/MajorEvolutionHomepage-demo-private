@@ -213,7 +213,6 @@ export function AppShell({
   stickyAction,
   topAction,
   showHeader = true,
-  bottomNav,
   className,
 }: {
   children: ReactNode;
@@ -224,7 +223,6 @@ export function AppShell({
   stickyAction?: ReactNode;
   topAction?: ReactNode;
   showHeader?: boolean;
-  bottomNav?: ReactNode;
   className?: string;
 }) {
   const router = useRouter();
@@ -245,11 +243,10 @@ export function AppShell({
           </div>
         </header>
       )}
-      <main id="main-content" className={cx("screen-content", Boolean(stickyAction) && "has-sticky-action", Boolean(bottomNav) && "has-bottom-nav")}>
+      <main id="main-content" className={cx("screen-content", Boolean(stickyAction) && "has-sticky-action")}>
         <div className="screen-enter">{children}</div>
       </main>
       {stickyAction && <div className="sticky-action">{stickyAction}</div>}
-      {bottomNav}
     </div>
   );
 }
