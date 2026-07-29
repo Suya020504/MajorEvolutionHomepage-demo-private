@@ -192,7 +192,11 @@ strong {
 .side-nav { display: none; }
 
 @media (min-width: 1024px) {
-  body { padding-left: 248px; }
+  /*
+   * 내비 자리는 body가 아니라 화면 자신이 비운다.
+   * body에 걸면 스플래시처럼 내비를 끈 화면에서도 왼쪽이 빈 채로 남는다.
+   */
+  .app-viewport.has-side-nav { padding-left: 248px; }
 
   .side-nav {
     position: fixed;
@@ -3487,6 +3491,18 @@ strong {
   font-weight: 720;
 }
 .reader-assist { display: grid; gap: 9px; padding: 14px; }
+.reader-assist--streaming { border-color: var(--brand-violet); }
+/* 아직 받는 중이라는 걸 알리는 깜박이는 커서 */
+.reader-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 2px;
+  animation: reader-caret 900ms steps(2, start) infinite;
+  background: var(--brand-violet);
+  vertical-align: text-bottom;
+}
+@keyframes reader-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 .reader-assist p { font-size: 13px; line-height: 1.75; }
 .reader-ungrounded { display: flex; align-items: center; gap: 6px; color: var(--warning); font-size: 12px; font-weight: 700; }
 
@@ -4109,7 +4125,7 @@ strong {
   .portfolio-screen .side-nav,
   .skip-link,
   .offline-notice { display: none !important; }
-  body { padding-left: 0 !important; }
+  .app-viewport.has-side-nav { padding-left: 0 !important; }
   .portfolio-preview { border: 0; box-shadow: none; padding: 0; }
   .portfolio-screen .screen-content { padding: 0; }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   AiServiceError,
   assistPaperReading,
+  assistPaperReadingStream,
   type PaperReaderAssistRequest,
   type PaperReaderTask,
 } from "@/lib/openai-server";
@@ -34,6 +35,40 @@ export async function POST(request: Request) {
   }
   if (!Array.isArray(body?.pages) || body.pages.length === 0) {
     return NextResponse.json({ error: { code: "invalid_request", message: "근거로 쓸 페이지를 함께 보내 주세요." } }, { status: 400 });
+  }
+
+  // 스트리밍: 글자가 오는 대로 먼저 보여주고, 끝에서 검증된 전체 결과를 보냅니다.
+  if (new URL(request.url).searchParams.get("stream") === "1") {
+    const encoder = new TextEncoder();
+    const send = (controller: ReadableStreamDefaultController, event: string, data: unknown) =>
+      controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          const result = await assistPaperReadingStream(body, (delta) => {
+            send(controller, "delta", { text: delta });
+          });
+          send(controller, "done", result);
+        } catch (error) {
+          const serviceError = error instanceof AiServiceError
+            ? error
+            : new AiServiceError("upstream", "논문 도움을 완료하지 못했습니다.", 502);
+          console.error("[ai/paper-reader:stream]", serviceError.code);
+          send(controller, "fail", { code: serviceError.code, message: serviceError.message });
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-store, no-transform",
+        Connection: "keep-alive",
+      },
+    });
   }
 
   try {
