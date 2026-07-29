@@ -25,6 +25,7 @@ import {
   SecondaryButton,
   cx,
 } from "@/components/app/primitives";
+import { guideCharacter } from "@/lib/brand-assets";
 import {
   IDEA_MODES,
   conditionContext,
@@ -148,7 +149,7 @@ export function CoDesignScreen() {
           <h1>어떤 방식으로 연구 아이디어를 발전시킬까요?</h1>
           <p>한 번에 한 질문씩 답하며 확인된 맥락을 쌓아요.</p>
         </div>
-        <Image src="/mvp-assets/robot-pose-3.png" alt="" width={76} height={72} priority />
+        <Image src={guideCharacter.makeLab} alt="" width={76} height={72} priority unoptimized />
       </div>
 
       <div className="co-mode-grid" role="radiogroup" aria-label="아이디어 탐색 방식">

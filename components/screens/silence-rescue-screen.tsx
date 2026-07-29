@@ -21,6 +21,8 @@ import {
   StatusBanner,
   Tag,
 } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
+import { brandScene } from "@/lib/brand-assets";
 import { useQuestContext } from "@/lib/quest-context";
 import { cardsForTool, useQuestStore } from "@/store/quest-store";
 
@@ -123,10 +125,13 @@ export function SilenceRescueScreen() {
 
   return (
     <AppShell title="침묵 구조대" backHref="/quest" className="silence-rescue-screen">
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.silenceRescue}
+        alt="대화가 끊겼을 때 미리 저장한 질문 카드를 확인하는 장면"
         eyebrow="교수님, 말 걸어도 돼요?"
         title="침묵 구조대"
         description="말이 끊겼을 때 꺼내 볼 질문을 미리 저장해 두고, 현장에서는 큰 글자로 조용히 확인합니다."
+        priority
       />
 
       <StatusBanner icon={MicOff} title="듣지 않습니다" tone="lavender">

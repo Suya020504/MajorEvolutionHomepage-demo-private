@@ -26,6 +26,7 @@ import {
   SecondaryButton,
   Tag,
 } from "@/components/app/primitives";
+import { guideCharacter } from "@/lib/brand-assets";
 import {
   careerOptions,
   cropPath,
@@ -54,7 +55,7 @@ export function SplashScreen() {
   const openPaperTool = () => router.push("/paper");
 
   return (
-    <AppShell showHeader={false} className="splash-screen">
+    <AppShell showHeader={false} showSideNav={false} className="splash-screen">
       <div className="splash-layout">
         <AppLogo />
         <div className="splash-copy">
@@ -327,7 +328,7 @@ export function DnaScreen() {
       </div>
       {stepContent.tip && (
         <div className="dna-tip" aria-hidden="true">
-          <Image src="/mvp-assets/robot-pose-1.png" alt="" width={64} height={64} />
+          <Image src={guideCharacter.thinking} alt="" width={64} height={64} unoptimized />
           <p>{stepContent.tip}</p>
         </div>
       )}
@@ -393,11 +394,11 @@ export function AnalyzingScreen() {
   }, [goal, profile, router, setAiFallback, setAiJourney, setAiLoading]);
 
   return (
-    <AppShell showHeader={false} className="analyzing-screen">
+    <AppShell showHeader={false} showSideNav={false} className="analyzing-screen">
       <div className="analyzing-layout">
         <div className="analysis-mascot">
           <span className="analysis-pulse" />
-          <Image src="/mvp-assets/robot-pose-2.png" alt="분석 중인 너의 교수님은? AI 도우미" width={88} height={88} priority />
+          <Image src={guideCharacter.processing1024} alt="분석 중인 너의 교수님은? AI 도우미" width={88} height={88} priority unoptimized />
         </div>
         <div className="analyzing-title">
           <Tag tone="violet">AI 분석 중</Tag>

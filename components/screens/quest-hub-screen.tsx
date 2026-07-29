@@ -12,7 +12,8 @@ import {
   SectionHeading,
   Tag,
 } from "@/components/app/primitives";
-import { questIcon } from "@/lib/brand-assets";
+import { SceneBanner } from "@/components/app/scene-banner";
+import { brandScene, questIcon } from "@/lib/brand-assets";
 import { cardsForTool, useQuestStore, type QuestToolId } from "@/store/quest-store";
 
 /**
@@ -131,10 +132,13 @@ export function QuestHubScreen() {
   return (
     <AppShell title="교수님 퀘스트 — 잇다" backHref="/mentoring" className="quest-hub-screen">
       {/* 브랜드 위계: 퀘스트 내부에서는 CTA를 서비스·기능명보다 먼저 보여줍니다. */}
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.connect}
+        alt="연구실 문 앞에서 교수님께 첫 대화를 준비하는 장면"
         eyebrow="교수님, 말 걸어도 돼요?"
         title="교수님 퀘스트 — 잇다"
         description="만나기 전·대화 중·만난 후의 작은 도구를 한 허브에서 제공합니다."
+        priority
       />
 
       <div className="filter-scroll quest-hub-filter">

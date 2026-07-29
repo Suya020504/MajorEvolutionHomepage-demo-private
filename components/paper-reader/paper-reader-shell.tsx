@@ -20,6 +20,8 @@ import {
   SectionHeading,
   StatusBanner,
 } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
+import { brandScene } from "@/lib/brand-assets";
 import {
   PAPER_READER_CAPABILITIES,
   type PaperReaderCapabilityId,
@@ -59,10 +61,13 @@ const serviceSteps = [
 export function PaperReaderShell() {
   return (
     <AppShell title="논문 리더" backHref="/paper">
-      <PageHeader
-        eyebrow="통합 준비 화면"
+      <SceneBanner
+        scene={brandScene.paperBite}
+        alt="교수님의 논문을 읽고 질문을 정리하는 장면"
+        eyebrow="교수님, 말 걸어도 돼요?"
         title="교수님의 논문을 내 언어로 읽어요"
         description="팀원이 완성할 논문 리더가 너의 교수님은? 안에서 바로 이어지도록 화면과 데이터 경계를 먼저 준비했습니다."
+        priority
       />
 
       <StatusBanner icon={Sparkles} title="현재는 통합 셸 단계" tone="lavender">

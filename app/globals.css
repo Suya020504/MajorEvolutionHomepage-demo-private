@@ -185,6 +185,58 @@ strong {
   padding: 24px 20px 48px;
 }
 
+/*
+ * 데스크톱 좌측 내비. 모바일 우선 셸을 유지하기 위해 고정 배치로 얹고,
+ * 넓은 화면에서만 body에 왼쪽 여백을 주어 본문과 겹치지 않게 합니다.
+ */
+.side-nav { display: none; }
+
+@media (min-width: 1024px) {
+  body { padding-left: 248px; }
+
+  .side-nav {
+    position: fixed;
+    z-index: 40;
+    top: 0;
+    left: 0;
+    display: flex;
+    width: 248px;
+    height: 100svh;
+    flex-direction: column;
+    padding: 22px 16px;
+    border-right: 1px solid var(--border-default);
+    background: var(--surface);
+  }
+  .side-nav__brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 20px; }
+  .side-nav__brand span { display: grid; }
+  .side-nav__brand strong { font-size: 15px; }
+  .side-nav__brand small { margin-top: 1px; color: var(--text-secondary); font-size: 11px; }
+  .side-nav ul { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }
+  .side-nav a:not(.side-nav__brand) {
+    display: flex;
+    min-height: 46px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 720;
+  }
+  .side-nav a:not(.side-nav__brand):hover { background: var(--bg-secondary); }
+  .side-nav a.is-active { color: var(--brand-purple); background: var(--brand-violet-soft); }
+  .side-nav a.is-active svg { color: var(--brand-purple); }
+  .side-nav__note {
+    margin-top: auto;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-soft);
+    color: var(--text-tertiary);
+    font-size: 11px;
+    line-height: 1.5;
+  }
+}
+
 .top-app-bar + .screen-content {
   min-height: calc(100svh - 56px);
 }
@@ -3651,6 +3703,57 @@ strong {
 }
 .quest-saved__confirm button.is-danger { color: var(--text-inverse); background: var(--error); }
 
+/* ===================== 대표 장면 배너 ===================== */
+.scene-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--brand-navy-900);
+}
+.scene-banner__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+.scene-banner__body {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 40px 18px 18px;
+  /* 사진 위 텍스트 대비를 확보합니다. */
+  background: linear-gradient(180deg, rgba(11, 23, 63, 0) 0%, rgba(11, 23, 63, 0.86) 62%);
+  color: var(--text-inverse);
+}
+.scene-banner__eyebrow {
+  color: var(--brand-mint);
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: 0.04em;
+}
+.scene-banner__body h1 { margin-top: 3px; font-size: 22px; line-height: 1.3; }
+.scene-banner__description {
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* 화면이 좁으면 이미지를 낮추고 글을 더 크게 확보합니다. */
+@media (max-width: 420px) {
+  .scene-banner__image { aspect-ratio: 4 / 3; }
+  .scene-banner__body { padding: 32px 15px 15px; }
+  .scene-banner__body h1 { font-size: 19px; }
+}
+
+@media (min-width: 768px) {
+  .scene-banner__body { padding: 56px 26px 24px; }
+  .scene-banner__body h1 { font-size: 27px; }
+  .scene-banner__description { max-width: 620px; font-size: 14px; }
+}
+
 /* ===================== Y-00 통합 홈 · 핵심 3기능 ===================== */
 /*
  * 찾다·만들다·잇다는 같은 시각 무게를 가집니다.
@@ -3674,6 +3777,21 @@ strong {
   transition: transform 160ms ease, box-shadow 160ms ease;
 }
 .core-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-elevated); }
+/* 카드 뒤 장식. 내용을 가리지 않도록 옅게 깔고 읽기에는 영향을 주지 않습니다. */
+.core-card::after {
+  position: absolute;
+  z-index: 0;
+  top: -18px;
+  right: -18px;
+  width: 132px;
+  height: 132px;
+  background: var(--core-deco) no-repeat center / contain;
+  content: "";
+  opacity: 0.16;
+  pointer-events: none;
+}
+.core-card { position: relative; }
+.core-card > * { position: relative; z-index: 1; }
 .core-card--find { --core-accent: var(--brand-mint); --core-tint: var(--brand-mint-soft); }
 .core-card--make { --core-accent: var(--brand-violet); --core-tint: var(--brand-violet-soft); }
 .core-card--connect { --core-accent: var(--brand-blue); --core-tint: var(--brand-blue-soft); }

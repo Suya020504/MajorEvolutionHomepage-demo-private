@@ -20,6 +20,8 @@ import {
   Timer,
 } from "lucide-react";
 import { AppShell, Card, PageHeader, PrimaryButton, SecondaryButton, Tag, cx } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
+import { brandScene, guideCharacter } from "@/lib/brand-assets";
 import { modeById } from "@/data/co-design";
 import {
   PROFESSOR_DATA_NOTE,
@@ -573,12 +575,19 @@ export function ResearchResultScreen() {
     <AppShell title="전공 진화 실험실 — 만들다" onBack={() => router.push("/research")} className="research-screen result-screen" stickyAction={stickyAction}>
       {loading ? (
         <div className="research-loading">
-          <Image src="/mvp-assets/robot-pose-2.png" alt="" width={92} height={92} priority />
+          <Image src={guideCharacter.processing} alt="" width={92} height={92} priority unoptimized />
           <p>조건에 맞는 연구주제 후보를 찾고 있어요.</p>
         </div>
       ) : (
         <>
-          <PageHeader eyebrow="1:1 비교" title="어떤 연구주제가 지금 더 시작 가능한가요?" description="점수 대신 근거·데이터·방법·범위와 확인할 조건으로 비교했어요." />
+          <SceneBanner
+            scene={brandScene.make}
+            alt="내 전공과 다른 분야를 조합해 연구 아이디어를 만드는 장면"
+            eyebrow="CORE 02"
+            title="전공 진화 실험실 — 만들다"
+            description="점수 대신 근거·데이터·방법·범위와 확인할 조건으로 비교했어요."
+            priority
+          />
 
           <Card className={cx("result-grounding", resultOrigin === "ai" ? "is-ai" : "is-fallback")}>
             <span>{resultOrigin === "ai" ? <Sparkles size={18} /> : <ShieldCheck size={18} />}</span>
@@ -700,7 +709,7 @@ export function ResearchResultScreen() {
 function EmptyBlock({ icon: Icon, title, desc, onChange, onRetry }: { icon: typeof CircleAlert; title: string; desc: string; onChange: () => void; onRetry?: () => void }) {
   return (
     <div className="research-empty">
-      <Image src="/mvp-assets/robot-pose-1.png" alt="" width={96} height={92} />
+      <Image src={guideCharacter.confused} alt="" width={96} height={92} unoptimized />
       <Icon size={22} />
       <h2>{title}</h2>
       <p>{desc}</p>

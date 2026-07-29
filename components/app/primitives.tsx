@@ -17,6 +17,7 @@ import type {
   ReactNode,
 } from "react";
 import { forwardRef } from "react";
+import { SideNav } from "@/components/app/side-nav";
 import { brandLogo } from "@/lib/brand-assets";
 
 export function cx(...values: Array<string | false | null | undefined>) {
@@ -213,6 +214,7 @@ export function AppShell({
   stickyAction,
   topAction,
   showHeader = true,
+  showSideNav = true,
   bottomNav,
   className,
 }: {
@@ -224,12 +226,16 @@ export function AppShell({
   stickyAction?: ReactNode;
   topAction?: ReactNode;
   showHeader?: boolean;
+  /** 넓은 화면 좌측 내비. 스플래시처럼 몰입이 필요한 화면에서만 끕니다. */
+  showSideNav?: boolean;
   bottomNav?: ReactNode;
   className?: string;
 }) {
   const router = useRouter();
   return (
-    <div className={cx("app-viewport", className)}>
+    <>
+    {showSideNav && <SideNav />}
+    <div className={cx("app-viewport", showSideNav && "has-side-nav", className)}>
       {showHeader && (
         <header className="top-app-bar">
           <div className="top-app-bar__side">
@@ -251,6 +257,7 @@ export function AppShell({
       {stickyAction && <div className="sticky-action">{stickyAction}</div>}
       {bottomNav}
     </div>
+    </>
   );
 }
 

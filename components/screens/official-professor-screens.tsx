@@ -24,7 +24,9 @@ import {
   StatusBanner,
   Tag,
 } from "@/components/app/primitives";
+import { SceneBanner } from "@/components/app/scene-banner";
 import type { ResearchTopic } from "@/data/research-mvp";
+import { brandScene } from "@/lib/brand-assets";
 import {
   contextToMatchTopic,
   requestProfessorMatches,
@@ -222,9 +224,13 @@ export function OfficialProfessorsScreen() {
 
   return (
     <AppShell title="나의 교수님 — 찾다" backHref="/mentoring" className="find-professor-screen">
-      <PageHeader
+      <SceneBanner
+        scene={brandScene.find}
+        alt="공식 자료로 관심 분야에 맞는 교수님을 찾는 장면"
+        eyebrow="CORE 01"
         title="나의 교수님 — 찾다"
         description="점수 대신 연결 근거와 직접 확인할 점을 보여줍니다."
+        priority
       />
 
       {/* 와이어프레임대로 넓은 화면에서는 입력 · 연결 교수 · 대안을 나란히 둡니다. */}
