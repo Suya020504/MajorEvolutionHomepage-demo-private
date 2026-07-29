@@ -26,7 +26,7 @@ import {
   Tag,
 } from "@/components/app/primitives";
 import { extractPdfText, PdfReadError, type PdfDocument } from "@/lib/pdf-text";
-import { requestPaperAssist, type PaperReaderAssist } from "@/lib/paper-reader-client";
+import { requestPaperAssistStream, type PaperReaderAssist } from "@/lib/paper-reader-client";
 import { useQuestContext } from "@/lib/quest-context";
 import { useQuestStore, type SavedQuestCard } from "@/store/quest-store";
 
@@ -69,6 +69,7 @@ export function PaperReader() {
   const [selected, setSelected] = useState<{ page: number; text: string } | null>(null);
 
   const [busy, setBusy] = useState<TabId | "simplify" | null>(null);
+  const [streaming, setStreaming] = useState("");
   const [assistError, setAssistError] = useState<string | null>(null);
   const [translation, setTranslation] = useState<PaperReaderAssist | null>(null);
   const [summary, setSummary] = useState<PaperReaderAssist | null>(null);
@@ -115,15 +116,31 @@ export function PaperReader() {
   ): Promise<PaperReaderAssist | null> => {
     setBusy(target);
     setAssistError(null);
+    setStreaming("");
     try {
-      return await requestPaperAssist(task, pages, focus);
+      // 글자가 오는 대로 먼저 보여주고, 검증된 결과는 끝에서 받습니다.
+      return await requestPaperAssistStream(task, pages, focus, (delta) => {
+        setStreaming((current) => current + delta);
+      });
     } catch (error) {
       setAssistError(error instanceof Error ? error.message : "요청을 완료하지 못했습니다.");
       return null;
     } finally {
       setBusy(null);
+      setStreaming("");
     }
   };
+
+  /** 스트리밍 중 화면에 먼저 뜨는 글. 완료되면 검증된 결과로 교체됩니다. */
+  const StreamingAnswer = () => (
+    <Card className="reader-assist reader-assist--streaming">
+      <p className="reader-body">
+        {streaming}
+        <span className="reader-caret" aria-hidden="true" />
+      </p>
+      <p className="reader-busy"><LoaderCircle className="spin" size={14} /> 받아쓰는 중…</p>
+    </Card>
+  );
 
   const saveNote = (kind: NoteKind, body: string, evidencePage: number | null) => {
     if (!body.trim() || !doc) return;
@@ -293,7 +310,7 @@ export function PaperReader() {
                     <Bookmark size={15} /> 메모 저장
                   </button>
                 </div>
-                {busy === "simplify" && <p className="reader-busy"><LoaderCircle className="spin" size={15} /> 설명을 만들고 있어요</p>}
+                {busy === "simplify" && <StreamingAnswer />}
                 {simplified && (
                   <Card className="reader-assist">
                     <p>{simplified.answer}</p>
@@ -319,7 +336,7 @@ export function PaperReader() {
           </section>
           <section>
             <h2>번역 <Tag tone="violet">p.{pageNo}</Tag></h2>
-            {translation ? (
+            {busy === "translation" ? <StreamingAnswer /> : translation ? (
               <>
                 <p className="reader-body">{translation.answer}</p>
                 {translation.terms.length > 0 && (
@@ -343,7 +360,7 @@ export function PaperReader() {
                   if (r) setTranslation(r);
                 }}
               >
-                {busy === "translation" ? <><LoaderCircle className="spin" size={16} /> 번역 중…</> : "이 페이지 번역하기"}
+                이 페이지 번역하기
               </PrimaryButton>
             )}
           </section>
@@ -352,7 +369,7 @@ export function PaperReader() {
 
       {tab === "summary" && (
         <div className="reader-single">
-          {summary ? (
+          {busy === "summary" ? <StreamingAnswer /> : summary ? (
             <>
               <Card className="reader-assist">
                 <p className="reader-body">{summary.answer}</p>
@@ -390,7 +407,7 @@ export function PaperReader() {
                   if (r) setSummary(r);
                 }}
               >
-                {busy === "summary" ? <><LoaderCircle className="spin" size={16} /> 정리 중…</> : "구조화 요약 만들기"}
+                구조화 요약 만들기
               </PrimaryButton>
             </Card>
           )}
@@ -400,7 +417,9 @@ export function PaperReader() {
       {tab === "qa" && (
         <div className="reader-single">
           <div className="reader-chat">
-            {qaTurns.length === 0 && <p className="reader-empty">논문 내용에 대해 질문해 보세요. 답변에는 페이지 근거가 붙습니다.</p>}
+            {qaTurns.length === 0 && busy !== "qa" && (
+              <p className="reader-empty">논문 내용에 대해 질문해 보세요. 답변에는 페이지 근거가 붙습니다.</p>
+            )}
             {qaTurns.map((turn, index) => (
               <article key={index}>
                 <p className="reader-chat__q">{turn.question}</p>
@@ -422,6 +441,7 @@ export function PaperReader() {
                 </div>
               </article>
             ))}
+            {busy === "qa" && <StreamingAnswer />}
           </div>
           <div className="reader-ask">
             <textarea
@@ -470,6 +490,7 @@ export function PaperReader() {
               {busy === "figure" ? <><LoaderCircle className="spin" size={16} /> 해설 중…</> : `p.${pageNo} 그림·표 해설 만들기`}
             </PrimaryButton>
           </Card>
+          {busy === "figure" && <StreamingAnswer />}
           {figure && (
             <Card className="reader-assist">
               <p className="reader-body">{figure.answer}</p>
