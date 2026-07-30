@@ -263,6 +263,15 @@ function normalizedContains(normalizedText: string, normalizedTerm: string): boo
   return normalizedText.includes(normalizedTerm);
 }
 
+/**
+ * 아직 정규화하지 않은 값을 대조할 때 씁니다.
+ * 1,051명을 훑는 경로에서는 쓰지 마세요. 거기서는 정규화를 미리 끝내고
+ * normalizedContains를 직접 부릅니다.
+ */
+function containsTerm(text: string, term: string): boolean {
+  return normalizedContains(normalize(text), normalize(term));
+}
+
 function toPublication(raw: RawPublication, professorId: string, index: number): OfficialPublication {
   return {
     id: raw.id ?? `publication:${professorId}:${index + 1}`,
