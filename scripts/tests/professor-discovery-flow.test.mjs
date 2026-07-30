@@ -40,6 +40,9 @@ const discoveryModule = require(
 const evidenceModule = require(
   compileCommonJs("lib/professor-match-evidence.ts", "professor-match-evidence.cjs"),
 );
+const pitchModule = require(
+  compileCommonJs("lib/professor-pitch.ts", "professor-pitch.cjs"),
+);
 
 after(() => fs.rmSync(runtimeDirectory, { recursive: true, force: true }));
 
@@ -149,6 +152,11 @@ test("진로 고민과 만남 맥락은 공식 연구근거 검색문에 섞지 
   assert.doesNotMatch(text, /진로 경험과 준비법/);
   assert.doesNotMatch(text, /통계 수업과 설문 프로젝트 경험/);
   assert.doesNotMatch(text, /포트폴리오가 부족해요/);
+  assert.doesNotMatch(
+    text,
+    /전공 관점에서 어떻게 탐색할 수 있을까/,
+    "찾다 폼의 자동 생성 질문은 공식 연구근거 검색문에서 제외해야 한다",
+  );
 });
 
 test("기본·심층 맥락은 세 개의 면담 질문으로 변환된다", () => {
@@ -189,4 +197,182 @@ test("기본·심층 맥락은 세 개의 면담 질문으로 변환된다", () 
   }, "[redacted-phone] : 고효율 무선 전력 장치")[0];
   assert.doesNotMatch(redactedQuestion, /redacted/);
   assert.match(redactedQuestion, /고효율 무선 전력 장치/);
+});
+
+test("새로고침용 매칭 요청에서 교수 찾기 맥락을 복원한다", () => {
+  const original = {
+    ...discoveryModule.EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
+    university: "단국대학교",
+    college: "경영경제대학",
+    major: "경제학과",
+    studentStage: "취업을 준비하는 중",
+    goal: "취업·직무 조언 받기",
+    interests: ["경제·금융"],
+    careerInterests: ["데이터·AI 직무"],
+    careerConcerns: ["취업시장·전망"],
+    secondaryMajorType: "부전공",
+    secondaryCollege: "SW융합대학",
+    secondaryMajor: "소프트웨어학과",
+    topic: "금융시장 변화",
+    meetingSituation: "오피스아워",
+    preferredSupport: "시작할 수업과 프로젝트",
+  };
+  const topic = discoveryModule.discoveryContextToMatchTopic(original, null);
+  const restored = discoveryModule.professorMatchTopicToDiscoveryContext(topic);
+
+  assert.equal(restored.university, original.university);
+  assert.equal(restored.college, original.college);
+  assert.equal(restored.major, original.major);
+  assert.equal(restored.studentStage, original.studentStage);
+  assert.equal(restored.goal, original.goal);
+  assert.deepEqual(restored.interests, original.interests);
+  assert.deepEqual(restored.careerInterests, original.careerInterests);
+  assert.deepEqual(restored.careerConcerns, original.careerConcerns);
+  assert.equal(restored.secondaryCollege, original.secondaryCollege);
+  assert.equal(restored.secondaryMajor, original.secondaryMajor);
+  assert.equal(restored.topic, original.topic);
+  assert.equal(restored.meetingSituation, original.meetingSituation);
+  assert.equal(restored.preferredSupport, original.preferredSupport);
+});
+
+test("교수 3인 피칭은 학생 조건·공식 근거·서비스 제안을 분리한다", () => {
+  const context = {
+    ...discoveryModule.EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
+    major: "경제학과",
+    interests: ["경제·금융"],
+    careerInterests: ["데이터·AI 직무"],
+    careerConcerns: ["취업시장·전망"],
+  };
+  const professor = {
+    id: "professor:test",
+    university: "단국대학교",
+    college: "경영경제대학",
+    department: "경제학과",
+    departments: ["경제학과"],
+    associationStatuses: [],
+    name: "테스트",
+    title: "교수",
+    researchFields: ["금융계량경제"],
+    publications: [{
+      id: "publication:test",
+      title: "금융시장 예측 연구",
+      publicationType: "학술논문",
+      publishedDate: "2026-01-01",
+      doi: null,
+      kciId: null,
+      officialProfileUrl: "https://www.dankook.ac.kr/example",
+    }],
+    publicationCount: 1,
+    officialProfileUrl: "https://www.dankook.ac.kr/example",
+    sourceUrl: "https://www.dankook.ac.kr/example",
+    collectedAt: "2026-07-30T00:00:00.000Z",
+    status: "FOUND",
+    researchFieldsStatus: "FOUND",
+    publicationsStatus: "FOUND",
+    failureReason: null,
+    profileEvidenceId: "profile:test",
+  };
+  const baseMatch = {
+    professor,
+    strength: "DIRECT",
+    reason: "공식 프로필의 금융계량경제 연구가 연결됩니다.",
+    evidenceIds: ["profile:test", "publication:test"],
+    matchedTerms: ["금융계량경제"],
+    doesNotEstablish: [
+      "교수의 면담·지도·모집 가능 여부",
+      "추천 결과의 우열이나 성공 가능성",
+    ],
+    decisionBasis: {
+      matchedConcepts: ["가격·시장"],
+      departmentMatchesMajor: true,
+      roleMatches: { topic: true, method: true, context: true },
+      sources: {
+        officialProfile: true,
+        researchFields: true,
+        matchedPublication: true,
+      },
+    },
+  };
+
+  for (const role of ["TOPIC", "METHOD", "CONTEXT"]) {
+    const pitch = pitchModule.buildProfessorPitch(
+      { ...baseMatch, role },
+      context,
+      "취업시장의 변화를 데이터로 보려면 무엇부터 시작하면 좋을까요?",
+    );
+    assert.equal(pitch.studentConnections.includes("경제학과 전공"), true);
+    assert.equal(pitch.officialConnections.includes("금융계량경제"), true);
+    assert.equal(
+      pitch.officialConnections.includes("가격·시장"),
+      false,
+      "내부 분류 개념을 공식 프로필 문구처럼 표시하면 안 된다",
+    );
+    assert.equal(pitch.potentialLearning.length, 3);
+    assert.match(pitch.firstQuestion, /무엇부터 시작/);
+    assert.equal(pitch.hasOfficialPublications, true);
+    assert.doesNotMatch(pitch.pitchLine, /궁합|점수|순위|지도 가능|모집 가능/);
+  }
+});
+
+test("데스크톱 교수 찾기 폼은 결과 영역을 sticky로 가리지 않는다", () => {
+  const css = fs.readFileSync(path.join(repositoryRoot, "app/globals.css"), "utf8");
+  const screen = fs.readFileSync(
+    path.join(repositoryRoot, "components/screens/official-professor-screens.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(
+    css,
+    /\.find-professor-screen\s+\.context-panel\s*\{[^}]*position:\s*sticky/si,
+  );
+  assert.match(css, /\.find-professor-screen\s+\.context-panel\s*\{[^}]*position:\s*static/si);
+  assert.match(screen, /교수님 \{visibleMatches\.length\}인 피칭/);
+  assert.match(screen, /공식 데이터 기반 캐스팅 한마디/);
+  assert.doesNotMatch(screen, /> AI 캐스팅 한마디</);
+  assert.match(screen, /서비스가 제안한 탐색 역할/);
+  assert.match(screen, /다른 교수님 만나보기/);
+  assert.match(
+    screen,
+    /matches\.length > 0\s*&& !storedDiscoveryTopic[\s\S]*clearProfessorMatches\(\)/,
+    "검색 맥락 없는 저장 결과는 재사용하지 않아야 한다",
+  );
+  assert.match(
+    screen,
+    /const showsStoredMatches =[\s\S]*Boolean\(storedDiscoveryTopic\)/,
+    "저장된 결과는 검색 맥락이 있을 때만 노출해야 한다",
+  );
+  assert.match(css, /@media \(min-width: 1280px\)[\s\S]*\.match-grid/);
+  assert.doesNotMatch(css, /var\(--border-subtle\)/);
+});
+
+test("새 연구주제로 전환하면 이전 교수 찾기 맥락과 포트폴리오 요약을 함께 지운다", () => {
+  const store = fs.readFileSync(
+    path.join(repositoryRoot, "store/research-store.ts"),
+    "utf8",
+  );
+  const sections = [
+    store.slice(
+      store.indexOf("completeCoDesign: (topics, groundingNote) =>"),
+      store.indexOf("  reRecommend: () => {"),
+    ),
+    store.slice(
+      store.indexOf("  reRecommend: () => {"),
+      store.indexOf("  selectTopic: (id) => set({"),
+    ),
+    store.slice(
+      store.indexOf("  selectTopic: (id) => set({"),
+      store.indexOf("  setProfessorMatchLoading: (professorMatchTopicId) =>"),
+    ),
+  ];
+
+  for (const section of sections) {
+    assert.match(section, /professorMatchTopicId:\s*null/);
+    assert.match(section, /professorDiscoveryTopic:\s*null/);
+    assert.match(section, /professorDiscoverySummary:\s*null/);
+  }
+  assert.match(
+    store,
+    /persistedVersion < 4[\s\S]*professorDiscoverySummary:\s*null/,
+    "v4 마이그레이션에서도 검색 결과 없는 이전 요약을 정리해야 한다",
+  );
 });

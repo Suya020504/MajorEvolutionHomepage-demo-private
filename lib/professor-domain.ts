@@ -128,6 +128,7 @@ export type ProfessorMatchTopic = {
   goal?: string;
   studentStage?: string;
   secondaryMajorType?: string;
+  secondaryCollege?: string;
   secondaryMajor?: string;
   careerInterests?: string[];
   careerConcerns?: string[];

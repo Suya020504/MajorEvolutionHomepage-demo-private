@@ -197,6 +197,7 @@ export function discoveryContextToMatchTopic(
     goal,
     studentStage: context.studentStage.trim(),
     secondaryMajorType: context.secondaryMajorType,
+    secondaryCollege: context.secondaryCollege.trim(),
     secondaryMajor,
     careerInterests,
     careerConcerns,
@@ -205,6 +206,35 @@ export function discoveryContextToMatchTopic(
     preferredSupport: context.preferredSupport.trim(),
     experience: context.experience.trim(),
     additionalContext,
+  };
+}
+
+/**
+ * 새로고침 뒤 저장된 교수 매칭 요청을 찾다 폼과 피칭 카드 맥락으로 복원합니다.
+ *
+ * 서버가 판단에 사용한 요청만 되살리며, 교수에 대한 새 정보는 만들지 않습니다.
+ */
+export function professorMatchTopicToDiscoveryContext(
+  topic: ProfessorMatchTopic,
+): ProfessorDiscoveryContext {
+  return {
+    university: topic.university ?? "",
+    college: topic.college ?? "",
+    major: topic.major,
+    studentStage: topic.studentStage ?? "",
+    goal: topic.goal ?? "",
+    interests: [...topic.interests],
+    careerInterests: [...(topic.careerInterests ?? [])],
+    careerConcerns: [...(topic.careerConcerns ?? [])],
+    secondaryMajorType: topic.secondaryMajorType || "없음",
+    secondaryCollege: topic.secondaryCollege ?? "",
+    secondaryMajor: topic.secondaryMajor ?? "",
+    topic: topic.title,
+    careerGoal: topic.careerGoal ?? "",
+    meetingSituation: topic.meetingSituation ?? "",
+    preferredSupport: topic.preferredSupport ?? "",
+    experience: topic.experience ?? "",
+    additionalContext: topic.additionalContext ?? "",
   };
 }
 

@@ -39,6 +39,17 @@ function assertDecisionContract(match, testCaseId) {
     `${testCaseId} match lacks official research evidence`,
   );
   assert.equal(typeof match.professor?.officialProfileUrl, "string");
+  const officialEvidenceText = [
+    match.professor.department,
+    ...match.professor.researchFields,
+    ...match.professor.publications.map((publication) => publication.title),
+  ].join(" ").toLocaleLowerCase("ko-KR");
+  for (const matchedTerm of match.matchedTerms) {
+    assert.ok(
+      officialEvidenceText.includes(matchedTerm.toLocaleLowerCase("ko-KR")),
+      `${testCaseId} exposed internal concept as official evidence: ${matchedTerm}`,
+    );
+  }
 }
 
 const cases = [

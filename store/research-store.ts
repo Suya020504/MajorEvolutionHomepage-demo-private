@@ -35,6 +35,7 @@ import type {
   ProfessorMatchResponse,
   ProfessorMentorLoopEntry,
   ProfessorPaperSelection,
+  ProfessorMatchTopic,
 } from "@/lib/professor-domain";
 import { MAX_FAVORITE_PROFESSORS } from "@/lib/professor-paper-selection";
 
@@ -127,6 +128,8 @@ type ResearchState = {
   professorMatchStatus: "idle" | "loading" | "success" | "error";
   professorMatchError: string | null;
   professorMatchTopicId: string | null;
+  /** 새로고침·퀘스트 왕복 뒤에도 피칭 문구와 다시 찾기 요청을 복원하는 최소 요청 맥락. */
+  professorDiscoveryTopic: ProfessorMatchTopic | null;
   selectedProfessorId: string | null;
   favoriteProfessorIds: string[];
   /**
@@ -169,6 +172,7 @@ type ResearchState = {
   /** 진행 중인 연결 요청의 주제 ID. 저장된 주제 ID이거나 `context:`로 시작하는 임시 ID입니다. */
   setProfessorMatchLoading: (topicId: string) => void;
   setProfessorMatches: (response: ProfessorMatchResponse) => void;
+  setProfessorDiscoveryTopic: (topic: ProfessorMatchTopic | null) => void;
   setProfessorDiscoverySummary: (summary: ProfessorDiscoverySummary | null) => void;
   setProfessorMatchError: (topicId: string, message: string) => void;
   selectProfessor: (id: string) => void;
@@ -198,6 +202,8 @@ const invalidatedResearchState = () => ({
   professorMatchStatus: "idle" as const,
   professorMatchError: null,
   professorMatchTopicId: null,
+  professorDiscoveryTopic: null,
+  professorDiscoverySummary: null,
   selectedProfessorId: null,
   seenIds: [] as string[],
   reRecommendNote: null,
@@ -251,6 +257,22 @@ export function migrateResearchState(
     // v1의 개인 맞춤 입력은 보편 대학생 입력으로 바뀌어 결과를 다시 계산해야 했습니다.
     // v2→v3은 즐겨찾기·논문 선택만 추가하므로 기존 공동설계와 추천 결과를 보존합니다.
     ...(persistedVersion < 2 ? invalidatedResearchState() : {}),
+    /*
+     * v3은 교수 결과만 저장하고 그 결과를 만든 입력 맥락은 저장하지 않았습니다.
+     * 새로고침 뒤 ‘다른 교수님 만나보기’를 누르면 재검색할 조건이 없어 멈추므로,
+     * v4 최초 진입에서는 이전 교수 결과만 비우고 새 계약으로 한 번 다시 찾게 합니다.
+     * 즐겨찾기·공동설계·논문 선택은 그대로 보존합니다.
+     */
+    ...(persistedVersion < 4 ? {
+      professorMatches: [],
+      professorCoverage: null,
+      professorMatchStatus: "idle" as const,
+      professorMatchError: null,
+      professorMatchTopicId: null,
+      professorDiscoveryTopic: null,
+      professorDiscoverySummary: null,
+      selectedProfessorId: null,
+    } : {}),
   };
 }
 
@@ -269,6 +291,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   professorMatchStatus: "idle",
   professorMatchError: null,
   professorMatchTopicId: null,
+  professorDiscoveryTopic: null,
   selectedProfessorId: null,
   favoriteProfessorIds: [],
   professorDiscoverySummary: null,
@@ -385,6 +408,9 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorCoverage: null,
       professorMatchStatus: "idle",
       professorMatchError: null,
+      professorMatchTopicId: null,
+      professorDiscoveryTopic: null,
+      professorDiscoverySummary: null,
       selectedProfessorId: null,
       reRecommendNote: null,
     });
@@ -440,6 +466,9 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorCoverage: null,
       professorMatchStatus: "idle",
       professorMatchError: null,
+      professorMatchTopicId: null,
+      professorDiscoveryTopic: null,
+      professorDiscoverySummary: null,
       selectedProfessorId: null,
       reRecommendNote: null,
       loadKey: state.loadKey + 1,
@@ -460,6 +489,9 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
         professorCoverage: null,
         professorMatchStatus: "idle",
         professorMatchError: null,
+        professorMatchTopicId: null,
+        professorDiscoveryTopic: null,
+        professorDiscoverySummary: null,
         selectedProfessorId: null,
         reRecommendNote: null,
         loadKey: s.loadKey + 1,
@@ -476,6 +508,9 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     professorCoverage: null,
     professorMatchStatus: "idle",
     professorMatchError: null,
+    professorMatchTopicId: null,
+    professorDiscoveryTopic: null,
+    professorDiscoverySummary: null,
     selectedProfessorId: null,
   }),
   setProfessorMatchLoading: (professorMatchTopicId) =>
@@ -547,6 +582,8 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
 
   setProfessorDiscoverySummary: (professorDiscoverySummary) =>
     set({ professorDiscoverySummary }),
+  setProfessorDiscoveryTopic: (professorDiscoveryTopic) =>
+    set({ professorDiscoveryTopic }),
 
   clearProfessorMatches: () =>
     set({
@@ -555,6 +592,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorMatchStatus: "idle",
       professorMatchError: null,
       professorMatchTopicId: null,
+      professorDiscoveryTopic: null,
       selectedProfessorId: null,
       professorDiscoverySummary: null,
     }),
@@ -575,6 +613,9 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorCoverage: null,
       professorMatchStatus: "idle",
       professorMatchError: null,
+      professorMatchTopicId: null,
+      professorDiscoveryTopic: null,
+      professorDiscoverySummary: null,
       selectedProfessorId: null,
       seenIds: [],
       reRecommendNote: null,
@@ -583,7 +624,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     }),
 }), {
   name: "major-evolution-research-v1",
-  version: 3,
+  version: 4,
   migrate: migrateResearchState,
   storage: createJSONStorage(() => localStorage),
   skipHydration: true,
