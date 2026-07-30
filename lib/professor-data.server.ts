@@ -205,6 +205,12 @@ const genericTerms = new Set([
   "대한",
   "어떤",
   "있는가",
+  "에서",
+  "관점에서",
+  "어떻게",
+  "있을까",
+  "통해",
+  "위한",
 ]);
 
 function normalize(value: string): string {
@@ -671,9 +677,14 @@ export function matchOfficialProfessors(
 
   for (const role of ["TOPIC", "METHOD", "CONTEXT"] as const) {
     if (matchByRole.has(role)) continue;
-    const candidate = officialCandidates.find(
-      (item) => !usedProfessorIds.has(item.match.professor.id),
-    );
+    /*
+     * 특정 역할의 직접 근거가 부족하더라도 전체 정렬의 다음 교수를 그대로
+     * 집어넣지 않습니다. 역할별 공식 근거 → 같은 전공 순으로 다시 비교해
+     * 의학과·상담학처럼 학생 입력과 동떨어진 후보가 우연히 채워지는 일을 줄입니다.
+     */
+    const candidate = officialCandidates
+      .filter((item) => !usedProfessorIds.has(item.match.professor.id))
+      .sort((left, right) => compareForRole(role, left, right))[0];
     if (!candidate) continue;
     usedProfessorIds.add(candidate.match.professor.id);
     matchByRole.set(role, presentAsRole(candidate, role));
