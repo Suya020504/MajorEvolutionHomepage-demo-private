@@ -182,6 +182,20 @@ const matchingConcepts: Array<{
   },
 ];
 
+/**
+ * 개념 사전은 고정이므로 정규화한 형태를 미리 만들어 둡니다.
+ * 근거 용어는 화면에 그대로 보여주므로 원문(raw)을 함께 들고 다닙니다.
+ */
+const normalizedConcepts = matchingConcepts.map((concept) => ({
+  label: concept.label,
+  role: concept.role,
+  topicTerms: concept.topicTerms.map((term) => normalize(term)),
+  evidenceTerms: concept.evidenceTerms.map((term) => ({
+    raw: term,
+    normalized: normalize(term),
+  })),
+}));
+
 const genericTerms = new Set([
   "연구",
   "분석",
@@ -222,15 +236,29 @@ function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
 
-function containsTerm(text: string, term: string): boolean {
-  const normalizedText = normalize(text);
-  const normalizedTerm = normalize(term);
+/** 짧은 영문·숫자 용어의 단어 경계 정규식. 같은 용어를 다시 컴파일하지 않으려고 모아 둡니다. */
+const boundaryPatterns = new Map<string, RegExp>();
+
+function boundaryPattern(normalizedTerm: string): RegExp {
+  const cached = boundaryPatterns.get(normalizedTerm);
+  if (cached) return cached;
+  const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i");
+  boundaryPatterns.set(normalizedTerm, pattern);
+  return pattern;
+}
+
+/**
+ * 이미 normalize를 거친 텍스트와 용어를 대조합니다.
+ *
+ * normalize는 toLocaleLowerCase를 타서 문자열 길이에 비례해 무겁습니다.
+ * 교수 1,051명을 훑는 동안 같은 문자열을 수백 번 다시 정규화하지 않으려고,
+ * 정규화된 값을 그대로 받는 길을 따로 둡니다.
+ */
+function normalizedContains(normalizedText: string, normalizedTerm: string): boolean {
   if (!normalizedTerm) return false;
-  if (/^[a-z0-9]+$/.test(normalizedTerm) && normalizedTerm.length <= 3) {
-    const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i").test(
-      normalizedText,
-    );
+  if (normalizedTerm.length <= 3 && /^[a-z0-9]+$/.test(normalizedTerm)) {
+    return boundaryPattern(normalizedTerm).test(normalizedText);
   }
   return normalizedText.includes(normalizedTerm);
 }
@@ -275,6 +303,48 @@ function toProfessor(raw: RawProfessor): OfficialProfessor {
 const officialProfessors = dataset.records.map(toProfessor);
 const professorById = new Map(officialProfessors.map((professor) => [professor.id, professor]));
 
+/**
+ * 교수 쪽 대조 문자열을 미리 정규화해 둡니다.
+ *
+ * 학과·연구분야·논문 제목은 주제와 무관하게 늘 같으므로, 요청마다 1,051명분을
+ * 다시 소문자로 접을 이유가 없습니다. 프로세스가 살아 있는 동안 한 번만 만듭니다.
+ */
+type ProfessorSearchIndex = {
+  fieldEvidence: string;
+  publicationEvidence: string;
+  publicationTitles: string[];
+  departments: string[];
+  fieldTerms: string[];
+};
+
+function buildSearchIndex(professor: OfficialProfessor): ProfessorSearchIndex {
+  return {
+    fieldEvidence: normalize([
+      professor.department,
+      ...professor.researchFields,
+    ].join(" ")),
+    publicationEvidence: normalize(
+      professor.publications.map((publication) => publication.title).join(" "),
+    ),
+    publicationTitles: professor.publications.map((publication) =>
+      normalize(publication.title)),
+    departments: professor.departments.map(normalize),
+    fieldTerms: unique(professor.researchFields.flatMap(meaningfulTerms)),
+  };
+}
+
+const professorSearchIndex = new Map<string, ProfessorSearchIndex>(
+  officialProfessors.map((professor) => [professor.id, buildSearchIndex(professor)]),
+);
+
+function searchIndexFor(professor: OfficialProfessor): ProfessorSearchIndex {
+  const cached = professorSearchIndex.get(professor.id);
+  if (cached) return cached;
+  const built = buildSearchIndex(professor);
+  professorSearchIndex.set(professor.id, built);
+  return built;
+}
+
 const coverageGaps: ProfessorCoverageGap[] = (dataset.coverage_gaps ?? []).map((gap) => ({
     university: gap.university ?? "단국대학교",
     department: gap.department,
@@ -284,15 +354,16 @@ const coverageGaps: ProfessorCoverageGap[] = (dataset.coverage_gaps ?? []).map((
     sourceUrl: gap.source_url,
   }));
 
+/** topicTerms와 titles는 모두 정규화된 상태로 받습니다. */
 function publicationEvidence(
   professor: OfficialProfessor,
   topicTerms: string[],
+  titles: string[],
 ): OfficialPublication | undefined {
   return professor.publications
-    .filter((publication) => {
-      const title = normalize(publication.title);
-      return topicTerms.some((term) => term.length >= 2 && containsTerm(title, term));
-    })
+    .filter((publication, index) =>
+      topicTerms.some((term) =>
+        term.length >= 2 && normalizedContains(titles[index] ?? "", term)))
     .sort((left, right) => left.id.localeCompare(right.id))[0];
 }
 
@@ -357,45 +428,73 @@ function compareEvaluatedProfessors(
     || left.match.professor.id.localeCompare(right.match.professor.id);
 }
 
-function evaluateProfessor(
-  professor: OfficialProfessor,
-  topic: ProfessorMatchTopic,
-): EvaluatedProfessor {
+/**
+ * 주제 한 건에서 한 번만 구하면 되는 값들.
+ *
+ * 예전에는 이걸 교수 1,051명마다 다시 만들었습니다. 주제 문장을 다시 정규화하고,
+ * 12개 개념의 주제 용어를 교수 수만큼 되풀이해 훑느라 요청당 2초 넘게 썼습니다.
+ */
+type TopicMatchContext = {
+  evidenceText: string;
+  topicTerms: string[];
+  evidenceTopicTerms: string[];
+  normalizedMajor: string;
+  normalizedMethods: string[];
+  /**
+   * 주제 쪽에서 이미 걸린 개념만 남깁니다.
+   * 주제에 걸리지 않은 개념은 어떤 교수와도 이어질 수 없으므로 교수마다 다시 볼 이유가 없습니다.
+   */
+  activeConcepts: typeof normalizedConcepts;
+};
+
+function buildTopicMatchContext(topic: ProfessorMatchTopic): TopicMatchContext {
   // 공식 연구근거 대조에는 전공·연구/산업 관심·희망 직무만 사용합니다.
   // 취업 고민, 학년, 만남 방식 같은 학생 맥락은 면담 질문을 개인화하되
   // 교수의 연구분야와 직접 일치하는 근거로 간주하지 않습니다.
   const evidenceText = normalize(buildProfessorEvidenceText(topic));
   const topicTerms = meaningfulTerms(evidenceText);
-  const evidenceTopicTerms = topicTerms.filter((term) => !genericTerms.has(term));
-  const fieldTerms = unique(professor.researchFields.flatMap(meaningfulTerms));
+  return {
+    evidenceText,
+    topicTerms,
+    evidenceTopicTerms: topicTerms.filter((term) => !genericTerms.has(term)),
+    normalizedMajor: normalize(topic.major ?? ""),
+    normalizedMethods: topic.methods.map((method) => normalize(method)),
+    activeConcepts: normalizedConcepts.filter((concept) =>
+      concept.topicTerms.some((term) => normalizedContains(evidenceText, term))),
+  };
+}
+
+function evaluateProfessor(
+  professor: OfficialProfessor,
+  topic: ProfessorMatchTopic,
+  context: TopicMatchContext,
+): EvaluatedProfessor {
+  const { evidenceText, evidenceTopicTerms } = context;
+  const index = searchIndexFor(professor);
+  const fieldTerms = index.fieldTerms;
   const directTerms = fieldTerms.filter(
-    (term) => !genericTerms.has(term) && containsTerm(evidenceText, term),
+    (term) => !genericTerms.has(term) && normalizedContains(evidenceText, term),
   );
-  const professorFieldEvidence = normalize([
-    professor.department,
-    ...professor.researchFields,
-  ].join(" "));
-  const professorPublicationEvidence = normalize([
-    ...professor.publications.map((publication) => publication.title),
-  ].join(" "));
-  const conceptMatches = matchingConcepts
+  const professorFieldEvidence = index.fieldEvidence;
+  const professorPublicationEvidence = index.publicationEvidence;
+  const conceptMatches = context.activeConcepts
     .map((concept) => {
-      const topicHits = concept.topicTerms.filter((term) =>
-        containsTerm(evidenceText, term));
-      const fieldHits = concept.evidenceTerms.filter((term) =>
-        containsTerm(professorFieldEvidence, term));
-      const publicationHits = concept.evidenceTerms.filter((term) =>
-        containsTerm(professorPublicationEvidence, term));
+      const fieldHits = concept.evidenceTerms
+        .filter((term) => normalizedContains(professorFieldEvidence, term.normalized))
+        .map((term) => term.raw);
+      const publicationHits = concept.evidenceTerms
+        .filter((term) => normalizedContains(professorPublicationEvidence, term.normalized))
+        .map((term) => term.raw);
       const evidenceHits = unique([...fieldHits, ...publicationHits]);
       return {
-        ...concept,
-        topicHits,
+        label: concept.label,
+        role: concept.role,
         fieldHits,
         publicationHits,
         evidenceHits,
       };
     })
-    .filter((concept) => concept.topicHits.length > 0 && concept.evidenceHits.length > 0);
+    .filter((concept) => concept.evidenceHits.length > 0);
   const roleMatches = new Set<ProfessorMatchRole>(
     conceptMatches.map((concept) => concept.role),
   );
@@ -410,7 +509,7 @@ function evaluateProfessor(
       .map((concept) => concept.role),
   );
   const methodDirectTerms = directTerms.filter((term) =>
-    topic.methods.some((method) => containsTerm(method, term)));
+    context.normalizedMethods.some((method) => normalizedContains(method, term)));
   if (directTerms.length > 0) {
     const directRole = methodDirectTerms.length > 0 ? "METHOD" : "TOPIC";
     roleMatches.add(directRole);
@@ -418,12 +517,12 @@ function evaluateProfessor(
   }
   const hasRelevantEvidence = roleMatches.size > 0;
   const publication = hasRelevantEvidence
-    ? publicationEvidence(professor, evidenceTopicTerms)
+    ? publicationEvidence(professor, evidenceTopicTerms, index.publicationTitles)
     : undefined;
   const departmentMatchesMajor = Boolean(
-    topic.major
-    && professor.departments.some((department) =>
-      containsTerm(department, topic.major)),
+    context.normalizedMajor
+    && index.departments.some((department) =>
+      normalizedContains(department, context.normalizedMajor)),
   );
 
   let role: ProfessorMatchRole = "CONTEXT";
@@ -446,10 +545,10 @@ function evaluateProfessor(
   }
 
   if (publication) {
+    const publicationTitle = normalize(publication.title);
     matchedTerms.push(
-      ...topicTerms
-        .filter((term) => !genericTerms.has(term))
-        .filter((term) => containsTerm(publication.title, term))
+      ...evidenceTopicTerms
+        .filter((term) => normalizedContains(publicationTitle, term))
         .slice(0, 2),
     );
   }
@@ -648,9 +747,11 @@ export function matchOfficialProfessors(
   options: { excludeIds?: string[] } = {},
 ): ProfessorMatchResponse {
   const excluded = new Set(options.excludeIds ?? []);
+  // 주제 쪽 계산은 교수와 무관하므로 루프 밖에서 한 번만 합니다.
+  const context = buildTopicMatchContext(topic);
   const evaluated = officialProfessors
     .filter((professor) => !excluded.has(professor.id))
-    .map((professor) => evaluateProfessor(professor, topic))
+    .map((professor) => evaluateProfessor(professor, topic, context))
     .sort(compareEvaluatedProfessors);
   const officialCandidates = evaluated.filter(hasOfficialMatchEvidence);
   const usedProfessorIds = new Set<string>();
