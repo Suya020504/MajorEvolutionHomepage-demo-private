@@ -75,7 +75,7 @@ function normalizeConcern(concern: string): string {
 }
 
 /**
- * 학생 입력, 대학 공식 근거, AI가 제안한 표현을 섞지 않고 피칭 카드용으로 나눕니다.
+ * 학생 입력, 대학 공식 근거, 서비스가 제안한 표현을 섞지 않고 피칭 카드용으로 나눕니다.
  * 이 결과는 교수의 실제 발언·성격·지도 가능성을 뜻하지 않습니다.
  */
 export function buildProfessorPitch(
@@ -85,10 +85,7 @@ export function buildProfessorPitch(
 ): ProfessorPitchViewModel {
   const copy = ROLE_COPY[match.role];
   const professor = match.professor;
-  const matchedOfficialConnections = compactUnique([
-    ...match.decisionBasis.matchedConcepts,
-    ...match.matchedTerms,
-  ], 3);
+  const matchedOfficialConnections = compactUnique(match.matchedTerms, 3);
   const officialConnections = matchedOfficialConnections.length > 0
     ? matchedOfficialConnections
     : compactUnique(professor.researchFields, 3);

@@ -179,7 +179,7 @@ function ProfessorFavoriteButton({
  * 주제·방법·확장 관점의 교수님 3인 피칭 카드.
  *
  * 궁합도·순위·면담 가능성은 표시하지 않습니다(제품 경계).
- * 학생 입력, 대학 공식 근거, AI가 제안한 표현을 명확히 나눠 보여줍니다.
+ * 학생 입력, 대학 공식 근거, 서비스가 제안한 표현을 명확히 나눠 보여줍니다.
  */
 function MatchCard({
   match,
@@ -257,9 +257,9 @@ function MatchCard({
       </header>
 
       <section className="match-card__pitch">
-        <span><Sparkles size={14} aria-hidden="true" /> AI 캐스팅 한마디</span>
+        <span><Sparkles size={14} aria-hidden="true" /> 공식 데이터 기반 캐스팅 한마디</span>
         <p>“{pitch.pitchLine}”</p>
-        <small>대학 공식 프로필과 학생 입력을 바탕으로 만든 소개이며, 교수님의 실제 발언이 아닙니다.</small>
+        <small>대학 공식 프로필과 학생 입력을 규칙으로 연결한 소개이며, 교수님의 실제 발언이 아닙니다.</small>
       </section>
 
       <section className="match-card__block">
@@ -286,7 +286,7 @@ function MatchCard({
       </section>
 
       <section className="match-card__mentor">
-        <span>🧭 AI가 제안한 탐색 역할</span>
+        <span>🧭 서비스가 제안한 탐색 역할</span>
         <strong>{pitch.mentorRole}</strong>
       </section>
 
@@ -649,7 +649,7 @@ export function OfficialProfessorsScreen({
               <p>점수 대신, 나와 연결된 이유와 배워볼 가능성·다음 행동을 비교해 보세요.</p>
               <small>
                 <ShieldCheck size={14} aria-hidden="true" />
-                AI가 학생 입력과 대학 공식 프로필을 바탕으로 구성한 소개이며, 교수님의 실제 발언이 아닙니다.
+                학생 입력과 대학 공식 프로필을 규칙으로 연결한 서비스 소개이며, 교수님의 실제 발언이 아닙니다.
               </small>
             </div>
             <div className="professor-pitch-intro__cast" aria-label="연결된 교수님">

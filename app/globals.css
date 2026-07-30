@@ -3523,7 +3523,7 @@ strong {
   display: grid;
   gap: 6px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-default);
 }
 .match-card__connection:last-child { padding-bottom: 0; border-bottom: 0; }
 .match-card__connection > strong {
@@ -3649,7 +3649,7 @@ strong {
 .match-card__source-row button,
 .match-card__source-row a {
   display: inline-flex;
-  min-height: 42px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 5px;
@@ -4047,7 +4047,7 @@ strong {
   .courses-warning a { grid-column: auto; padding: 0 16px; }
 }
 
-@media (min-width: 1040px) {
+@media (min-width: 1280px) {
   .match-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 

@@ -78,6 +78,7 @@ function normalizeTopic(value: unknown): ProfessorMatchTopic | null {
     goal: stringValue(raw.goal, 120),
     studentStage: stringValue(raw.studentStage, 120),
     secondaryMajorType: stringValue(raw.secondaryMajorType, 40),
+    secondaryCollege: stringValue(raw.secondaryCollege, 80),
     secondaryMajor: stringValue(raw.secondaryMajor, 80),
     careerInterests: stringArray(raw.careerInterests, 3, 80),
     careerConcerns: stringArray(raw.careerConcerns, 2, 80),

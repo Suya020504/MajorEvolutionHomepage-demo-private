@@ -588,16 +588,22 @@ function presentAsRole(
 
   const roleHasDirectEvidence =
     candidate.match.decisionBasis.roleMatches[roleDecisionKey[role]];
-  const roleConcepts = conceptsForRole(role)
+  const officialEvidenceText = normalize([
+    candidate.match.professor.department,
+    ...candidate.match.professor.researchFields,
+    ...candidate.match.professor.publications.map((publication) => publication.title),
+  ].join(" "));
+  const roleEvidenceTerms = unique(conceptsForRole(role)
     .filter((concept) => candidate.matchedConcepts.has(concept.label))
-    .map((concept) => concept.label);
+    .flatMap((concept) => concept.evidenceTerms.filter((term) =>
+      containsTerm(officialEvidenceText, term))));
   const roleLabel = role === "TOPIC"
     ? "연구 내용"
     : role === "METHOD"
       ? "연구 방법"
       : "확장 맥락";
   const evidenceTerms = (
-    roleConcepts.length > 0 ? roleConcepts : candidate.match.matchedTerms
+    roleEvidenceTerms.length > 0 ? roleEvidenceTerms : candidate.match.matchedTerms
   ).slice(0, 3);
   if (evidenceTerms.length === 0) {
     evidenceTerms.push(
