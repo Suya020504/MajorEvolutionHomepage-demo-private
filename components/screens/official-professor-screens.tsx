@@ -378,7 +378,6 @@ export function OfficialProfessorsScreen({
   const setDiscoverySummary = useResearchStore((state) => state.setProfessorDiscoverySummary);
   const setError = useResearchStore((state) => state.setProfessorMatchError);
   const clearProfessorMatches = useResearchStore((state) => state.clearProfessorMatches);
-  const selectProfessor = useResearchStore((state) => state.selectProfessor);
   const savedTopic = useSelectedTopic();
 
   const [context, setContext] = useState<ProfessorDiscoveryContext>(() => ({
@@ -387,7 +386,8 @@ export function OfficialProfessorsScreen({
     careerInterests: [],
     careerConcerns: [],
   }));
-  const [rejectedIds, setRejectedIds] = useState<string[]>([]);
+  const rejectedIds = useResearchStore((state) => state.professorRejectedIds);
+  const setRejectedIds = useResearchStore((state) => state.setProfessorRejectedIds);
   const [inputError, setInputError] = useState<string | null>(null);
   const [scopeNotice, setScopeNotice] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
@@ -505,6 +505,11 @@ export function OfficialProfessorsScreen({
         interests: requestContext.interests,
         careerConcerns: requestContext.careerConcerns,
       });
+      /*
+       * 피칭 결과는 폼 아래가 아니라 전용 주소에서 봅니다.
+       * 결과가 폼 밑에 붙어 있으면 세 장을 비교하는 동안에도 입력이 화면을 차지했습니다.
+       */
+      router.push("/professors/pitch");
     } catch (error) {
       if (
         error instanceof ProfessorMatchRequestAbortedError
@@ -523,27 +528,6 @@ export function OfficialProfessorsScreen({
     }
   };
 
-  const rejectMatch = (professorId: string) => {
-    const next = [...rejectedIds, professorId];
-    setRejectedIds(next);
-    void runSearch(next);
-  };
-
-  const openProfessor = (match: ProfessorMatch) => {
-    selectProfessor(match.professor.id);
-    router.push(`/professors/${match.professor.id}`);
-  };
-
-  const openProfessorPaper = (match: ProfessorMatch) => {
-    selectProfessor(match.professor.id);
-    router.push("/paper/reader?mode=bite&source=favorites");
-  };
-
-  const prepareProfessorConversation = (match: ProfessorMatch) => {
-    selectProfessor(match.professor.id);
-    router.push("/quest/first-line");
-  };
-
   /*
    * 이전에 찾은 결과는 화면을 다시 열어도 그대로 보여줍니다.
    *
@@ -556,9 +540,6 @@ export function OfficialProfessorsScreen({
     && !searchAttempted
     && matches.length > 0
     && Boolean(storedDiscoveryTopic);
-  const visibleMatches = (searchAttempted && isDankookUniversity(context.university)) || showsStoredMatches
-    ? matches
-    : [];
 
   return (
     <AppShell title="나의 교수님 — 찾다" backHref="/mentoring" className="find-professor-screen">
@@ -627,59 +608,230 @@ export function OfficialProfessorsScreen({
       )}
 
       {showsStoredMatches && (
-        <StatusBanner icon={SearchCheck} title="지난번에 찾은 결과예요" tone="lavender">
-          위 질문에서 조건을 바꾸면 새로 찾습니다. 그때까지는 이 결과가 그대로 유지됩니다.
-        </StatusBanner>
+        <Link className="professor-pitch-resume" href="/professors/pitch">
+          <SearchCheck size={22} aria-hidden="true" />
+          <div>
+            <strong>지난번에 찾은 교수님 {matches.length}인 피칭 보기</strong>
+            <p>
+              위 질문에서 조건을 바꾸면 새로 찾습니다. 그때까지는 이 결과가 그대로 유지됩니다.
+            </p>
+          </div>
+          <ArrowRight size={17} aria-hidden="true" />
+        </Link>
       )}
 
-      {searchAttempted && status !== "loading" && status !== "error" && visibleMatches.length === 0 && (
+      {searchAttempted && status === "success" && matches.length === 0 && (
         <Card className="official-professor-empty">
           <CircleAlert size={28} />
           <h2>공식 근거가 있는 후보를 찾지 못했어요</h2>
           <p>관심 분야를 더 구체적인 연구 키워드로 바꾸거나 구체 연구주제를 추가해 다시 찾아보세요.</p>
         </Card>
       )}
+    </AppShell>
+  );
+}
 
-      {(searchAttempted || showsStoredMatches) && status !== "loading" && visibleMatches.length > 0 && (
+/**
+ * 교수님 3인 피칭 전용 화면(/professors/pitch).
+ *
+ * 찾기 폼과 결과를 한 화면에 쌓아 두면 세 장을 나란히 비교하기 어려워,
+ * 검색이 끝나면 이 주소로 이동해 결과만 보여줍니다.
+ * 표시할 결과는 저장소에 있는 마지막 검색 결과이며, 입력을 바꾸면 사라집니다.
+ */
+export function ProfessorPitchScreen() {
+  const router = useRouter();
+  const hasHydrated = useResearchStore((state) => state.hasHydrated);
+  const matches = useResearchStore((state) => state.professorMatches);
+  const coverage = useResearchStore((state) => state.professorCoverage);
+  const status = useResearchStore((state) => state.professorMatchStatus);
+  const matchError = useResearchStore((state) => state.professorMatchError);
+  const storedDiscoveryTopic = useResearchStore((state) => state.professorDiscoveryTopic);
+  const rejectedIds = useResearchStore((state) => state.professorRejectedIds);
+  const setRejectedIds = useResearchStore((state) => state.setProfessorRejectedIds);
+  const setLoading = useResearchStore((state) => state.setProfessorMatchLoading);
+  const setMatches = useResearchStore((state) => state.setProfessorMatches);
+  const setDiscoveryTopic = useResearchStore((state) => state.setProfessorDiscoveryTopic);
+  const setError = useResearchStore((state) => state.setProfessorMatchError);
+  const selectProfessor = useResearchStore((state) => state.selectProfessor);
+  const savedTopic = useSelectedTopic();
+  const activeRequestRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => {
+    activeRequestRef.current?.abort();
+  }, []);
+
+  /*
+   * 피칭 문구는 학생이 입력한 맥락을 그대로 써야 합니다.
+   * 폼의 지역 상태는 이 주소에 없으므로 저장된 요청 맥락에서 되살립니다.
+   */
+  const context = useMemo<ProfessorDiscoveryContext>(
+    () => storedDiscoveryTopic
+      ? professorMatchTopicToDiscoveryContext(storedDiscoveryTopic)
+      : {
+        ...EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
+        interests: [],
+        careerInterests: [],
+        careerConcerns: [],
+      },
+    [storedDiscoveryTopic],
+  );
+
+  const runSearch = async (excludeIds: string[]) => {
+    if (!storedDiscoveryTopic) {
+      router.push("/professors");
+      return;
+    }
+    const useSaved = Boolean(savedTopic && savedTopic.title === context.topic.trim());
+    const matchTopic = discoveryContextToMatchTopic(context, useSaved ? savedTopic : null);
+    activeRequestRef.current?.abort();
+    const requestController = new AbortController();
+    activeRequestRef.current = requestController;
+    setLoading(matchTopic.id);
+    try {
+      const response = await requestProfessorDiscoveryMatches(context, {
+        excludeIds,
+        savedTopic: useSaved ? savedTopic : null,
+        signal: requestController.signal,
+      });
+      if (activeRequestRef.current !== requestController) return;
+      setMatches(response);
+      setDiscoveryTopic(matchTopic);
+    } catch (error) {
+      if (
+        error instanceof ProfessorMatchRequestAbortedError
+        || activeRequestRef.current !== requestController
+      ) {
+        return;
+      }
+      setError(
+        matchTopic.id,
+        error instanceof Error ? error.message : "공식 교수 데이터를 연결하지 못했습니다.",
+      );
+    } finally {
+      if (activeRequestRef.current === requestController) {
+        activeRequestRef.current = null;
+      }
+    }
+  };
+
+  const rejectMatch = (professorId: string) => {
+    const next = [...rejectedIds, professorId];
+    setRejectedIds(next);
+    void runSearch(next);
+  };
+
+  const openProfessor = (match: ProfessorMatch) => {
+    selectProfessor(match.professor.id);
+    router.push(`/professors/${match.professor.id}`);
+  };
+
+  const openProfessorPaper = (match: ProfessorMatch) => {
+    selectProfessor(match.professor.id);
+    router.push("/paper/reader?mode=bite&source=favorites");
+  };
+
+  const prepareProfessorConversation = (match: ProfessorMatch) => {
+    selectProfessor(match.professor.id);
+    router.push("/quest/first-line");
+  };
+
+  return (
+    <AppShell title="교수님 3인 피칭" backHref="/professors" className="professor-pitch-screen">
+      {!hasHydrated ? (
+        <Card className="official-professor-empty" role="status">
+          <LoaderCircle className="spin" size={26} />
+          <h2>저장한 피칭 결과를 불러오는 중이에요</h2>
+        </Card>
+      ) : status === "loading" ? (
+        <Card className="official-professor-empty professor-match-loading" role="status">
+          <LoaderCircle className="spin" size={26} />
+          <h2>공식 교수 1,051명을 세 관점으로 확인 중이에요</h2>
+          <p>첫 요청은 공식 데이터를 여는 시간까지 약 3~10초 걸릴 수 있어요. 화면을 닫지 않아도 결과가 바로 이어집니다.</p>
+          <div className="professor-match-loading__steps" aria-hidden="true">
+            <span>입력 구조화</span>
+            <span>공식 근거 대조</span>
+            <span>3인 피칭 구성</span>
+          </div>
+        </Card>
+      ) : (
         <>
-          <section className="professor-pitch-intro" aria-labelledby="professor-pitch-title">
-            <div className="professor-pitch-intro__copy">
-              <span>TODAY&apos;S PROFESSOR CASTING</span>
-              <h2 id="professor-pitch-title">🎤 교수님 {visibleMatches.length}인 피칭</h2>
-              <p>점수 대신, 나와 연결된 이유와 배워볼 가능성·다음 행동을 비교해 보세요.</p>
-              <small>
-                <ShieldCheck size={14} aria-hidden="true" />
-                학생 입력과 대학 공식 프로필을 규칙으로 연결한 서비스 소개이며, 교수님의 실제 발언이 아닙니다.
-              </small>
-            </div>
-            <div className="professor-pitch-intro__cast" aria-label="연결된 교수님">
-              {visibleMatches.map((match) => (
-                <div key={match.professor.id}>
-                  <ProfessorPortrait professor={match.professor} variant={match.role} large />
-                  <span>{match.professor.name}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-          {visibleMatches.length < 3 && (
-            <StatusBanner icon={CircleAlert} title="세 관점을 모두 채우지 못했어요" tone="warning">
-              공식 프로필에서 확인 가능한 직접 근거가 있는 교수만 표시했습니다. 키워드를 보완하면 다른 관점이 추가될 수 있습니다.
+          {status === "error" && (
+            <StatusBanner icon={CircleAlert} title="연결하지 못했어요" tone="warning">
+              {matchError ?? "공식 교수 데이터를 연결하지 못했습니다."}{" "}
+              입력한 내용은 그대로 두었으니 찾기 화면에서 다시 시도해 주세요.
             </StatusBanner>
           )}
-          <div className="match-grid">
-            {visibleMatches.map((match) => (
-              <MatchCard
-                key={match.professor.id}
-                match={match}
-                context={context}
-                onOpen={() => openProfessor(match)}
-                onOpenPaper={() => openProfessorPaper(match)}
-                onPrepareConversation={() => prepareProfessorConversation(match)}
-                onReject={() => rejectMatch(match.professor.id)}
-              />
-            ))}
-          </div>
-          {coverage && <p className="prof-scope-note">{coverage.note}</p>}
+
+          {matches.length === 0 ? (
+            <Card className="official-professor-empty">
+              <SearchCheck size={28} />
+              <h2>아직 보여드릴 피칭이 없어요</h2>
+              <p>찾기 화면에서 전공·관심 분야와 진로 고민을 입력하면 세 관점의 교수님을 찾아드려요.</p>
+              <PrimaryButton onClick={() => router.push("/professors")}>
+                교수님 찾기로 가기 <ArrowRight size={17} />
+              </PrimaryButton>
+            </Card>
+          ) : (
+            <>
+              <section className="professor-pitch-intro" aria-labelledby="professor-pitch-title">
+                <div className="professor-pitch-intro__copy">
+                  <span>TODAY&apos;S PROFESSOR CASTING</span>
+                  <h2 id="professor-pitch-title">🎤 교수님 {matches.length}인 피칭</h2>
+                  <p>점수 대신, 나와 연결된 이유와 배워볼 가능성·다음 행동을 비교해 보세요.</p>
+                  <small>
+                    <ShieldCheck size={14} aria-hidden="true" />
+                    학생 입력과 대학 공식 프로필을 규칙으로 연결한 서비스 소개이며, 교수님의 실제 발언이 아닙니다.
+                  </small>
+                </div>
+                <div className="professor-pitch-intro__cast" aria-label="연결된 교수님">
+                  {matches.map((match) => (
+                    <div key={match.professor.id}>
+                      <ProfessorPortrait professor={match.professor} variant={match.role} large />
+                      <span>{match.professor.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {matches.length < 3 && (
+                <StatusBanner icon={CircleAlert} title="세 관점을 모두 채우지 못했어요" tone="warning">
+                  공식 프로필에서 확인 가능한 직접 근거가 있는 교수만 표시했습니다. 키워드를 보완하면 다른 관점이 추가될 수 있습니다.
+                </StatusBanner>
+              )}
+
+              <div className="professor-pitch-toolbar">
+                <Link href="/professors">
+                  <SearchCheck size={16} aria-hidden="true" /> 조건 바꿔 다시 찾기
+                </Link>
+                {rejectedIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRejectedIds([]);
+                      void runSearch([]);
+                    }}
+                  >
+                    제외한 교수 {rejectedIds.length}명 다시 포함하기
+                  </button>
+                )}
+              </div>
+
+              <div className="match-grid">
+                {matches.map((match) => (
+                  <MatchCard
+                    key={match.professor.id}
+                    match={match}
+                    context={context}
+                    onOpen={() => openProfessor(match)}
+                    onOpenPaper={() => openProfessorPaper(match)}
+                    onPrepareConversation={() => prepareProfessorConversation(match)}
+                    onReject={() => rejectMatch(match.professor.id)}
+                  />
+                ))}
+              </div>
+              {coverage && <p className="prof-scope-note">{coverage.note}</p>}
+            </>
+          )}
         </>
       )}
     </AppShell>

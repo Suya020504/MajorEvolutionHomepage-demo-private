@@ -130,6 +130,11 @@ type ResearchState = {
   professorMatchTopicId: string | null;
   /** 새로고침·퀘스트 왕복 뒤에도 피칭 문구와 다시 찾기 요청을 복원하는 최소 요청 맥락. */
   professorDiscoveryTopic: ProfessorMatchTopic | null;
+  /**
+   * ‘다른 교수님 만나보기’로 제외한 교수 ID.
+   * 찾기 화면과 피칭 화면이 다른 주소로 나뉘어 있어, 제외 목록도 저장소에서 공유합니다.
+   */
+  professorRejectedIds: string[];
   selectedProfessorId: string | null;
   favoriteProfessorIds: string[];
   /**
@@ -173,6 +178,7 @@ type ResearchState = {
   setProfessorMatchLoading: (topicId: string) => void;
   setProfessorMatches: (response: ProfessorMatchResponse) => void;
   setProfessorDiscoveryTopic: (topic: ProfessorMatchTopic | null) => void;
+  setProfessorRejectedIds: (ids: string[]) => void;
   setProfessorDiscoverySummary: (summary: ProfessorDiscoverySummary | null) => void;
   setProfessorMatchError: (topicId: string, message: string) => void;
   selectProfessor: (id: string) => void;
@@ -203,6 +209,7 @@ const invalidatedResearchState = () => ({
   professorMatchError: null,
   professorMatchTopicId: null,
   professorDiscoveryTopic: null,
+  professorRejectedIds: [],
   professorDiscoverySummary: null,
   selectedProfessorId: null,
   seenIds: [] as string[],
@@ -270,6 +277,7 @@ export function migrateResearchState(
       professorMatchError: null,
       professorMatchTopicId: null,
       professorDiscoveryTopic: null,
+      professorRejectedIds: [],
       professorDiscoverySummary: null,
       selectedProfessorId: null,
     } : {}),
@@ -292,6 +300,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   professorMatchError: null,
   professorMatchTopicId: null,
   professorDiscoveryTopic: null,
+  professorRejectedIds: [],
   selectedProfessorId: null,
   favoriteProfessorIds: [],
   professorDiscoverySummary: null,
@@ -410,6 +419,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorMatchError: null,
       professorMatchTopicId: null,
       professorDiscoveryTopic: null,
+      professorRejectedIds: [],
       professorDiscoverySummary: null,
       selectedProfessorId: null,
       reRecommendNote: null,
@@ -468,6 +478,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorMatchError: null,
       professorMatchTopicId: null,
       professorDiscoveryTopic: null,
+      professorRejectedIds: [],
       professorDiscoverySummary: null,
       selectedProfessorId: null,
       reRecommendNote: null,
@@ -491,6 +502,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
         professorMatchError: null,
         professorMatchTopicId: null,
         professorDiscoveryTopic: null,
+        professorRejectedIds: [],
         professorDiscoverySummary: null,
         selectedProfessorId: null,
         reRecommendNote: null,
@@ -510,6 +522,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     professorMatchError: null,
     professorMatchTopicId: null,
     professorDiscoveryTopic: null,
+    professorRejectedIds: [],
     professorDiscoverySummary: null,
     selectedProfessorId: null,
   }),
@@ -584,6 +597,8 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     set({ professorDiscoverySummary }),
   setProfessorDiscoveryTopic: (professorDiscoveryTopic) =>
     set({ professorDiscoveryTopic }),
+  setProfessorRejectedIds: (professorRejectedIds) =>
+    set({ professorRejectedIds }),
 
   clearProfessorMatches: () =>
     set({
@@ -593,6 +608,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorMatchError: null,
       professorMatchTopicId: null,
       professorDiscoveryTopic: null,
+      professorRejectedIds: [],
       selectedProfessorId: null,
       professorDiscoverySummary: null,
     }),
@@ -615,6 +631,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       professorMatchError: null,
       professorMatchTopicId: null,
       professorDiscoveryTopic: null,
+      professorRejectedIds: [],
       professorDiscoverySummary: null,
       selectedProfessorId: null,
       seenIds: [],

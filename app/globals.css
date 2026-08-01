@@ -3335,6 +3335,45 @@ strong {
 .find-layout { display: grid; gap: 12px; }
 .find-results { display: grid; align-content: start; gap: 12px; min-width: 0; }
 .find-results > .match-grid { margin-top: 0; }
+/* 찾기 화면에 남는 지난 결과 진입 링크. 결과 자체는 /professors/pitch에서 봅니다. */
+.professor-pitch-resume {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  margin-top: 14px;
+  padding: 15px;
+  border: 1px solid rgba(117, 87, 255, 0.22);
+  border-radius: var(--radius-md);
+  background: var(--brand-lavender-soft, rgba(245, 242, 255, 0.9));
+}
+.professor-pitch-resume svg:first-child { color: var(--brand-purple); }
+.professor-pitch-resume strong { display: block; font-size: 14px; }
+.professor-pitch-resume p { margin-top: 3px; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+
+.professor-pitch-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.professor-pitch-toolbar > a,
+.professor-pitch-toolbar > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.professor-pitch-toolbar > a { color: var(--brand-purple); border-color: rgba(117, 87, 255, 0.3); }
+
 .professor-pitch-intro {
   display: grid;
   gap: 18px;
@@ -4045,6 +4084,11 @@ strong {
   .courses-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .courses-warning { grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; }
   .courses-warning a { grid-column: auto; padding: 0 16px; }
+}
+
+@media (min-width: 1024px) {
+  /* 피칭 전용 화면은 입력 폼이 없어 세 장을 더 일찍 나란히 놓을 수 있습니다. */
+  .professor-pitch-screen .match-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (min-width: 1280px) {
