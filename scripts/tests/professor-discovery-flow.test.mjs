@@ -326,7 +326,7 @@ test("데스크톱 교수 찾기 폼은 결과 영역을 sticky로 가리지 않
     /\.find-professor-screen\s+\.context-panel\s*\{[^}]*position:\s*sticky/si,
   );
   assert.match(css, /\.find-professor-screen\s+\.context-panel\s*\{[^}]*position:\s*static/si);
-  assert.match(screen, /교수님 \{visibleMatches\.length\}인 피칭/);
+  assert.match(screen, /교수님 \{matches\.length\}인 피칭/);
   assert.match(screen, /공식 데이터 기반 캐스팅 한마디/);
   assert.doesNotMatch(screen, /> AI 캐스팅 한마디</);
   assert.match(screen, /서비스가 제안한 탐색 역할/);
@@ -343,6 +343,45 @@ test("데스크톱 교수 찾기 폼은 결과 영역을 sticky로 가리지 않
   );
   assert.match(css, /@media \(min-width: 1280px\)[\s\S]*\.match-grid/);
   assert.doesNotMatch(css, /var\(--border-subtle\)/);
+});
+
+test("교수님 3인 피칭은 찾기 폼 아래가 아니라 전용 주소에서 보여준다", () => {
+  const screen = fs.readFileSync(
+    path.join(repositoryRoot, "components/screens/official-professor-screens.tsx"),
+    "utf8",
+  );
+  const route = fs.readFileSync(
+    path.join(repositoryRoot, "app/professors/pitch/page.tsx"),
+    "utf8",
+  );
+
+  assert.match(route, /ProfessorPitchScreen/);
+  assert.match(screen, /export function ProfessorPitchScreen\(\)/);
+  assert.match(
+    screen,
+    /router\.push\("\/professors\/pitch"\)/,
+    "검색에 성공하면 피칭 전용 주소로 이동해야 한다",
+  );
+
+  const formScreen = screen.slice(
+    screen.indexOf("export function OfficialProfessorsScreen("),
+    screen.indexOf("export function ProfessorPitchScreen()"),
+  );
+  assert.doesNotMatch(
+    formScreen,
+    /<MatchCard/,
+    "찾기 화면은 결과 카드를 직접 렌더링하지 않는다",
+  );
+  assert.match(formScreen, /href="\/professors\/pitch"/, "저장된 결과로 되돌아갈 링크가 있어야 한다");
+
+  const pitchScreen = screen.slice(screen.indexOf("export function ProfessorPitchScreen()"));
+  assert.match(pitchScreen, /<MatchCard/);
+  assert.match(pitchScreen, /다른 교수님 만나보기|onReject/);
+  assert.match(
+    pitchScreen,
+    /professorMatchTopicToDiscoveryContext\(storedDiscoveryTopic\)/,
+    "피칭 문구는 저장된 요청 맥락으로 복원해야 한다",
+  );
 });
 
 test("새 연구주제로 전환하면 이전 교수 찾기 맥락과 포트폴리오 요약을 함께 지운다", () => {
