@@ -9,6 +9,9 @@
 ## 구성
 
 - `index.html`: 발표 슬라이드 전체 코드
+- `styles.css`: 데스크톱·모바일 반응형 레이아웃과 발표 디자인
+- `deck.js`: 슬라이드 이동, 해시 주소, 발표자 노트, 전체화면 제어
+- `assets/`: 발표에 사용한 PNG 이미지 20개
 - Vercel Web Analytics 추적 스크립트 포함
 - Google Analytics 4는 측정 ID 발급 후 연결 예정
 
@@ -19,5 +22,4 @@
 
 ## 배포
 
-이 폴더를 Vercel 정적 프로젝트의 루트로 지정하면 배포할 수 있습니다.
-
+이 폴더를 Vercel 정적 프로젝트의 루트로 지정하면 배포할 수 있습니다. `index.html`, `styles.css`, `deck.js`, `assets/`를 항상 함께 배포해야 이미지와 모바일 레이아웃이 정상 표시됩니다.
