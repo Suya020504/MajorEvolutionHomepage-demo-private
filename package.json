@@ -25,6 +25,7 @@
     "professors:verify-matches": "node scripts/verify-professor-matches.mjs"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "lucide-react": "^0.468.0",
     "next": "^15.1.0",
     "pdfjs-dist": "^4.10.38",
