@@ -143,7 +143,7 @@ export function LandingPage() {
             <Link href="/home" className={styles.resumeLink}>
               이어하기
             </Link>
-            <Link href="/professors" className={styles.headerCta}>
+            <Link href="/tutorial" className={styles.headerCta}>
               3분 방향 찾기
             </Link>
           </div>
@@ -170,7 +170,7 @@ export function LandingPage() {
             <Link href="/home" onClick={closeMenu}>
               이어하기
             </Link>
-            <Link href="/professors" className={styles.mobileMenuCta} onClick={closeMenu}>
+            <Link href="/tutorial" className={styles.mobileMenuCta} onClick={closeMenu}>
               3분 방향 찾기 <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </nav>
@@ -191,7 +191,7 @@ export function LandingPage() {
                 <br className={styles.desktopBreak} /> 첫 질문과 다음 행동까지 준비합니다.
               </p>
               <div className={styles.heroActions}>
-                <Link href="/professors" className={styles.primaryCta}>
+                <Link href="/tutorial" className={styles.primaryCta}>
                   3분 방향 찾기 <ArrowRight size={19} aria-hidden="true" />
                 </Link>
                 <a href="#flow" className={styles.secondaryCta}>
@@ -405,7 +405,7 @@ export function LandingPage() {
               </h2>
               <p>가입 없이 3분이면 기본 방향과 첫 교수 연결을 확인할 수 있어요.</p>
               <div className={styles.closingActions}>
-                <Link href="/professors" className={styles.primaryCta}>
+                <Link href="/tutorial" className={styles.primaryCta}>
                   3분 방향 찾기 <ArrowRight size={19} aria-hidden="true" />
                 </Link>
                 <Link href="/home" className={styles.closingResume}>
