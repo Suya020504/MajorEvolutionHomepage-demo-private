@@ -21,6 +21,19 @@ export const brandLogo = {
   appIcon512: `${ROOT}/logo/nyp-app-icon-color-v01-512.png`,
 } as const;
 
+/** 2026-08 리뉴얼: 학생과 교수의 첫 대화를 두 인물의 연결선으로 표현한 공용 로고. */
+export const brandLogoV2 = {
+  /** ImageGen으로 제작하고 웹용으로 여백/용량만 정리한 공식 심벌. */
+  mark: "/brand/nyp-v04/logo/nyp-logo-symbol-generated-v01.png",
+  /** 생성형 심벌의 형태를 단색 환경에 맞게 재구성한 벡터 대체안. */
+  markMonoWhite: "/brand/nyp-v04/logo/nyp-logo-mark-mono-white-v02.svg",
+} as const;
+
+/** 튜토리얼 전용 장면. 공식 V3 캐릭터·캠퍼스 무드를 기준으로 새로 제작했습니다. */
+export const tutorialScene = {
+  firstPath: "/brand/nyp-v04/scenes/tutorial/nyp-scene-tutorial-first-path-16x9-v01.webp",
+} as const;
+
 /** 핵심 3기능 아이콘. 화면에서는 항상 텍스트 라벨과 함께 씁니다. */
 export const coreIcon = {
   find: `${ROOT}/icons/core3/nyp-icon-core3-find-v01.svg`,

@@ -39,7 +39,7 @@ The concepts are visual references only. Runtime copy, controls, and layout are 
    - This preserves the conventional landing-page funnel represented by the accepted concepts.
 
 7. **Interaction and destination clarity — pass**
-   - Primary CTA opens the direction-finding experience at `/professors`.
+   - Primary CTA opens the guided direction-finding tutorial at `/tutorial`.
    - `서비스 흐름 보기` moves to `#flow`.
    - Returning users enter the internal product home at `/home`.
    - The mobile navigation opens, exposes the same anchors, and closes correctly.

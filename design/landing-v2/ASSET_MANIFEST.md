@@ -7,7 +7,7 @@
 | `public/brand/nyp-v03/scenes/connect/nyp-scene-connect-professor-web-1440-1440x810-v01.webp` | 사람과의 연결 | 흐름 3단계 | 16:9, 불투명 | 공식 브랜드 패키지 | 원본, 실제 교수 사진 아님 |
 | `public/brand/nyp-v03/scenes/q-paper/nyp-scene-q-paper-bite-web-1440-1440x810-v01.webp` | 논문 한입 | 결과 경험 | 16:9, 불투명 | 공식 브랜드 패키지 | 원본, 본문과 대체 텍스트 제공 |
 | `public/brand/nyp-v03/scenes/q-seed/nyp-scene-q-next-seed-web-1440-1440x810-v01.webp` | 다음 행동 | 결과/마지막 CTA | 16:9, 불투명 | 공식 브랜드 패키지 | 원본, 본문과 대체 텍스트 제공 |
-| `public/brand/nyp-v03/logo/nyp-logo-mark-color-v01.svg` 및 흰색 워드마크 | 브랜드 식별 | 헤더 심볼·푸터 워드마크 | SVG, 투명 | 공식 브랜드 패키지 | 심볼은 변형하지 않고 헤더 명칭은 코드 텍스트로 구성 |
+| `public/brand/nyp-v04/logo/nyp-logo-symbol-generated-v01.png` 및 단색 SVG | 브랜드 식별 | 헤더 심볼·푸터 로고 | PNG/SVG, 투명 | ImageGen 심벌+코드 워드마크 | 생성형 심벌은 코드 타이포와 결합하고 어두운 배경은 단색 대체안 사용 |
 | `concepts/landing-hero-concept-v1.png` | 구현 기준 | Hero | 16:9, 불투명 | ImageGen, 공식 히어로 장면 참조 | 코드 UI로만 재구성, 런타임 미사용 |
 | `concepts/landing-flow-concept-v1.png` | 구현 기준 | Problem/Flow | 세로 보드, 불투명 | ImageGen, 공식 find/connect 장면 참조 | 코드 UI로만 재구성, 런타임 미사용 |
 | `concepts/landing-trust-cta-concept-v1.png` | 구현 기준 | Outcome/Trust/CTA | 세로 보드, 불투명 | ImageGen, 공식 paper/seed 장면 참조 | 코드 UI로만 재구성, 런타임 미사용 |

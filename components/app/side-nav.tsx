@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CompassIcon, FlaskConical, Home, MessagesSquare, NotebookPen } from "lucide-react";
-import { brandLogo } from "@/lib/brand-assets";
+import { brandLogoV2 } from "@/lib/brand-assets";
 
 /**
  * 넓은 화면 좌측 내비.
@@ -48,7 +48,7 @@ export function SideNav() {
   return (
     <nav className="side-nav" aria-label="주요 메뉴">
       <Link href="/home" className="side-nav__brand">
-        <Image src={brandLogo.mark} alt="" aria-hidden="true" width={34} height={34} unoptimized />
+        <Image src={brandLogoV2.mark} alt="" aria-hidden="true" width={38} height={38} unoptimized />
         <span>
           <strong>너의 교수님은?</strong>
           <small>찾다 · 만들다 · 잇다</small>

@@ -1,12 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
-  BookOpenCheck,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -18,7 +16,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { guideCharacter } from "@/lib/brand-assets";
+import { BrandLogo } from "@/components/brand/brand-logo";
+import { brandLogoV2, tutorialScene } from "@/lib/brand-assets";
 import {
   CAREER_CONCERN_OPTIONS,
   CAREER_GOAL_OPTIONS,
@@ -356,9 +355,6 @@ export function ProfessorTutorialScreen({
       return (
         <div className={styles.welcomePanel}>
           <div className={styles.timeBadge}><Clock3 size={16} /> 약 3분</div>
-          <div className={styles.welcomeVisual} aria-hidden="true">
-            <Image src={guideCharacter.findRadar} alt="" width={220} height={210} priority unoptimized />
-          </div>
           <div className={styles.promiseList}>
             <p><CheckCircle2 size={18} /> 질문은 한 번에 하나씩</p>
             <p><ShieldCheck size={18} /> 학교 공식 정보와 연결 이유 확인</p>
@@ -537,7 +533,7 @@ export function ProfessorTutorialScreen({
     return (
       <div className={styles.reviewPanel}>
         <div className={styles.reviewHero}>
-          <Image src={guideCharacter.thinking} alt="" width={108} height={104} unoptimized />
+          <span className={styles.reviewMark}><Check size={22} strokeWidth={2.5} /></span>
           <div><span>{context.major}</span><strong>{context.goal}</strong></div>
         </div>
         <dl className={styles.reviewList}>
@@ -560,11 +556,10 @@ export function ProfessorTutorialScreen({
 
   if (isMatching) {
     return (
-      <main className={styles.loadingPage}>
+      <main id="main-content" className={styles.loadingPage}>
         <div className={styles.loadingCard} aria-live="polite">
           <div className={styles.processingVisual}>
-            <span className={styles.orbit} aria-hidden="true" />
-            <Image src={guideCharacter.processing} alt="" width={140} height={140} priority unoptimized />
+            <Image src={brandLogoV2.mark} alt="" width={86} height={86} priority unoptimized />
           </div>
           <span className={styles.eyebrow}>첫 교수 연결 준비 중</span>
           <h1>내 고민과 공식 정보를 연결하고 있어요.</h1>
@@ -585,17 +580,14 @@ export function ProfessorTutorialScreen({
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="너의 교수님은? 랜딩페이지로 이동">
-          <span className={styles.brandMark}><BookOpenCheck size={18} /></span>
-          <strong>너의 <em>교수님</em>은?</strong>
-        </Link>
+        <BrandLogo href="/" tagline="전공·진로 첫 대화" className={styles.brand} />
         <div className={styles.headerMeta}>
           <span><ShieldCheck size={15} /> 입력은 이 브라우저에 임시저장돼요</span>
           {step !== "welcome" && <button type="button" onClick={resetTutorial}><RotateCcw size={15} /> 처음부터</button>}
         </div>
       </header>
 
-      <main className={styles.shell}>
+      <main id="main-content" className={styles.shell}>
         <aside className={styles.contextPanel}>
           <div className={styles.progressTop}>
             <span>{progressLabel}</span>
@@ -607,8 +599,17 @@ export function ProfessorTutorialScreen({
             <h1>{stepCopy.title}</h1>
             <p>{stepCopy.description}</p>
           </div>
+          <figure className={styles.contextMedia}>
+            <Image
+              src={tutorialScene.firstPath}
+              alt="캠퍼스에서 자신의 고민을 정리하며 교수와의 첫 대화를 준비하는 학생"
+              fill
+              sizes="(max-width: 760px) 100vw, 48vw"
+              priority
+            />
+          </figure>
           <div className={styles.contextTip}>
-            <Image src={guideCharacter.thinking} alt="" width={72} height={70} unoptimized />
+            <CheckCircle2 size={19} aria-hidden="true" />
             <p><strong>답이 달라져도 괜찮아요.</strong> 뒤로 가서 언제든 수정할 수 있습니다.</p>
           </div>
           <div className={styles.scopeTag}><ShieldCheck size={16} /> 단국대학교 공식 데이터 파일럿</div>
@@ -624,6 +625,18 @@ export function ProfessorTutorialScreen({
             <h1 id="tutorial-question">{stepCopy.title}</h1>
             <p>{stepCopy.description}</p>
           </div>
+
+          {(step === "welcome" || step === "academic") && (
+            <figure className={styles.mobileHeroMedia}>
+              <Image
+                src={tutorialScene.firstPath}
+                alt="캠퍼스에서 자신의 고민을 정리하며 교수와의 첫 대화를 준비하는 학생"
+                fill
+                sizes="100vw"
+                priority
+              />
+            </figure>
+          )}
 
           <div className={styles.questionBody}>{renderQuestion()}</div>
 

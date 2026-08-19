@@ -24,8 +24,7 @@
   z-index: 80;
   top: 0;
   border-bottom: 1px solid rgba(223, 228, 240, 0.72);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(18px);
+  background: #fff;
 }
 
 .headerInner {
@@ -43,47 +42,6 @@
   align-items: center;
   gap: 10px;
   color: var(--landing-navy);
-}
-
-.logoMark {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid rgba(117, 87, 246, 0.16);
-  border-radius: 13px;
-  background: linear-gradient(145deg, #fff 12%, #f0edff 100%);
-  box-shadow: 0 8px 20px rgba(72, 55, 167, 0.12);
-}
-
-.logoMark img {
-  width: 28px;
-  height: 28px;
-}
-
-.logoCopy {
-  display: grid;
-  gap: 1px;
-}
-
-.logoName {
-  font-size: 19px;
-  font-weight: 820;
-  letter-spacing: -0.045em;
-  line-height: 1.12;
-}
-
-.logoName strong {
-  color: var(--landing-violet);
-  font-weight: 850;
-}
-
-.logoTagline {
-  color: #7a849b;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
 }
 
 .desktopNav {
@@ -139,11 +97,11 @@
   padding: 0 23px;
   border-radius: 15px;
   color: #fff;
-  background: linear-gradient(135deg, var(--landing-violet), var(--landing-purple));
-  box-shadow: 0 12px 28px rgba(94, 67, 217, 0.22);
+  background: var(--landing-violet);
+  box-shadow: 0 8px 18px rgba(72, 53, 166, 0.14);
   font-size: 15px;
   font-weight: 780;
-  transition: transform 150ms ease, box-shadow 150ms ease;
+  transition: background 150ms ease, transform 150ms ease, box-shadow 150ms ease;
 }
 
 .headerCta {
@@ -155,8 +113,9 @@
 
 .headerCta:hover,
 .primaryCta:hover {
-  box-shadow: 0 15px 32px rgba(94, 67, 217, 0.29);
-  transform: translateY(-2px);
+  background: #6549df;
+  box-shadow: 0 10px 22px rgba(72, 53, 166, 0.17);
+  transform: translateY(-1px);
 }
 
 .menuButton {
@@ -382,9 +341,7 @@
 
 .promiseSection {
   padding: 90px 24px;
-  background:
-    radial-gradient(circle at 50% 20%, rgba(117, 87, 246, 0.1), transparent 48%),
-    linear-gradient(180deg, #f9f8ff, #f3f7ff);
+  background: #f7f7fb;
 }
 
 .promiseInner {
@@ -511,7 +468,7 @@
   border: 1px solid #e0e5f1;
   border-radius: 25px;
   background: #f4f6fb;
-  box-shadow: 0 22px 60px rgba(18, 35, 75, 0.12);
+  box-shadow: 0 14px 36px rgba(18, 35, 75, 0.09);
 }
 
 .flowMedia img {
@@ -520,7 +477,7 @@
 
 .outcomeSection {
   padding: 128px 0 132px;
-  background: linear-gradient(180deg, #fafaff, #f4f5ff);
+  background: #f7f7fb;
 }
 
 .outcomeHeading {
@@ -542,7 +499,7 @@
   margin: 0;
   overflow: hidden;
   border-radius: 25px;
-  box-shadow: 0 22px 55px rgba(18, 35, 75, 0.12);
+  box-shadow: 0 14px 36px rgba(18, 35, 75, 0.09);
 }
 
 .outcomeMedia img {
@@ -613,22 +570,7 @@
   overflow: hidden;
   padding: 118px 0 126px;
   color: #fff;
-  background:
-    radial-gradient(circle at 82% 12%, rgba(49, 201, 174, 0.16), transparent 26%),
-    radial-gradient(circle at 18% 100%, rgba(117, 87, 246, 0.22), transparent 34%),
-    var(--landing-navy);
-}
-
-.trustSection::after {
-  position: absolute;
-  top: 62px;
-  right: -140px;
-  width: 410px;
-  height: 410px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 50%;
-  box-shadow: 0 0 0 60px rgba(255, 255, 255, 0.02), 0 0 0 120px rgba(255, 255, 255, 0.014);
-  content: "";
+  background: var(--landing-navy);
 }
 
 .trustInner {
@@ -734,7 +676,7 @@
 
 .closingSection {
   padding: clamp(72px, 8vw, 112px) 24px;
-  background: linear-gradient(180deg, #fff 0%, #f4f3ff 100%);
+  background: #f7f7fb;
 }
 
 .closingInner {
@@ -750,10 +692,8 @@
   border: 1px solid rgba(117, 87, 246, 0.15);
   border-radius: 34px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 5% 10%, rgba(49, 201, 174, 0.1), transparent 26%),
-    linear-gradient(145deg, #fff 0%, #f7f5ff 100%);
-  box-shadow: 0 30px 80px rgba(35, 29, 88, 0.11);
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(35, 29, 88, 0.08);
 }
 
 .closingCopy {
@@ -1008,20 +948,6 @@
 
   .logo {
     gap: 8px;
-  }
-
-  .logoMark {
-    width: 36px;
-    height: 36px;
-  }
-
-  .logoMark img {
-    width: 26px;
-    height: 26px;
-  }
-
-  .logoName {
-    font-size: 18px;
   }
 
   .menuButton {

@@ -22,7 +22,8 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { brandLogo, brandScene } from "@/lib/brand-assets";
+import { BrandLogo } from "@/components/brand/brand-logo";
+import { brandScene } from "@/lib/brand-assets";
 import styles from "./landing-page.module.css";
 
 const NAV_ITEMS = [
@@ -119,17 +120,7 @@ export function LandingPage() {
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/" className={styles.logo} aria-label="너의 교수님은? 첫 화면">
-            <span className={styles.logoMark} aria-hidden="true">
-              <Image src={brandLogo.mark} alt="" width={32} height={32} priority unoptimized />
-            </span>
-            <span className={styles.logoCopy}>
-              <span className={styles.logoName}>
-                너의 <strong>교수님</strong>은?
-              </span>
-              <span className={styles.logoTagline}>전공·진로 첫 대화</span>
-            </span>
-          </Link>
+          <BrandLogo href="/" tagline="전공·진로 첫 대화" className={styles.logo} />
 
           <nav className={styles.desktopNav} aria-label="랜딩페이지 주요 메뉴">
             {NAV_ITEMS.map((item) => (
@@ -434,7 +425,7 @@ export function LandingPage() {
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div className={styles.footerBrand}>
-            <Image src={brandLogo.wordmarkMonoWhite} alt="너의 교수님은?" width={154} height={30} unoptimized />
+            <BrandLogo href="/" inverse />
             <p>대학생의 고민과 교수의 전문성을 첫 대화로 연결합니다.</p>
           </div>
           <nav aria-label="푸터 메뉴">
