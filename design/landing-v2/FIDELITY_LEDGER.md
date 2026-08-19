@@ -50,7 +50,7 @@ The concepts are visual references only. Runtime copy, controls, and layout are 
 
 ## Intentional deviations
 
-- The implementation uses the official brand lockup instead of reproducing the concept's simplified logo treatment.
+- The header combines the official brand mark with a code-native wordmark and tagline; the footer retains the official monochrome wordmark.
 - The concept's partial next-section card at the bottom of the hero was replaced by a compact `왜 필요한가요?` scroll cue so the first viewport remains focused on one decision.
 - The closing section uses the official `next-seed` growth scene rather than the concept's professor-door illustration, keeping the ending focused on the student's next action.
 - The header action is labeled `이어하기` rather than a generic `로그인`, because an existing user is returning to the internal service home.

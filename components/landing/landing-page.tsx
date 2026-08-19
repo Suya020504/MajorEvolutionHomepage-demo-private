@@ -120,7 +120,15 @@ export function LandingPage() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <Link href="/" className={styles.logo} aria-label="너의 교수님은? 첫 화면">
-            <Image src={brandLogo.lockup} alt="너의 교수님은?" width={186} height={30} priority unoptimized />
+            <span className={styles.logoMark} aria-hidden="true">
+              <Image src={brandLogo.mark} alt="" width={32} height={32} priority unoptimized />
+            </span>
+            <span className={styles.logoCopy}>
+              <span className={styles.logoName}>
+                너의 <strong>교수님</strong>은?
+              </span>
+              <span className={styles.logoTagline}>전공·진로 첫 대화</span>
+            </span>
           </Link>
 
           <nav className={styles.desktopNav} aria-label="랜딩페이지 주요 메뉴">
@@ -401,7 +409,7 @@ export function LandingPage() {
                   3분 방향 찾기 <ArrowRight size={19} aria-hidden="true" />
                 </Link>
                 <Link href="/home" className={styles.closingResume}>
-                  이미 이어서 하고 있어요 <ArrowRight size={16} aria-hidden="true" />
+                  이어하기 <ArrowRight size={16} aria-hidden="true" />
                 </Link>
               </div>
             </div>
@@ -410,8 +418,14 @@ export function LandingPage() {
                 src={brandScene.nextSeed.w1440}
                 alt="학생이 교수와의 대화 후 다음 행동 계획을 세우는 모습"
                 fill
-                sizes="(max-width: 767px) 100vw, 58vw"
+                sizes="(max-width: 900px) 100vw, 55vw"
               />
+              <figcaption className={styles.closingCaption}>
+                <span>
+                  <Sparkles size={15} aria-hidden="true" /> 첫 대화 이후
+                </span>
+                <strong>조언을 나의 다음 행동으로</strong>
+              </figcaption>
             </figure>
           </div>
         </section>
@@ -429,6 +443,12 @@ export function LandingPage() {
             <a href="#trust">신뢰 원칙</a>
             <Link href="/home">서비스 홈</Link>
           </nav>
+          <div className={styles.footerTeam}>
+            <span>TEAM TRION</span>
+            <p>
+              <strong>팀장</strong> 이연수 <i aria-hidden="true">·</i> <strong>팀원</strong> 최현규, 이진재
+            </p>
+          </div>
           <p className={styles.footerNote}>교수 정보는 공식 출처를 우선하며, 연락과 최종 선택은 학생이 직접 진행합니다.</p>
         </div>
       </footer>
