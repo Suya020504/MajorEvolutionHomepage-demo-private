@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { UnifiedHomeScreen } from "@/components/screens/unified-home-screen";
 
 export default function Page() {
-  redirect("/");
+  return <UnifiedHomeScreen />;
 }

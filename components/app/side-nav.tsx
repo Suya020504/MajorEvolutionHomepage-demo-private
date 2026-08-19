@@ -14,7 +14,7 @@ import { brandLogo } from "@/lib/brand-assets";
  */
 
 const NAV_ITEMS = [
-  { href: "/", label: "홈", icon: Home },
+  { href: "/home", label: "홈", icon: Home },
   { href: "/professors", label: "나의 교수님", icon: CompassIcon },
   { href: "/research", label: "전공 진화 실험실", icon: FlaskConical },
   { href: "/quest", label: "교수님 퀘스트", icon: MessagesSquare },
@@ -31,9 +31,9 @@ const SECTION_PREFIX: Record<string, string> = {
   "/paper": "/quest",
   "/professors": "/professors",
   "/portfolio": "/portfolio",
-  // 통합 홈은 루트에 있습니다. 구형 /mentoring은 루트로 리다이렉트됩니다.
-  "/": "/",
-  "/mentoring": "/",
+  // 공개 랜딩은 루트, 로그인 후 통합 홈은 /home에 있습니다.
+  "/home": "/home",
+  "/mentoring": "/home",
 };
 
 function activeHref(pathname: string): string | null {
@@ -47,7 +47,7 @@ export function SideNav() {
 
   return (
     <nav className="side-nav" aria-label="주요 메뉴">
-      <Link href="/mentoring" className="side-nav__brand">
+      <Link href="/home" className="side-nav__brand">
         <Image src={brandLogo.mark} alt="" aria-hidden="true" width={34} height={34} unoptimized />
         <span>
           <strong>너의 교수님은?</strong>
