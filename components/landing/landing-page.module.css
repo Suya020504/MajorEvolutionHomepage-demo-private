@@ -823,13 +823,31 @@
   }
 
   .heroCopy {
-    width: 700px;
+    width: min(60vw, 600px);
+    padding-right: 36px;
     padding-left: 40px;
   }
 
   .heroCopy h1 {
-    font-size: 46px;
+    max-width: 560px;
+    font-size: clamp(40px, 4.2vw, 46px);
     white-space: normal;
+    text-wrap: balance;
+  }
+
+  .heroMedia {
+    width: 56%;
+  }
+
+  .heroMedia::after {
+    background: linear-gradient(
+      90deg,
+      #fff 0%,
+      rgba(255, 255, 255, 0.98) 20%,
+      rgba(255, 255, 255, 0.86) 40%,
+      rgba(255, 255, 255, 0.34) 62%,
+      transparent 78%
+    );
   }
 
   .problemSection .sectionInner {
