@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CompassIcon, FlaskConical, Home, MessagesSquare, NotebookPen } from "lucide-react";
-import { brandLogoV2 } from "@/lib/brand-assets";
+import { BrandLogo } from "@/components/brand/brand-logo";
 
 /**
  * 넓은 화면 좌측 내비.
@@ -15,10 +14,10 @@ import { brandLogoV2 } from "@/lib/brand-assets";
 
 const NAV_ITEMS = [
   { href: "/home", label: "홈", icon: Home },
-  { href: "/professors", label: "나의 교수님", icon: CompassIcon },
-  { href: "/research", label: "전공 진화 실험실", icon: FlaskConical },
-  { href: "/quest", label: "교수님 퀘스트", icon: MessagesSquare },
-  { href: "/portfolio", label: "나의 여정", icon: NotebookPen },
+  { href: "/professors", label: "교수 찾기", icon: CompassIcon },
+  { href: "/research", label: "전공 아이디어", icon: FlaskConical },
+  { href: "/quest", label: "대화 준비", icon: MessagesSquare },
+  { href: "/portfolio", label: "성장 기록", icon: NotebookPen },
 ] as const;
 
 /** /result와 /co-design은 만들다 흐름의 일부이므로 같은 항목을 활성으로 봅니다. */
@@ -47,13 +46,12 @@ export function SideNav() {
 
   return (
     <nav className="side-nav" aria-label="주요 메뉴">
-      <Link href="/home" className="side-nav__brand">
-        <Image src={brandLogoV2.mark} alt="" aria-hidden="true" width={38} height={38} unoptimized />
-        <span>
-          <strong>너의 교수님은?</strong>
-          <small>찾다 · 만들다 · 잇다</small>
-        </span>
-      </Link>
+      <BrandLogo
+        href="/home"
+        tagline="찾다 · 준비하다 · 이어가다"
+        compact
+        className="side-nav__brand"
+      />
       <ul>
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;

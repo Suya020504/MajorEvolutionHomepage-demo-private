@@ -1,0 +1,467 @@
+.shell {
+  min-height: 100svh;
+  background: #ffffff;
+}
+
+.shell :global(.screen-content) {
+  padding: 0;
+  background: #ffffff;
+}
+
+.shell :global(.screen-enter) { min-height: 100%; }
+
+.mobileHeader {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  justify-content: space-between;
+  padding: env(safe-area-inset-top) 20px 0;
+  border-bottom: 1px solid #e5e9f2;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.mobileHeader > a:last-child {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid #dfe4ef;
+  border-radius: 50%;
+  color: #18213d;
+}
+
+.dashboard {
+  display: grid;
+  gap: 24px;
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 34px 20px 48px;
+}
+
+.intro { max-width: 790px; }
+
+.intro h1 {
+  color: #071026;
+  font-size: clamp(30px, 5.8vw, 42px);
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 1.18;
+  text-wrap: balance;
+}
+
+.intro p {
+  margin-top: 12px;
+  color: #65708a;
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.primaryGrid { display: grid; gap: 16px; }
+
+.nextAction,
+.professorPanel,
+.progressSection,
+.recentSection,
+.utilitySection {
+  border: 1px solid #dfe4ef;
+  border-radius: 18px;
+  background: #ffffff;
+}
+
+.nextAction {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  min-height: 250px;
+  padding: 30px;
+  border-color: #bcb0ff;
+  background: #fdfcff;
+}
+
+.nextIcon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  border: 1px solid #cfc6ff;
+  border-radius: 50%;
+  color: #6548df;
+  background: #f7f5ff;
+}
+
+.nextCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.nextCopy h2 {
+  color: #111a36;
+  font-size: 25px;
+  font-weight: 830;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
+}
+
+.nextCopy p {
+  max-width: 510px;
+  margin-top: 10px;
+  color: #65708a;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.primaryButton {
+  display: inline-flex;
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 0 24px;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #6548df;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 8px 18px rgba(101, 72, 223, 0.18);
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.primaryButton:hover { background: #5638d2; transform: translateY(-1px); }
+
+.professorPanel { min-height: 250px; padding: 28px; }
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sectionHeader h2 {
+  color: #111a36;
+  font-size: 19px;
+  font-weight: 820;
+  letter-spacing: -0.025em;
+}
+
+.sectionHeader > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #6548df;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.professorIdentity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 124px;
+  padding: 18px 0;
+}
+
+.professorInitial {
+  display: grid;
+  width: 78px;
+  height: 78px;
+  place-items: center;
+  border: 1px solid #a8ddd3;
+  border-radius: 50%;
+  color: #147968;
+  background: #ecf9f6;
+  font-size: 29px;
+  font-weight: 850;
+}
+
+.professorIdentity h3 { color: #111a36; font-size: 19px; font-weight: 820; }
+.professorIdentity p { margin-top: 5px; color: #65708a; font-size: 14px; }
+
+.officialStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 9px;
+  color: #168b78;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.professorActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #e8ebf3;
+}
+
+.professorActions a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d7ddea;
+  border-radius: 9px;
+  color: #2e3956;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.professorActions a:hover {
+  border-color: #bcb0ff;
+  color: #6548df;
+  background: #faf9ff;
+}
+
+.professorEmpty {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 24px;
+  color: #65708a;
+}
+
+.professorEmpty h3 { color: #111a36; font-size: 16px; }
+.professorEmpty p { margin-top: 4px; font-size: 13px; line-height: 1.55; }
+
+.professorEmpty > a {
+  grid-column: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #6548df;
+  font-size: 13px;
+  font-weight: 780;
+}
+
+.progressSection {
+  overflow-x: auto;
+  padding: 24px 20px 20px;
+  scrollbar-width: thin;
+}
+
+.progressRail {
+  display: grid;
+  min-width: 580px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.progressRail li { position: relative; }
+
+.progressRail li:not(:last-child)::after {
+  position: absolute;
+  z-index: 0;
+  top: 17px;
+  right: -50%;
+  left: 50%;
+  height: 2px;
+  background: #d9deea;
+  content: "";
+}
+
+.progressRail li.stepDone:not(:last-child)::after { background: #2ba287; }
+
+.progressRail a {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  color: #8b95ab;
+  text-align: center;
+}
+
+.stepMarker {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 2px solid #cfd5e1;
+  border-radius: 50%;
+  color: #8b95ab;
+  background: #ffffff;
+}
+
+.progressRail strong {
+  margin-top: 9px;
+  color: #2e3956;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.progressRail small { margin-top: 4px; color: #8b95ab; font-size: 11px; }
+.stepDone .stepMarker { border-color: #168b78; color: #168b78; }
+.stepDone small { color: #168b78; font-weight: 760; }
+
+.stepCurrent .stepMarker {
+  border-color: #6548df;
+  color: #6548df;
+  box-shadow: 0 0 0 4px #eeeaff;
+}
+
+.stepCurrent small { color: #6548df; font-weight: 760; }
+.mobileStepLabel { display: none; }
+.lowerGrid { display: grid; gap: 16px; }
+.recentSection, .utilitySection { padding: 22px 24px; }
+
+.recordList,
+.utilityList {
+  margin-top: 12px;
+  border-top: 1px solid #e8ebf3;
+}
+
+.recordRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 78px;
+  border-bottom: 1px solid #e8ebf3;
+}
+
+.recordRow > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 10px;
+  color: #6548df;
+  background: #f0edff;
+}
+
+.recordRow > div { display: grid; min-width: 0; }
+.recordRow small { color: #8b95ab; font-size: 11px; }
+
+.recordRow strong {
+  overflow: hidden;
+  margin-top: 2px;
+  color: #222d48;
+  font-size: 13px;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recordRow em { margin-top: 3px; color: #8b95ab; font-size: 11px; font-style: normal; }
+.recordRow > svg { color: #8b95ab; }
+
+.emptyRecords {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 122px;
+  margin-top: 12px;
+  padding: 20px 0;
+  border-top: 1px solid #e8ebf3;
+  color: #8b95ab;
+}
+
+.emptyRecords strong { color: #2e3956; font-size: 14px; }
+.emptyRecords p { margin-top: 4px; color: #8b95ab; font-size: 12px; line-height: 1.5; }
+
+.utilityList > a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  min-height: 66px;
+  border-bottom: 1px solid #e8ebf3;
+  color: #17213c;
+}
+
+.utilityList > a > svg:first-child { color: #071026; }
+.utilityList strong { font-size: 14px; font-weight: 760; }
+.utilityList p { margin-top: 3px; color: #7d879d; font-size: 11px; line-height: 1.45; }
+.utilityList > a > svg:last-child { color: #8b95ab; }
+
+.bottomNav {
+  position: sticky;
+  z-index: 30;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+  border-top: 1px solid #dfe4ef;
+  background: rgba(255, 255, 255, 0.97);
+}
+
+.bottomNav a {
+  display: grid;
+  min-height: 48px;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  color: #7b859b;
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.bottomNav a.bottomNavActive { color: #6548df; }
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 760px) {
+  .dashboard { gap: 26px; padding: 48px 38px 64px; }
+  .primaryGrid, .lowerGrid { grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.95fr); }
+}
+
+@media (min-width: 1024px) {
+  .mobileHeader, .bottomNav { display: none; }
+  .dashboard { padding: 44px 48px 54px; }
+}
+
+@media (max-width: 520px) {
+  .dashboard { gap: 20px; padding-top: 30px; }
+  .intro h1 { font-size: 31px; }
+  .intro p { font-size: 15px; }
+
+  .nextAction { display: block; min-height: 0; padding: 24px; }
+  .nextIcon { width: 56px; height: 56px; }
+  .nextCopy h2 { margin-top: 18px; font-size: 23px; }
+  .primaryButton { width: 100%; margin-top: 22px; }
+
+  .professorPanel { min-height: 0; padding: 22px; }
+  .professorIdentity { min-height: 104px; }
+  .professorInitial { width: 64px; height: 64px; font-size: 24px; }
+  .professorActions { grid-template-columns: 1fr; }
+
+  .progressSection {
+    margin-right: -20px;
+    margin-left: -20px;
+    padding-right: 20px;
+    padding-left: 20px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .progressRail { min-width: 490px; }
+  .desktopStepLabel { display: none; }
+  .mobileStepLabel { display: block; }
+  .recentSection, .utilitySection { padding: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton { transition: none; }
+}

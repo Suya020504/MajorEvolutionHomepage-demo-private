@@ -205,6 +205,13 @@ export function PaperReaderShell({
   const removeFavoriteProfessors = useResearchStore((state) => state.removeFavoriteProfessors);
   const selectedProfessorPaper = useResearchStore((state) => state.selectedProfessorPaper);
   const selectProfessorPaper = useResearchStore((state) => state.selectProfessorPaper);
+  const connectedProfessorIds = useMemo(
+    () => Array.from(new Set([
+      ...(selectedProfessorId ? [selectedProfessorId] : []),
+      ...favoriteProfessorIds,
+    ])),
+    [favoriteProfessorIds, selectedProfessorId],
+  );
 
   useEffect(() => {
     const selectionKey = selectedProfessorPaper
@@ -473,7 +480,7 @@ export function PaperReaderShell({
   const paperPicker = (
     <FavoriteProfessorPaperPicker
       open={isPickerOpen}
-      favoriteProfessorIds={favoriteProfessorIds}
+      favoriteProfessorIds={connectedProfessorIds}
       initialProfessorId={verifiedProfessorPaper?.professorId ?? selectedProfessorId}
       onClose={() => setIsPickerOpen(false)}
       onManualEntry={useManualEntry}
@@ -619,7 +626,7 @@ export function PaperReaderShell({
             <strong>즐겨찾는 교수님의 논문으로 시작</strong>
             <small>
               {hasResearchHydrated
-                ? `즐겨찾는 교수님 ${favoriteProfessorIds.length}명`
+                ? `연결한 교수님 ${connectedProfessorIds.length}명`
                 : "즐겨찾기를 불러오는 중"}
             </small>
           </span>

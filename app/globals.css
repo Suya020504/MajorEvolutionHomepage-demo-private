@@ -212,7 +212,7 @@ strong {
     background: var(--surface);
   }
   .side-nav__brand { display: flex; align-items: center; gap: 10px; padding: 0 8px 20px; }
-  .side-nav__brand span { display: grid; }
+  .side-nav__brand > span { display: grid; }
   .side-nav__brand strong { font-size: 15px; }
   .side-nav__brand small { margin-top: 1px; color: var(--text-secondary); font-size: 11px; }
   .side-nav ul { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; }

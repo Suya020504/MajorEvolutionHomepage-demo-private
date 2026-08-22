@@ -28,17 +28,12 @@ import type {
 } from "@/lib/professor-domain";
 import { SceneBanner } from "@/components/app/scene-banner";
 import { brandScene } from "@/lib/brand-assets";
+import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
 
 function getSelectedTopic(): ResearchTopic | null {
-  const { result, selectedTopicId } = useResearchStore.getState();
-  if (!result || !selectedTopicId) return null;
-  if (result.kind === "ok") {
-    return result.candidates.find((candidate) => candidate.topic.id === selectedTopicId)?.topic ?? null;
-  }
-  return result.kind === "insufficient" && result.candidate.topic.id === selectedTopicId
-    ? result.candidate.topic
-    : null;
+  const { result, selectedTopicId, professorDiscoveryTopic } = useResearchStore.getState();
+  return resolveJourneyTopic({ result, selectedTopicId, professorDiscoveryTopic });
 }
 
 function createEntry(topic: ResearchTopic, match: ProfessorMatch): ProfessorMentorLoopEntry {

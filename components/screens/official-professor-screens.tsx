@@ -186,14 +186,14 @@ function MatchCard({
   context,
   onOpen,
   onOpenPaper,
-  onPrepareConversation,
+  onChoose,
   onReject,
 }: {
   match: ProfessorMatch;
   context: ProfessorDiscoveryContext;
   onOpen: () => void;
   onOpenPaper: () => void;
-  onPrepareConversation: () => void;
+  onChoose: () => void;
   onReject: () => void;
 }) {
   const professor = match.professor;
@@ -348,8 +348,8 @@ function MatchCard({
             ? isFavorite ? "공식 논문 한입 보기" : "저장하고 공식 논문 한입"
             : "공식 논문 미기재"}
         </button>
-        <button type="button" className="match-card__conversation" onClick={onPrepareConversation}>
-          <MessageCircleQuestion size={16} aria-hidden="true" /> 첫 대화 준비하기
+        <button type="button" className="match-card__conversation" onClick={onChoose}>
+          <MessageCircleQuestion size={16} aria-hidden="true" /> 이 교수와 시작하기
         </button>
         <button type="button" className="match-card__reject" onClick={onReject}>
           <ThumbsDown size={15} /> 다른 교수님 만나보기
@@ -730,9 +730,9 @@ export function ProfessorPitchScreen() {
     router.push("/paper/reader?mode=bite&source=favorites");
   };
 
-  const prepareProfessorConversation = (match: ProfessorMatch) => {
+  const chooseProfessor = (match: ProfessorMatch) => {
     selectProfessor(match.professor.id);
-    router.push("/quest/first-line");
+    router.push("/home");
   };
 
   return (
@@ -824,7 +824,7 @@ export function ProfessorPitchScreen() {
                     context={context}
                     onOpen={() => openProfessor(match)}
                     onOpenPaper={() => openProfessorPaper(match)}
-                    onPrepareConversation={() => prepareProfessorConversation(match)}
+                    onChoose={() => chooseProfessor(match)}
                     onReject={() => rejectMatch(match.professor.id)}
                   />
                 ))}
