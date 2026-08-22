@@ -84,7 +84,7 @@ const UTILITY_LINKS = [
     icon: Search,
   },
   {
-    href: "/research",
+    href: "/research/tutorial",
     label: "전공 아이디어",
     description: "관심사를 수업·프로젝트·연구 주제로 더 구체화해요.",
     icon: Lightbulb,

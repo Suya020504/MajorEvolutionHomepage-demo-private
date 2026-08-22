@@ -415,3 +415,42 @@ test("새 연구주제로 전환하면 이전 교수 찾기 맥락과 포트폴�
     "v4 마이그레이션에서도 검색 결과 없는 이전 요약을 정리해야 한다",
   );
 });
+
+test("전공 아이디어 튜토리얼은 최종 확인 전 로컬 초안만 쓰고 한 번에 공동설계를 시작한다", () => {
+  const screen = fs.readFileSync(
+    path.join(repositoryRoot, "components/tutorial/research-tutorial-screen.tsx"),
+    "utf8",
+  );
+  const store = fs.readFileSync(
+    path.join(repositoryRoot, "store/research-store.ts"),
+    "utf8",
+  );
+  const route = fs.readFileSync(
+    path.join(repositoryRoot, "app/research/tutorial/page.tsx"),
+    "utf8",
+  );
+
+  assert.match(route, /ResearchTutorialScreen/);
+  assert.match(screen, /major-evolution-research-tutorial-v1/);
+  assert.match(
+    screen,
+    /QUESTION_STEPS = \["major", "mode", "interests", "readiness", "feasibility", "review"\]/,
+  );
+  assert.match(screen, /browserStorage\(\)\?\.setItem\(STORAGE_KEY, JSON\.stringify\(draft\)\)/);
+  assert.match(
+    screen,
+    /const startCoDesign = \(\) => \{[\s\S]*beginIdeaCoDesign\([\s\S]*router\.push\("\/co-design"\)/,
+  );
+
+  const atomicCommit = store.slice(
+    store.indexOf("  beginIdeaCoDesign: ({ ideaMode, conditions }) => {"),
+    store.indexOf("  submit: () => {"),
+  );
+  assert.match(atomicCommit, /if \(missing\.length\) return missing;[\s\S]*set\(\{/);
+  assert.match(atomicCommit, /\.\.\.invalidatedResearchState\(\)/);
+  assert.equal(
+    (atomicCommit.match(/\bset\(\{/g) ?? []).length,
+    1,
+    "최종 확인은 연구 상태를 한 번에 반영해야 한다",
+  );
+});

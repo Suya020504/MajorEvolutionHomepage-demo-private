@@ -164,6 +164,10 @@ type ResearchState = {
   setPeriod: (p: PeriodLabel) => void;
   setDataAccess: (d: DataAccess) => void;
   toggleAvoid: (tag: string) => void;
+  beginIdeaCoDesign: (input: {
+    ideaMode: IdeaMode | null;
+    conditions: Conditions;
+  }) => string[];
 
   submit: () => string[]; // 누락 항목 반환 (빈 배열이면 공동설계 진입 가능)
   answerCoDesign: (value: string) => boolean; // 마지막 질문이면 true
@@ -399,6 +403,36 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       },
       ...invalidatedResearchState(),
     })),
+  beginIdeaCoDesign: ({ ideaMode, conditions }) => {
+    const major = normalizeAcademicInput(conditions.major, 80) || null;
+    const interests = Array.from(new Set(
+      conditions.interests
+        .map((interest) => normalizeAcademicInput(interest, 60))
+        .filter(Boolean),
+    )).slice(0, MAX_INTERESTS);
+    const methods = Array.from(new Set(conditions.methods)).slice(0, MAX_METHODS);
+    const nextConditions: Conditions = {
+      ...conditions,
+      school: normalizeAcademicInput(conditions.school, 80),
+      majorArea: conditions.majorArea,
+      major,
+      interests,
+      methods,
+      avoid: Array.from(new Set(conditions.avoid)),
+    };
+    const missing = [...missingRequired(nextConditions)] as string[];
+    if (!ideaMode) missing.unshift("ideaMode");
+    if (missing.length) return missing;
+
+    set({
+      conditions: nextConditions,
+      ideaMode,
+      interestsFull: interests.length >= MAX_INTERESTS,
+      methodsFull: methods.length >= MAX_METHODS,
+      ...invalidatedResearchState(),
+    });
+    return [];
+  },
 
   submit: () => {
     const { conditions, ideaMode } = get();

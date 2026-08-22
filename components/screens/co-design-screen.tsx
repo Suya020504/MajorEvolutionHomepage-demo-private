@@ -70,7 +70,7 @@ export function CoDesignScreen() {
 
   useEffect(() => {
     if (!ideaMode || missingRequired(conditions).length > 0) {
-      router.replace("/research");
+      router.replace("/research/tutorial");
     }
   }, [conditions, ideaMode, router]);
 
@@ -140,7 +140,7 @@ export function CoDesignScreen() {
   return (
     <AppShell
       title="전공 진화 실험실 — 만들다"
-      onBack={() => router.push("/research")}
+      onBack={() => router.push("/research/tutorial")}
       step={{ current: step + 1, total: questions.length }}
       className="research-screen co-design-screen"
     >

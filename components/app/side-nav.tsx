@@ -13,11 +13,11 @@ import { BrandLogo } from "@/components/brand/brand-logo";
  */
 
 const NAV_ITEMS = [
-  { href: "/home", label: "홈", icon: Home },
-  { href: "/professors", label: "교수 찾기", icon: CompassIcon },
-  { href: "/research", label: "전공 아이디어", icon: FlaskConical },
-  { href: "/quest", label: "대화 준비", icon: MessagesSquare },
-  { href: "/portfolio", label: "성장 기록", icon: NotebookPen },
+  { href: "/home", section: "/home", label: "홈", icon: Home },
+  { href: "/professors", section: "/professors", label: "교수 찾기", icon: CompassIcon },
+  { href: "/research/tutorial", section: "/research", label: "전공 아이디어", icon: FlaskConical },
+  { href: "/quest", section: "/quest", label: "대화 준비", icon: MessagesSquare },
+  { href: "/portfolio", section: "/portfolio", label: "성장 기록", icon: NotebookPen },
 ] as const;
 
 /** /result와 /co-design은 만들다 흐름의 일부이므로 같은 항목을 활성으로 봅니다. */
@@ -55,7 +55,7 @@ export function SideNav() {
       <ul>
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
-          const isActive = active === item.href;
+          const isActive = active === item.section;
           return (
             <li key={item.href}>
               <Link
