@@ -21,7 +21,6 @@ import {
   PageHeader,
   PrimaryButton,
 } from "@/components/app/primitives";
-import { DataControls } from "@/components/screens/data-controls";
 import { cardsForTool, useQuestStore } from "@/store/quest-store";
 import { useResearchStore } from "@/store/research-store";
 
@@ -44,7 +43,7 @@ const STEP_META: Array<{ id: StepId; label: string; hint: string; icon: typeof S
   { id: "actions", label: "7일 행동", hint: "면담 후 7일 동안의 행동", icon: CalendarCheck },
 ];
 
-export function PortfolioScreen() {
+export function PortfolioBuilderScreen() {
   const hasHydrated = useResearchStore((state) => state.hasHydrated);
   const conditions = useResearchStore((state) => state.conditions);
   const result = useResearchStore((state) => state.result);
@@ -163,9 +162,9 @@ export function PortfolioScreen() {
   const activeOrder = STEP_META.findIndex((step) => step.id === active.id) + 1;
 
   return (
-    <AppShell title="성장 포트폴리오" backHref="/" className="portfolio-screen">
+    <AppShell title="포트폴리오 만들기" backHref="/portfolio" className="portfolio-screen">
       <PageHeader
-        title="성장 포트폴리오"
+        title="포트폴리오 만들기"
         description="교수님을 만난 결과가 아니라, 내가 준비하고 바뀐 과정을 기록해요."
       />
 
@@ -321,7 +320,6 @@ export function PortfolioScreen() {
         )}
       </section>
 
-      <DataControls />
     </AppShell>
   );
 }

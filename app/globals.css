@@ -191,6 +191,40 @@ strong {
  */
 .side-nav { display: none; }
 
+.service-bottom-nav {
+  position: fixed;
+  z-index: 35;
+  bottom: 0;
+  left: 50%;
+  display: grid;
+  width: min(100%, 560px);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  transform: translateX(-50%);
+  padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(14px);
+}
+.service-bottom-nav a {
+  display: grid;
+  min-width: 0;
+  min-height: 50px;
+  place-items: center;
+  align-content: center;
+  gap: 3px;
+  border-radius: 12px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 720;
+}
+.service-bottom-nav a.is-active {
+  color: var(--brand-purple);
+}
+.service-bottom-nav a:focus-visible {
+  outline: 2px solid var(--brand-violet);
+  outline-offset: 1px;
+}
+
 @media (min-width: 1024px) {
   /*
    * 내비 자리는 body가 아니라 화면 자신이 비운다.
@@ -239,6 +273,7 @@ strong {
     font-size: 11px;
     line-height: 1.5;
   }
+  .service-bottom-nav { display: none; }
 }
 
 .top-app-bar + .screen-content {
@@ -256,9 +291,10 @@ strong {
 
 /* sticky 막대는 실제 자리를 차지하므로 본문에 여백을 더 주지 않는다. */
 .screen-content.has-sticky-action,
-.screen-content.has-bottom-nav {
+.screen-content.has-sticky-action {
   padding-bottom: 32px;
 }
+.screen-content.has-bottom-nav { padding-bottom: 94px; }
 
 .screen-enter {
   animation: screen-enter 220ms ease-out both;

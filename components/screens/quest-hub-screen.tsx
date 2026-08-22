@@ -3,7 +3,23 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Ban, HandHeart, LoaderCircle, Sparkles, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Ban,
+  BookOpenCheck,
+  CalendarCheck,
+  Compass,
+  FileText,
+  HandHeart,
+  LoaderCircle,
+  Mail,
+  MessageCircleQuestion,
+  MessageSquareText,
+  NotebookPen,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import {
   AppShell,
   Card,
@@ -12,6 +28,17 @@ import {
   SectionHeading,
   Tag,
 } from "@/components/app/primitives";
+import { ServiceBottomNav } from "@/components/app/side-nav";
+import {
+  HubList,
+  HubPrimaryTask,
+  HubRow,
+  HubUtilityLink,
+  HubUtilityLinks,
+  ServiceHubIntro,
+  ServiceMobileHeader,
+  serviceHubStyles as styles,
+} from "@/components/app/service-hub";
 import { SceneBanner } from "@/components/app/scene-banner";
 import { brandScene, questIcon } from "@/lib/brand-assets";
 import { cardsForTool, useQuestStore, type QuestToolId } from "@/store/quest-store";
@@ -110,6 +137,150 @@ const NEVER_DOES = [
 const TOOL_NAME = new Map(TOOLS.map((tool) => [tool.id, tool.name]));
 
 export function QuestHubScreen() {
+  const hasHydrated = useQuestStore((state) => state.hasHydrated);
+  const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
+  const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
+  const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
+  const mentorLoopEntries = useResearchStore((state) => state.mentorLoopEntries);
+  const cards = useQuestStore((state) => state.cards);
+
+  if (!hasHydrated || !hasResearchHydrated) {
+    return (
+      <div className="research-loading">
+        <LoaderCircle className="spin" />
+        <p>저장한 대화 준비를 불러오고 있어요.</p>
+      </div>
+    );
+  }
+
+  const paperCount = cardsForTool(cards, "paper-bite").length;
+  const questionCount = cardsForTool(cards, "first-line").length;
+  const silenceCount = cardsForTool(cards, "silence-rescue").length;
+  const emailCount = cardsForTool(cards, "email-guard").length + Object.keys(knockKitDrafts).length;
+  const afterCount = cardsForTool(cards, "next-seed").length + Object.keys(mentorLoopEntries).length;
+  const beforeCount = paperCount + questionCount + emailCount;
+
+  const primary = favoriteProfessorIds.length === 0
+      ? {
+          icon: Compass,
+          heading: "먼저 대화할 교수를 고를 차례예요",
+          taskTitle: "공식 근거로 교수 찾기",
+        description: "연결 이유를 확인하고 저장하면, 그 교수에게 맞춘 준비가 시작돼요.",
+        cta: "교수 찾기",
+        href: "/professors",
+      }
+    : paperCount === 0
+      ? {
+          icon: BookOpenCheck,
+          heading: "교수님의 연구를 살펴볼 차례예요",
+          taskTitle: "논문 한입 준비하기",
+          description: "공식 프로필의 논문을 문제·방법·결과·질문으로 가볍게 정리해요.",
+          cta: "논문 한입 시작하기",
+          href: "/paper/reader?mode=bite&source=favorites",
+        }
+      : questionCount === 0
+        ? {
+            icon: MessageCircleQuestion,
+            heading: "지금은 첫 질문을 준비할 차례예요",
+            taskTitle: "첫 질문 3개 준비하기",
+            description: "교수님께 궁금한 점을 정리하고 첫 대화의 실마리를 만들어요.",
+            cta: "질문 준비하기",
+            href: "/quest/first-line",
+          }
+        : emailCount === 0
+          ? {
+              icon: Mail,
+              heading: "첫 연락을 보내기 전에 점검해 볼까요?",
+              taskTitle: "이메일 초안 점검하기",
+              description: "자동 발송하지 않고, 연결 이유와 요청을 담은 초안을 내가 검토해요.",
+              cta: "이메일 준비하기",
+              href: "/quest/email-guard",
+            }
+          : afterCount === 0
+            ? {
+                icon: CalendarCheck,
+                heading: "면담에서 들은 조언을 행동으로 바꿔보세요",
+                taskTitle: "면담 후 7일 행동 정리하기",
+                description: "이번 주에 할 일과 다시 보여줄 결과물을 짧게 남겨요.",
+                cta: "면담 후 기록하기",
+                href: "/mentor-loop",
+              }
+            : {
+                icon: NotebookPen,
+                heading: "준비하며 달라진 과정을 확인해 보세요",
+                taskTitle: "나의 성장 과정 보기",
+                description: "저장한 근거와 질문, 다음 행동을 성장 기록에서 이어 봐요.",
+                cta: "성장 기록 보기",
+                href: "/portfolio",
+              };
+
+  return (
+    <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
+      <ServiceMobileHeader />
+      <div className={styles.hub}>
+        <ServiceHubIntro
+          title={primary.heading}
+          description="교수님과의 첫 대화까지, 오늘 할 일 하나만 이어가요."
+        />
+        <HubPrimaryTask
+          icon={primary.icon}
+          title={primary.taskTitle}
+          description={primary.description}
+          cta={primary.cta}
+          href={primary.href}
+          secondary={{ label: "전체 준비 도구 보기", href: "/quest/all" }}
+        />
+
+        <HubList title="대화 단계">
+          <HubRow
+            icon={BookOpenCheck}
+            title="만나기 전"
+            description="논문 이해 · 첫 질문 · 이메일 준비"
+            status={beforeCount ? `${beforeCount}개 저장` : "준비 중"}
+            href={paperCount === 0 ? "/paper/reader?mode=bite&source=favorites" : questionCount === 0 ? "/quest/first-line" : "/quest/email-guard"}
+            tone="violet"
+          />
+          <HubRow
+            icon={MessageSquareText}
+            title="대화 중"
+            description="말이 막힐 때 볼 질문을 미리 준비해요."
+            status={silenceCount ? `${silenceCount}개 저장` : "시작 전"}
+            href="/quest/silence-rescue"
+            tone={silenceCount ? "mint" : "neutral"}
+          />
+          <HubRow
+            icon={CalendarCheck}
+            title="만난 후"
+            description="피드백을 수정 전후와 7일 행동으로 남겨요."
+            status={afterCount ? `${afterCount}개 저장` : "시작 전"}
+            href="/mentor-loop"
+            tone={afterCount ? "mint" : "neutral"}
+          />
+        </HubList>
+
+        <HubList title="저장한 준비물">
+          <HubRow
+            icon={FileText}
+            title="저장한 준비물"
+            description={cards.length ? "작성한 질문과 논문 카드가 여기에 모여 있어요." : "아직 저장한 준비물이 없어요."}
+            status={cards.length ? `${cards.length}개` : "비어 있음"}
+            href="/quest/all#saved-cards"
+            tone={cards.length ? "mint" : "neutral"}
+          />
+        </HubList>
+
+        <HubUtilityLinks>
+          <HubUtilityLink icon={Sparkles} href="/quest/mini-tools">가볍게 써보는 미니도구</HubUtilityLink>
+        </HubUtilityLinks>
+        <p className={styles.trustNote}>
+          <ShieldCheck size={17} aria-hidden="true" /> 연락과 면담은 학생이 직접 진행해요.
+        </p>
+      </div>
+    </AppShell>
+  );
+}
+
+export function QuestAllToolsScreen() {
   const router = useRouter();
   const hasHydrated = useQuestStore((state) => state.hasHydrated);
   const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
@@ -133,7 +304,7 @@ export function QuestHubScreen() {
     : TOOLS.filter((tool) => tool.timings.includes(timing));
 
   return (
-    <AppShell title="교수님 퀘스트 — 잇다" backHref="/" className="quest-hub-screen">
+    <AppShell title="전체 준비 도구" backHref="/quest" className="quest-hub-screen">
       {/* 브랜드 위계: 퀘스트 내부에서는 CTA를 서비스·기능명보다 먼저 보여줍니다. */}
       <SceneBanner
         scene={brandScene.connect}
@@ -219,7 +390,7 @@ export function QuestHubScreen() {
       </Card>
 
       {cards.length > 0 && (
-        <>
+        <div id="saved-cards">
           <SectionHeading
             title="저장한 카드"
             description="여기에 저장한 결과물만 준비 증거로 사용합니다."
@@ -268,7 +439,7 @@ export function QuestHubScreen() {
               </article>
             ))}
           </div>
-        </>
+        </div>
       )}
     </AppShell>
   );

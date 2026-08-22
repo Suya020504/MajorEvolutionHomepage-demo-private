@@ -12,7 +12,7 @@ import { BrandLogo } from "@/components/brand/brand-logo";
  * 핵심 3기능을 같은 무게로 나열하고 나의 여정을 마지막에 둡니다.
  */
 
-const NAV_ITEMS = [
+export const NAV_ITEMS = [
   { href: "/home", section: "/home", label: "홈", icon: Home },
   { href: "/professors", section: "/professors", label: "교수 찾기", icon: CompassIcon },
   { href: "/research/tutorial", section: "/research", label: "전공 아이디어", icon: FlaskConical },
@@ -38,6 +38,31 @@ const SECTION_PREFIX: Record<string, string> = {
 function activeHref(pathname: string): string | null {
   const segment = `/${pathname.split("/")[1] ?? ""}`;
   return SECTION_PREFIX[segment] ?? null;
+}
+
+export function ServiceBottomNav() {
+  const pathname = usePathname() ?? "";
+  const active = activeHref(pathname);
+
+  return (
+    <nav className="service-bottom-nav" aria-label="모바일 주요 메뉴">
+      {NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        const isActive = active === item.section;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={isActive ? "is-active" : undefined}
+            aria-current={isActive ? "page" : undefined}
+          >
+            <Icon size={21} aria-hidden="true" />
+            <span>{item.label === "교수 찾기" ? "교수" : item.label === "전공 아이디어" ? "아이디어" : item.label === "대화 준비" ? "준비" : item.label === "성장 기록" ? "기록" : item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }
 
 export function SideNav() {

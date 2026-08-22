@@ -10,7 +10,6 @@ import {
   CircleHelp,
   Compass,
   FileQuestion,
-  Home,
   Lightbulb,
   LoaderCircle,
   Mail,
@@ -23,6 +22,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/app/primitives";
+import { ServiceBottomNav } from "@/components/app/side-nav";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import {
@@ -116,33 +116,6 @@ function recentFromCard(card: SavedQuestCard): RecentItem {
     href: meta.href,
     icon: meta.icon,
   };
-}
-
-function HomeBottomNav() {
-  const items = [
-    { href: "/home", label: "홈", icon: Home, active: true },
-    { href: "/professors", label: "교수", icon: UsersRound, active: false },
-    { href: "/quest", label: "준비", icon: NotebookPen, active: false },
-    { href: "/portfolio", label: "기록", icon: CalendarDays, active: false },
-  ];
-  return (
-    <nav className={styles.bottomNav} aria-label="모바일 주요 메뉴">
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={item.active ? styles.bottomNavActive : undefined}
-            aria-current={item.active ? "page" : undefined}
-          >
-            <Icon size={21} aria-hidden="true" />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
 }
 
 export function UnifiedHomeScreen() {
@@ -357,7 +330,7 @@ export function UnifiedHomeScreen() {
       title="너의 교수님은?"
       className={`${styles.shell} unified-home-screen`}
       showHeader={false}
-      bottomNav={<HomeBottomNav />}
+      bottomNav={<ServiceBottomNav />}
     >
       <header className={styles.mobileHeader}>
         <BrandLogo href="/home" compact />

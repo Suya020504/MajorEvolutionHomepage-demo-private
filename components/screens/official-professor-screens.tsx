@@ -542,7 +542,7 @@ export function OfficialProfessorsScreen({
     && Boolean(storedDiscoveryTopic);
 
   return (
-    <AppShell title="나의 교수님 — 찾다" backHref="/mentoring" className="find-professor-screen">
+    <AppShell title="조건 직접 입력" backHref="/professors" className="find-professor-screen">
       <SceneBanner
         scene={brandScene.find}
         alt="공식 자료로 관심 분야에 맞는 교수님을 찾는 장면"
@@ -678,7 +678,7 @@ export function ProfessorPitchScreen() {
 
   const runSearch = async (excludeIds: string[]) => {
     if (!storedDiscoveryTopic) {
-      router.push("/professors");
+      router.push("/professors/discover");
       return;
     }
     const useSaved = Boolean(savedTopic && savedTopic.title === context.topic.trim());
@@ -767,7 +767,7 @@ export function ProfessorPitchScreen() {
               <SearchCheck size={28} />
               <h2>아직 보여드릴 피칭이 없어요</h2>
               <p>찾기 화면에서 전공·관심 분야와 진로 고민을 입력하면 세 관점의 교수님을 찾아드려요.</p>
-              <PrimaryButton onClick={() => router.push("/professors")}>
+              <PrimaryButton onClick={() => router.push("/professors/discover")}>
                 교수님 찾기로 가기 <ArrowRight size={17} />
               </PrimaryButton>
             </Card>
@@ -800,7 +800,7 @@ export function ProfessorPitchScreen() {
               )}
 
               <div className="professor-pitch-toolbar">
-                <Link href="/professors">
+                <Link href="/professors/discover">
                   <SearchCheck size={16} aria-hidden="true" /> 조건 바꿔 다시 찾기
                 </Link>
                 {rejectedIds.length > 0 && (

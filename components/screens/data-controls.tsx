@@ -21,7 +21,7 @@ type Category = {
   clear: () => void;
 };
 
-export function DataControls() {
+export function DataControls({ showHeading = true }: { showHeading?: boolean }) {
   const matches = useResearchStore((state) => state.professorMatches);
   const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
   const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
@@ -76,10 +76,12 @@ export function DataControls() {
 
   return (
     <>
-      <SectionHeading
-        title="내 기록 관리"
-        description="종류별로 각각 지울 수 있습니다. 삭제한 기록은 되돌릴 수 없습니다."
-      />
+      {showHeading ? (
+        <SectionHeading
+          title="내 기록 관리"
+          description="종류별로 각각 지울 수 있습니다. 삭제한 기록은 되돌릴 수 없습니다."
+        />
+      ) : null}
       <Card className="data-controls">
         {categories.map((category) => (
           <div key={category.id} className="data-controls__row">
