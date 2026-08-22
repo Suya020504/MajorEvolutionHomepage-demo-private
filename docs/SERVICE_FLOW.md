@@ -112,3 +112,4 @@ flowchart TD
 상세 홈 상태 계약과 시각 검수는 `design/home-dashboard-v2/`를 기준으로 한다.
 전공 아이디어 튜토리얼의 흐름·상태·PC/모바일 시각 기준은 `design/research-tutorial-v1/`을 기준으로 한다.
 토스·당근 구조 원칙을 적용한 교수·대화 준비·성장 기록 허브는 `design/service-hubs-v1/`을 기준으로 한다.
+AI 생성형 템플릿의 흔적을 줄인 공통 간격·반경·그림자·미디어 규칙과 검증 화면은 `design/front-polish-v1/`을 기준으로 한다.

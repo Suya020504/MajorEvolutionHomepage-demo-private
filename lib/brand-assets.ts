@@ -29,9 +29,12 @@ export const brandLogoV2 = {
   markMonoWhite: "/brand/nyp-v04/logo/nyp-logo-mark-mono-white-v02.svg",
 } as const;
 
-/** 튜토리얼 전용 장면. 공식 V3 캐릭터·캠퍼스 무드를 기준으로 새로 제작했습니다. */
+/**
+ * 튜토리얼 전용 장면.
+ * V2는 로봇과 발광 경로를 걷어내고 학생의 실제 고민 맥락만 남긴 차분한 보조 이미지입니다.
+ */
 export const tutorialScene = {
-  firstPath: "/brand/nyp-v04/scenes/tutorial/nyp-scene-tutorial-first-path-16x9-v01.webp",
+  firstPath: "/brand/nyp-v04/scenes/tutorial/nyp-scene-tutorial-student-campus-16x9-v02.png",
 } as const;
 
 /** 핵심 3기능 아이콘. 화면에서는 항상 텍스트 라벨과 함께 씁니다. */

@@ -360,10 +360,12 @@ export function ProfessorTutorialScreen({
             <p><ShieldCheck size={18} /> 학교 공식 정보와 연결 이유 확인</p>
             <p><MessageCircleQuestion size={18} /> 교수님께 드릴 첫 질문까지 준비</p>
           </div>
-          <button type="button" className={styles.primaryButton} onClick={() => setStep("academic")}>
-            내 고민부터 시작하기 <ArrowRight size={19} />
-          </button>
-          <p className={styles.smallNote}>가입 없이 시작 · 교수에게 자동으로 연락하지 않아요</p>
+          <div className={styles.welcomeAction}>
+            <button type="button" className={styles.primaryButton} onClick={() => setStep("academic")}>
+              내 고민부터 시작하기 <ArrowRight size={19} />
+            </button>
+            <p className={styles.smallNote}>가입 없이 시작 · 교수에게 자동으로 연락하지 않아요</p>
+          </div>
         </div>
       );
     }
@@ -595,7 +597,7 @@ export function ProfessorTutorialScreen({
           </div>
           <div className={styles.progressTrack} aria-hidden="true"><span style={{ width: `${progressValue}%` }} /></div>
           <div className={styles.contextCopy}>
-            <span className={styles.eyebrow}>{stepCopy.eyebrow}</span>
+            {step !== "welcome" && <span className={styles.eyebrow}>{stepCopy.eyebrow}</span>}
             <h1>{stepCopy.title}</h1>
             <p>{stepCopy.description}</p>
           </div>
@@ -620,14 +622,8 @@ export function ProfessorTutorialScreen({
             <span>{progressLabel}</span>
             <div className={styles.progressTrack}><span style={{ width: `${progressValue}%` }} /></div>
           </div>
-          <div className={styles.mobileQuestionCopy}>
-            <span className={styles.eyebrow}>{stepCopy.eyebrow}</span>
-            <h1 id="tutorial-question">{stepCopy.title}</h1>
-            <p>{stepCopy.description}</p>
-          </div>
-
-          {(step === "welcome" || step === "academic") && (
-            <figure className={styles.mobileHeroMedia}>
+          {step === "welcome" ? (
+            <figure className={`${styles.mobileHeroMedia} ${styles.mobileHeroWelcome}`}>
               <Image
                 src={tutorialScene.firstPath}
                 alt="캠퍼스에서 자신의 고민을 정리하며 교수와의 첫 대화를 준비하는 학생"
@@ -635,7 +631,31 @@ export function ProfessorTutorialScreen({
                 sizes="100vw"
                 priority
               />
+              <figcaption className={styles.mobileHeroOverlay}>
+                <h1 id="tutorial-question">{stepCopy.title}</h1>
+                <p>{stepCopy.description}</p>
+              </figcaption>
             </figure>
+          ) : (
+            <>
+              <div className={styles.mobileQuestionCopy}>
+                <span className={styles.eyebrow}>{stepCopy.eyebrow}</span>
+                <h1 id="tutorial-question">{stepCopy.title}</h1>
+                <p>{stepCopy.description}</p>
+              </div>
+
+              {step === "academic" && (
+                <figure className={styles.mobileHeroMedia}>
+                  <Image
+                    src={tutorialScene.firstPath}
+                    alt="캠퍼스에서 자신의 고민을 정리하며 교수와의 첫 대화를 준비하는 학생"
+                    fill
+                    sizes="100vw"
+                    priority
+                  />
+                </figure>
+              )}
+            </>
           )}
 
           <div className={styles.questionBody}>{renderQuestion()}</div>
