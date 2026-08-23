@@ -10,6 +10,7 @@ import {
   CircleHelp,
   Compass,
   FileQuestion,
+  GraduationCap,
   Lightbulb,
   LoaderCircle,
   Mail,
@@ -79,21 +80,27 @@ const TOOL_META: Record<QuestToolId, { label: string; href: string; icon: Lucide
 const UTILITY_LINKS = [
   {
     href: "/professors",
-    label: "교수 찾기",
+    label: "교수 매칭",
     description: "내 고민과 이어지는 교수를 학교 공식 정보로 찾아보세요.",
     icon: Search,
   },
   {
+    href: "/quest",
+    label: "교수 만남 연계",
+    description: "교수를 만나기 전부터 만난 후까지 필요한 도구를 이어 써요.",
+    icon: MessageSquareText,
+  },
+  {
     href: "/research/tutorial",
-    label: "전공 아이디어",
+    label: "AI 프로젝트 설계",
     description: "관심사를 수업·프로젝트·연구 주제로 더 구체화해요.",
     icon: Lightbulb,
   },
   {
-    href: "/quest",
-    label: "대화 퀘스트",
-    description: "교수를 만나기 전부터 만난 후까지 필요한 도구를 이어 써요.",
-    icon: MessageSquareText,
+    href: "/project-professors",
+    label: "맞춤 교수 추천",
+    description: "선택한 프로젝트의 주제·방법·응용 맥락에 맞는 교수를 확인해요.",
+    icon: GraduationCap,
   },
 ] as const;
 

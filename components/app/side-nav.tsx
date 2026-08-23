@@ -2,22 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CompassIcon, FlaskConical, Home, MessagesSquare, NotebookPen } from "lucide-react";
+import { CompassIcon, FlaskConical, GraduationCap, Home, MessagesSquare } from "lucide-react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 
 /**
  * 넓은 화면 좌측 내비.
  *
  * 와이어프레임의 데스크톱 사이드바를 그대로 옮긴 것으로, 모바일에서는 나타나지 않습니다.
- * 핵심 3기능을 같은 무게로 나열하고 나의 여정을 마지막에 둡니다.
+ * 홈 다음에 두 사용자 여정을 순서대로 둡니다.
+ * 1) 교수 매칭 → 교수 만남 연계
+ * 2) AI 프로젝트 설계 → 맞춤 교수 추천
  */
 
 export const NAV_ITEMS = [
-  { href: "/home", section: "/home", label: "홈", icon: Home },
-  { href: "/professors", section: "/professors", label: "교수 찾기", icon: CompassIcon },
-  { href: "/research/tutorial", section: "/research", label: "전공 아이디어", icon: FlaskConical },
-  { href: "/quest", section: "/quest", label: "대화 준비", icon: MessagesSquare },
-  { href: "/portfolio", section: "/portfolio", label: "성장 기록", icon: NotebookPen },
+  { href: "/home", section: "/home", label: "홈", shortLabel: "홈", icon: Home },
+  { href: "/professors", section: "/professors", label: "교수 매칭", shortLabel: "매칭", icon: CompassIcon },
+  { href: "/quest", section: "/quest", label: "교수 만남 연계", shortLabel: "만남", icon: MessagesSquare },
+  { href: "/research/tutorial", section: "/research", label: "AI 프로젝트 설계", shortLabel: "프로젝트", icon: FlaskConical },
+  { href: "/project-professors", section: "/project-professors", label: "맞춤 교수 추천", shortLabel: "추천", icon: GraduationCap },
 ] as const;
 
 /** /result와 /co-design은 만들다 흐름의 일부이므로 같은 항목을 활성으로 봅니다. */
@@ -29,7 +31,9 @@ const SECTION_PREFIX: Record<string, string> = {
   "/mentor-loop": "/quest",
   "/paper": "/quest",
   "/professors": "/professors",
-  "/portfolio": "/portfolio",
+  "/project-professors": "/project-professors",
+  // 성장 기록은 홈의 재방문·관리 기능으로 남기므로 홈을 활성으로 표시합니다.
+  "/portfolio": "/home",
   // 공개 랜딩은 루트, 로그인 후 통합 홈은 /home에 있습니다.
   "/home": "/home",
   "/mentoring": "/home",
@@ -55,9 +59,10 @@ export function ServiceBottomNav() {
             href={item.href}
             className={isActive ? "is-active" : undefined}
             aria-current={isActive ? "page" : undefined}
+            aria-label={item.label}
           >
             <Icon size={21} aria-hidden="true" />
-            <span>{item.label === "교수 찾기" ? "교수" : item.label === "전공 아이디어" ? "아이디어" : item.label === "대화 준비" ? "준비" : item.label === "성장 기록" ? "기록" : item.label}</span>
+            <span>{item.shortLabel}</span>
           </Link>
         );
       })}

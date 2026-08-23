@@ -64,8 +64,8 @@ type StepCopy = {
 
 const STEP_COPY: Record<TutorialStep, StepCopy> = {
   welcome: {
-    title: "전공과 관심을, 시작할 수 있는 아이디어로 바꿔볼까요?",
-    description: "한 번에 한 가지씩 답하면 지금 가능한 과제·프로젝트·연구 아이디어의 조건이 정리돼요.",
+    title: "나만의 프로젝트를 AI와 설계해 볼까요?",
+    description: "전공과 관심을 한 단계씩 정리하면 지금 가능한 과제·프로젝트·연구 주제의 조건이 구체화돼요.",
   },
   major: {
     title: "지금 공부하고 있는 전공은 무엇인가요?",
@@ -88,8 +88,8 @@ const STEP_COPY: Record<TutorialStep, StepCopy> = {
     description: "실현 가능한 범위로 아이디어를 좁히는 데만 사용해요.",
   },
   review: {
-    title: "이 조건으로 아이디어를 함께 만들까요?",
-    description: "AI가 후보 2개를 제안하면 근거와 확인할 점을 비교할 수 있어요.",
+    title: "이 조건으로 프로젝트를 함께 설계할까요?",
+    description: "AI 맞춤 질문을 거쳐 후보 2개를 만들고 근거와 확인할 점을 비교해요.",
   },
 };
 
@@ -390,7 +390,7 @@ export function ResearchTutorialScreen() {
     return (
       <div className={styles.loading}>
         <LoaderCircle className={styles.spin} size={24} />
-        <p>저장된 아이디어 조건을 불러오고 있어요.</p>
+        <p>저장된 프로젝트 조건을 불러오고 있어요.</p>
       </div>
     );
   }
@@ -406,10 +406,10 @@ export function ResearchTutorialScreen() {
             <p><ShieldCheck size={19} /> 최종 확인 전 기존 기록 유지</p>
           </div>
           <button type="button" className={styles.primaryButton} onClick={resetAndStart}>
-            전공 아이디어 시작하기 <ArrowRight size={19} />
+            AI 프로젝트 설계 시작하기 <ArrowRight size={19} />
           </button>
           <div className={styles.welcomeLinks}>
-            {result ? <Link href="/result">기존 아이디어 이어보기</Link> : null}
+            {result ? <Link href="/result">기존 프로젝트 이어보기</Link> : null}
             <Link href="/research">한 번에 입력하기</Link>
           </div>
         </div>

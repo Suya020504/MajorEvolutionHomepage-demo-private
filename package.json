@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test:favorite-paper": "node --test scripts/tests/favorite-paper-flow.test.mjs",
     "test:co-design": "node --test scripts/tests/co-design-ai-flow.test.mjs",
+    "test:navigation": "node --test scripts/tests/service-navigation-flow.test.mjs",
     "test:professor-discovery": "node --test scripts/tests/professor-discovery-flow.test.mjs",
     "professors:crawl": "node scripts/professor-crawler/cli.mjs crawl",
     "professors:recover-dku": "node scripts/professor-crawler/recover-dku.mjs",
