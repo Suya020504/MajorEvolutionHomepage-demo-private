@@ -371,7 +371,16 @@ test("데스크톱 교수 찾기 폼은 결과 영역을 sticky로 가리지 않
   assert.doesNotMatch(screen, /> AI 캐스팅 한마디</);
   assert.match(screen, /서비스가 제안한 탐색 역할/);
   assert.match(screen, /이 교수님과 첫 대화 준비하기/);
-  assert.match(screen, /교수 정보와 준비 도구 더 보기/);
+  assert.match(screen, /추천 이유와 공식 근거 더 보기/);
+  assert.match(screen, /왜 이 교수님을 제안했나요/);
+  assert.match(screen, /근거 확인 상태/);
+  assert.match(screen, /공식 프로필에서 연결된 항목/);
+  assert.match(screen, /공식 근거와 출처/);
+  assert.doesNotMatch(
+    css,
+    /\.match-card__actions\s*\{[^}]*grid-template-columns:\s*repeat\(2/si,
+    "첫 대화 준비와 더 보기는 같은 행에 배치하지 않아야 한다",
+  );
   assert.match(
     screen,
     /matches\.length > 0\s*&& !storedDiscoveryTopic[\s\S]*clearProfessorMatches\(\)/,
@@ -522,4 +531,32 @@ test("전공 아이디어 튜토리얼은 최종 확인 전 로컬 초안만 쓰
     1,
     "최종 확인은 연구 상태를 한 번에 반영해야 한다",
   );
+});
+
+test("프로젝트 설계는 단계형과 한 화면 입력을 오가며 건너뛰고 이어갈 수 있다", () => {
+  const tutorial = fs.readFileSync(
+    path.join(repositoryRoot, "components/tutorial/research-tutorial-screen.tsx"),
+    "utf8",
+  );
+  const fullForm = fs.readFileSync(
+    path.join(repositoryRoot, "components/screens/research-condition.tsx"),
+    "utf8",
+  );
+  const store = fs.readFileSync(
+    path.join(repositoryRoot, "store/research-store.ts"),
+    "utf8",
+  );
+
+  assert.match(tutorial, /한 단계씩 질문받기/);
+  assert.match(tutorial, /한 화면에서 직접 입력/);
+  assert.match(tutorial, /프로젝트 설계 단계 바로가기/);
+  assert.match(tutorial, /나중에 답하기/);
+  assert.match(tutorial, /저장하고 나가기/);
+  assert.match(tutorial, /saveIdeaDraft\(\{ ideaMode: draft\.ideaMode, conditions: draft\.conditions \}\)/);
+  assert.match(fullForm, /\/research\/tutorial\?source=full/);
+  assert.match(fullForm, /프로젝트 설계 단계/);
+  assert.match(fullForm, /설계 방식 선택으로 돌아가기/);
+  assert.match(fullForm, /renderCurrentStep\(\)/);
+  assert.match(fullForm, /현재 입력은 이 브라우저에 자동 저장돼요/);
+  assert.match(store, /saveIdeaDraft: \(\{ ideaMode, conditions \}\) =>/);
 });

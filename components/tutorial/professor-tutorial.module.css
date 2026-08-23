@@ -26,6 +26,42 @@
 
 .brand { flex: 0 0 auto; }
 
+.overlayTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+}
+
+.overlayTitle > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--tutorial-violet);
+  background: #f2f0fb;
+}
+
+.overlayTitle > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.overlayTitle strong {
+  color: var(--tutorial-navy);
+  font-size: 15px;
+  font-weight: 810;
+  letter-spacing: -0.02em;
+}
+
+.overlayTitle small {
+  color: var(--tutorial-muted);
+  font-size: 10px;
+}
+
 .headerMeta {
   display: flex;
   align-items: center;
@@ -39,6 +75,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.headerMeta .closeButton {
+  min-height: 38px;
+  gap: 5px;
+  color: var(--tutorial-violet);
 }
 
 .headerMeta button {
@@ -813,6 +855,148 @@
   .questionPanel { padding-right: 16px; padding-left: 16px; }
   .mobileQuestionCopy h1 { font-size: 29px; }
   .depthIcon { width: 42px; height: 42px; }
+}
+
+.overlayPage {
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.overlayPage .header {
+  min-height: 64px;
+  padding: 0 20px;
+}
+
+.overlayPage .shell {
+  width: 100%;
+  min-height: calc(100% - 64px);
+}
+
+.overlayPage .contextPanel,
+.overlayPage .questionPanel {
+  min-height: calc(100% - 64px);
+}
+
+.overlayLoadingPage {
+  min-height: 100%;
+  height: 100%;
+}
+
+@media (min-width: 761px) and (max-height: 1080px) {
+  .overlayPage .contextPanel {
+    padding-top: 32px;
+    padding-bottom: 18px;
+  }
+
+  .overlayPage .contextCopy {
+    margin-top: 28px;
+  }
+
+  .overlayPage .contextCopy h1 {
+    font-size: clamp(34px, 2.6vw, 42px);
+  }
+
+  .overlayPage .contextCopy p {
+    margin-top: 14px;
+  }
+
+  .overlayPage .contextMedia {
+    margin-top: 20px;
+  }
+
+  .overlayPage .contextTip {
+    margin-top: 14px;
+    padding-top: 13px;
+  }
+
+  .overlayPage .questionPanel {
+    padding-top: 36px;
+    padding-bottom: 36px;
+  }
+}
+
+@media (max-width: 760px) {
+  .overlayPage .header {
+    min-height: 54px;
+    padding: 0 14px;
+  }
+
+  .overlayPage .shell,
+  .overlayPage .questionPanel {
+    min-height: calc(100% - 54px);
+  }
+
+  .overlayPage .questionPanel {
+    padding: 12px 14px max(14px, env(safe-area-inset-bottom));
+  }
+
+  .overlayPage .mobileQuestionCopy {
+    margin-top: 18px;
+  }
+
+  .overlayPage .mobileQuestionCopy h1 {
+    font-size: clamp(26px, 7.4vw, 29px);
+  }
+
+  .overlayPage .mobileQuestionCopy p {
+    margin-top: 9px;
+    font-size: 13px;
+    line-height: 1.48;
+  }
+
+  .overlayPage .mobileHeroWelcome {
+    height: clamp(242px, 34dvh, 286px);
+    margin-top: 12px;
+    border-radius: 14px;
+  }
+
+  .overlayPage .mobileHeroOverlay {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+  }
+
+  .overlayPage .mobileHeroOverlay h1 {
+    font-size: clamp(25px, 7vw, 29px);
+  }
+
+  .overlayPage .mobileHeroOverlay p {
+    margin-top: 8px;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .overlayPage .questionBody {
+    margin-top: 12px;
+  }
+
+  .overlayPage .timeBadge {
+    min-height: 28px;
+  }
+
+  .overlayPage .promiseList {
+    margin: 8px 0 12px;
+  }
+
+  .overlayPage .promiseList p {
+    min-height: 42px;
+    font-size: 12px;
+  }
+
+  .overlayPage .welcomeAction {
+    padding: 8px 0 max(6px, env(safe-area-inset-bottom));
+  }
+
+  .overlayPage .primaryButton,
+  .overlayPage .backButton {
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 420px) {
+  .overlayTitle small { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

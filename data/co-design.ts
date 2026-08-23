@@ -114,7 +114,7 @@ const MODE_FIRST_QUESTION: Record<IdeaMode, CoDesignQuestion> = {
   trend: {
     id: "trend-focus",
     prompt: "학과의 최근 AI 융합 흐름에서 먼저 비교해 보고 싶은 변화는 무엇인가요?",
-    helper: "공식 프로필에 근거가 없는 흐름은 ‘확인 필요’로 남겨요.",
+    helper: "가장 궁금한 변화 하나를 고르면 다음 질문에서 범위와 방법을 더 구체화해요.",
     options: ["연구 방법의 변화", "새로운 데이터 활용", "현장 문제 해결", "아직 열어두기"],
     contextLabel: "트렌드 탐색 초점",
     allowCustom: true,

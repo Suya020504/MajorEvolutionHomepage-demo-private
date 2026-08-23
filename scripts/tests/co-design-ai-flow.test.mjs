@@ -22,6 +22,15 @@ test("공동설계는 공통 3문항 뒤 API 맞춤 질문 2문항으로 이어�
   assert.match(route, /generateCoDesignFollowUpQuestions/);
 });
 
+test("첫 공동설계 화면은 답변 평가가 아니라 AI의 역할과 답변 방법을 먼저 안내한다", async () => {
+  const screen = await read("components/screens/co-design-screen.tsx");
+
+  assert.match(screen, /반가워요, \{conditions\.major \?\? "전공"\}에서 시작해 볼게요/);
+  assert.match(screen, /첫 질문에는 정답이 없으니/);
+  assert.match(screen, /오른쪽 제안 중 가장 가까운 방향을 고르거나/);
+  assert.doesNotMatch(screen, /좋은 질문이에요/);
+});
+
 test("후보 생성은 공통·맞춤 질문 ID 다섯 개를 모두 요구한다", async () => {
   const [data, server] = await Promise.all([
     read("data/co-design.ts"),

@@ -219,6 +219,32 @@ function MatchCard({
     professor.researchFields[0] ?? "",
   );
   const pitch = buildProfessorPitch(match, context, contextQuestions[0] ?? "");
+  const evidenceStrengthLabel = {
+    DIRECT: "직접 연결 근거 확인",
+    RELATED: "관련 근거 확인",
+    LIMITED: "확인 가능한 근거 제한",
+  }[match.strength];
+  const evidenceStatuses = [
+    {
+      label: "대학 공식 프로필",
+      value: match.decisionBasis.sources.officialProfile ? "확인됨" : "확인 필요",
+      verified: match.decisionBasis.sources.officialProfile,
+    },
+    {
+      label: "공식 연구분야",
+      value: match.decisionBasis.sources.researchFields
+        ? `${professor.researchFields.length}건 확인`
+        : "연결 근거 확인 필요",
+      verified: match.decisionBasis.sources.researchFields,
+    },
+    {
+      label: "관련 논문 근거",
+      value: match.decisionBasis.sources.matchedPublication
+        ? "연결 항목 확인"
+        : hasPublications ? "연구분야 중심 연결" : "공식 프로필 미기재",
+      verified: match.decisionBasis.sources.matchedPublication,
+    },
+  ];
   const isHomeDepartment = match.role === "CONTEXT"
     && match.decisionBasis.departmentMatchesMajor;
   const roleIcon = match.role === "TOPIC"
@@ -285,16 +311,46 @@ function MatchCard({
           이 교수님과 첫 대화 준비하기 <ArrowRight size={17} aria-hidden="true" />
         </button>
         <details className="match-card__more">
-          <summary>교수 정보와 준비 도구 더 보기</summary>
+          <summary>추천 이유와 공식 근거 더 보기</summary>
           <div className="match-card__more-content">
-            <section className="match-card__block">
-              <h3><Link2 size={15} aria-hidden="true" /> 나와 연결된 점</h3>
-              <div className="match-card__connection">
-                <strong>내가 알려준 조건</strong>
-                <div className="match-card__chips">
-                  {pitch.studentConnections.map((item) => <span key={item}>{item}</span>)}
+            <section className="match-card__reason-panel">
+              <header>
+                <span><SearchCheck size={16} aria-hidden="true" /> 왜 이 교수님을 제안했나요?</span>
+                <em>{evidenceStrengthLabel}</em>
+              </header>
+              <p>{match.mentorFitReason?.trim() || match.reason}</p>
+              <div className="match-card__reason-grid">
+                <div>
+                  <strong>내가 입력한 조건</strong>
+                  <div className="match-card__chips">
+                    {pitch.studentConnections.map((item) => <span key={item}>{item}</span>)}
+                  </div>
+                </div>
+                <div>
+                  <strong>공식 프로필에서 연결된 항목</strong>
+                  <div className="match-card__chips match-card__chips--official">
+                    {pitch.officialConnections.map((item) => <span key={item}>{item}</span>)}
+                  </div>
                 </div>
               </div>
+            </section>
+
+            <section className="match-card__basis-status">
+              <h3><ShieldCheck size={15} aria-hidden="true" /> 근거 확인 상태</h3>
+              <ul>
+                {evidenceStatuses.map((item) => (
+                  <li key={item.label} className={item.verified ? "is-verified" : "is-unverified"}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </li>
+                ))}
+              </ul>
+              {match.decisionBasis.matchedConcepts.length > 0 ? (
+                <div className="match-card__matched-concepts">
+                  <strong>조건에서 연결된 개념</strong>
+                  <p>{match.decisionBasis.matchedConcepts.join(" · ")}</p>
+                </div>
+              ) : null}
             </section>
 
             <section className="match-card__block">
@@ -316,8 +372,8 @@ function MatchCard({
               </ul>
             </section>
 
-            <details className="match-card__evidence-details">
-              <summary>공식 근거와 출처 확인</summary>
+            <section className="match-card__evidence-details" aria-label="공식 근거와 출처">
+              <h3><Link2 size={15} aria-hidden="true" /> 공식 근거와 출처</h3>
               <p>{match.reason}</p>
               <ul className="match-card__evidence">
                 <li>
@@ -340,7 +396,7 @@ function MatchCard({
                   대학 공식 프로필 <ExternalLink size={15} />
                 </Link>
               </div>
-            </details>
+            </section>
 
             <div className="match-card__secondary-actions">
               <ProfessorFavoriteButton
@@ -756,7 +812,7 @@ export function ProfessorPitchScreen() {
       {!hasHydrated ? (
         <Card className="official-professor-empty" role="status">
           <LoaderCircle className="spin" size={26} />
-          <h2>저장한 피칭 결과를 불러오는 중이에요</h2>
+          <h1>저장한 피칭 결과를 불러오는 중이에요</h1>
         </Card>
       ) : status === "loading" ? (
         <Card className="official-professor-empty professor-match-loading" role="status">
@@ -781,7 +837,7 @@ export function ProfessorPitchScreen() {
           {matches.length === 0 ? (
             <Card className="official-professor-empty">
               <SearchCheck size={28} />
-              <h2>아직 보여드릴 피칭이 없어요</h2>
+              <h1>아직 보여드릴 피칭이 없어요</h1>
               <p>찾기 화면에서 전공·관심 분야와 진로 고민을 입력하면 세 관점의 교수님을 찾아드려요.</p>
               <PrimaryButton onClick={() => router.push("/professors/discover")}>
                 교수님 찾기로 가기 <ArrowRight size={17} />
@@ -791,7 +847,7 @@ export function ProfessorPitchScreen() {
             <>
               <section className="professor-pitch-intro" aria-labelledby="professor-pitch-title">
                 <div className="professor-pitch-intro__copy">
-                  <h2 id="professor-pitch-title">세 분 중 한 분과 첫 대화를 시작해 보세요</h2>
+                  <h1 id="professor-pitch-title">세 분 중 한 분과 첫 대화를 시작해 보세요</h1>
                   <p>
                     {hasHomeDepartmentMatch
                       ? "같은 학과 교수님을 가장 가까운 시작점으로 먼저 제안하고, 다른 학과에서는 내 관심 주제와 방법에 맞는 교수님을 찾아드렸어요."

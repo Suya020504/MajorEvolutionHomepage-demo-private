@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -8,6 +9,7 @@ import {
   Ban,
   BookOpenCheck,
   CalendarCheck,
+  Check,
   Compass,
   FileText,
   HandHeart,
@@ -43,6 +45,7 @@ import { SceneBanner } from "@/components/app/scene-banner";
 import { brandScene, questIcon } from "@/lib/brand-assets";
 import { cardsForTool, useQuestStore, type QuestToolId } from "@/store/quest-store";
 import { useResearchStore } from "@/store/research-store";
+import questStyles from "./quest-hub-screen.module.css";
 
 /**
  * Q-00 교수님 퀘스트 허브.
@@ -161,9 +164,12 @@ export function QuestHubScreen() {
   const emailCount = cardsForTool(cards, "email-guard").length + Object.keys(knockKitDrafts).length;
   const afterCount = cardsForTool(cards, "next-seed").length + Object.keys(mentorLoopEntries).length;
   const beforeCount = paperCount + questionCount + emailCount;
-  const selectedProfessor = professorMatches.find(
+  const selectedProfessorMatch = professorMatches.find(
     (match) => match.professor.id === selectedProfessorId,
-  )?.professor ?? null;
+  ) ?? professorMatches.find(
+    (match) => favoriteProfessorIds.includes(match.professor.id),
+  ) ?? null;
+  const selectedProfessor = selectedProfessorMatch?.professor ?? null;
   const hasConnectedProfessor = Boolean(selectedProfessor)
     || favoriteProfessorIds.length > 0;
 
@@ -171,7 +177,7 @@ export function QuestHubScreen() {
       ? {
           icon: Compass,
           heading: "먼저 대화할 교수를 고를 차례예요",
-          taskTitle: "공식 근거로 교수 찾기",
+          taskTitle: "만남 준비 시작 · 교수 선택",
         description: "연결 이유를 확인하고 저장하면, 그 교수에게 맞춘 준비가 시작돼요.",
         cta: "교수 찾기",
         href: "/professors",
@@ -182,7 +188,7 @@ export function QuestHubScreen() {
           heading: selectedProfessor
             ? `${selectedProfessor.name} 교수님의 연구를 살펴볼 차례예요`
             : "교수님의 연구를 살펴볼 차례예요",
-          taskTitle: "논문 한입 준비하기",
+          taskTitle: "만나기 전 · 논문 한입 준비",
           description: "공식 프로필의 논문을 문제·방법·결과·질문으로 가볍게 정리해요.",
           cta: "논문 한입 시작하기",
           href: "/paper/reader?mode=bite&source=favorites",
@@ -191,7 +197,7 @@ export function QuestHubScreen() {
         ? {
             icon: MessageCircleQuestion,
             heading: "지금은 첫 질문을 준비할 차례예요",
-            taskTitle: "첫 질문 3개 준비하기",
+            taskTitle: "만나기 전 · 첫 질문 3개 준비",
             description: "교수님께 궁금한 점을 정리하고 첫 대화의 실마리를 만들어요.",
             cta: "질문 준비하기",
             href: "/quest/first-line",
@@ -200,7 +206,7 @@ export function QuestHubScreen() {
           ? {
               icon: Mail,
               heading: "첫 연락을 보내기 전에 점검해 볼까요?",
-              taskTitle: "이메일 초안 점검하기",
+              taskTitle: "첫 연락 준비 · 이메일 초안 점검",
               description: "자동 발송하지 않고, 연결 이유와 요청을 담은 초안을 내가 검토해요.",
               cta: "이메일 준비하기",
               href: "/quest/email-guard",
@@ -209,7 +215,7 @@ export function QuestHubScreen() {
             ? {
                 icon: CalendarCheck,
                 heading: "면담에서 들은 조언을 행동으로 바꿔보세요",
-                taskTitle: "면담 후 7일 행동 정리하기",
+                taskTitle: "만난 후 · 7일 행동 정리",
                 description: "이번 주에 할 일과 다시 보여줄 결과물을 짧게 남겨요.",
                 cta: "면담 후 기록하기",
                 href: "/mentor-loop",
@@ -223,13 +229,61 @@ export function QuestHubScreen() {
                 href: "/portfolio",
               };
 
+  const beforeDoneCount = [paperCount > 0, questionCount > 0, emailCount > 0]
+    .filter(Boolean).length;
+  const meetingSteps = [
+    {
+      id: "professor",
+      label: "교수 선택",
+      status: hasConnectedProfessor ? "연결 완료" : "먼저 선택",
+      href: selectedProfessor ? `/professors/${selectedProfessor.id}` : "/professors",
+      icon: Compass,
+      done: hasConnectedProfessor,
+    },
+    {
+      id: "before",
+      label: "만나기 전",
+      status: `${beforeDoneCount}/3 준비`,
+      href: hasConnectedProfessor
+        ? paperCount === 0
+          ? "/paper/reader?mode=bite&source=favorites"
+          : questionCount === 0
+            ? "/quest/first-line"
+            : "/quest/email-guard"
+        : "/professors",
+      icon: BookOpenCheck,
+      done: beforeDoneCount === 3,
+    },
+    {
+      id: "during",
+      label: "대화 중",
+      status: silenceCount ? "질문 저장" : "질문 준비",
+      href: "/quest/silence-rescue",
+      icon: MessageSquareText,
+      done: silenceCount > 0,
+    },
+    {
+      id: "after",
+      label: "만난 후",
+      status: afterCount ? "기록 완료" : "면담 후 기록",
+      href: "/mentor-loop",
+      icon: CalendarCheck,
+      done: afterCount > 0,
+    },
+  ] as const;
+  const completedMeetingSteps = meetingSteps.filter((step) => step.done).length;
+  const currentMeetingStep = meetingSteps.findIndex((step) => !step.done);
+  const progressPercent = Math.round((completedMeetingSteps / meetingSteps.length) * 100);
+
   return (
     <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
       <ServiceMobileHeader />
       <div className={styles.hub}>
         <ServiceHubIntro
-          title={primary.heading}
-          description="교수님과의 첫 대화까지, 오늘 할 일 하나만 이어가요."
+          title={selectedProfessor
+            ? `${selectedProfessor.name} 교수님과 첫 만남을 준비해요`
+            : "교수님과 첫 만남을 준비해요"}
+          description="교수 선택부터 연락, 대화 중 질문, 면담 후 행동까지 현재 단계와 다음 할 일을 한 화면에서 이어가요."
         />
         <HubPrimaryTask
           icon={primary.icon}
@@ -240,7 +294,51 @@ export function QuestHubScreen() {
           secondary={{ label: "전체 준비 도구 보기", href: "/quest/all" }}
         />
 
-        <HubList title="대화 단계">
+        <section className={questStyles.journey} aria-labelledby="meeting-journey-title">
+          <header className={questStyles.journeyHeader}>
+            <div>
+              <span>첫 만남 여정</span>
+              <h2 id="meeting-journey-title">지금 어디까지 준비했나요?</h2>
+            </div>
+            <strong>{completedMeetingSteps} / {meetingSteps.length} 단계</strong>
+          </header>
+          <div
+            className={questStyles.progressTrack}
+            role="progressbar"
+            aria-label="첫 만남 준비 진행률"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressPercent}
+          >
+            <span style={{ width: `${progressPercent}%` }} />
+          </div>
+          <div className={questStyles.journeySteps}>
+            {meetingSteps.map((step, index) => {
+              const Icon = step.icon;
+              const isCurrent = currentMeetingStep === index;
+              return (
+                <Link
+                  key={step.id}
+                  href={step.href}
+                  className={`${questStyles.journeyStep}${step.done ? ` ${questStyles.isDone}` : ""}${isCurrent ? ` ${questStyles.isCurrent}` : ""}`}
+                  aria-current={isCurrent ? "step" : undefined}
+                >
+                  <span className={questStyles.stepIcon}>
+                    {step.done ? <Check size={19} aria-hidden="true" /> : <Icon size={19} aria-hidden="true" />}
+                  </span>
+                  <span className={questStyles.stepCopy}>
+                    <small>{index + 1}단계</small>
+                    <strong>{step.label}</strong>
+                    <em>{step.status}</em>
+                  </span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <HubList title="단계별 준비 도구">
           <HubRow
             icon={BookOpenCheck}
             title="만나기 전"

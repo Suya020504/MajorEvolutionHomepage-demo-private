@@ -1,12 +1,19 @@
 import { AppShell, PageHeader } from "@/components/app/primitives";
+import { ServiceBottomNav } from "@/components/app/side-nav";
 import { DataControls } from "@/components/screens/data-controls";
 
 export default function Page() {
   return (
-    <AppShell title="내 기록 관리" backHref="/portfolio" className="portfolio-screen">
+    <AppShell
+      title="내 기록 관리"
+      backHref="/portfolio"
+      className="portfolio-screen"
+      bottomNav={<ServiceBottomNav />}
+    >
       <PageHeader
+        eyebrow="내 데이터"
         title="내 기록 관리"
-        description="종류별로 저장 범위를 확인하고, 필요할 때만 직접 삭제할 수 있어요."
+        description="저장한 성장 기록의 범위와 최근 시각을 확인하고, 백업하거나 종류별로 직접 정리할 수 있어요."
       />
       <DataControls showHeading={false} />
     </AppShell>

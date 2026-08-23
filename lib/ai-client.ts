@@ -5,6 +5,10 @@ import type {
   CoDesignRequest,
   CoDesignResponse,
 } from "@/lib/co-design-ai";
+import type {
+  GrowthProfessorRequest,
+  GrowthProfessorResponse,
+} from "@/lib/ai-growth-professor";
 
 type ApiErrorPayload = { error?: { message?: string } };
 
@@ -39,4 +43,10 @@ export function requestCoDesignFollowUpQuestions(
   body: CoDesignFollowUpRequest,
 ): Promise<CoDesignFollowUpResponse> {
   return postJson<CoDesignFollowUpResponse>("/api/ai/co-design/questions", body);
+}
+
+export function requestGrowthProfessorReply(
+  body: GrowthProfessorRequest,
+): Promise<GrowthProfessorResponse> {
+  return postJson<GrowthProfessorResponse>("/api/ai/growth-professor", body);
 }

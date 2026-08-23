@@ -9,13 +9,16 @@ import {
   Check,
   ChevronRight,
   Combine,
+  FlaskConical,
   GraduationCap,
   Lightbulb,
   LoaderCircle,
   Route,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   WandSparkles,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -38,6 +41,7 @@ import {
   type PeriodLabel,
 } from "@/data/research-mvp";
 import { emptyConditions, type Conditions } from "@/lib/recommend";
+import { useProfileStore } from "@/store/profile-store";
 import { useResearchStore } from "@/store/research-store";
 import styles from "./research-tutorial.module.css";
 
@@ -46,6 +50,15 @@ const QUESTION_STEPS = ["major", "mode", "interests", "readiness", "feasibility"
 const ALL_STEPS = ["welcome", ...QUESTION_STEPS] as const;
 const MAX_INTERESTS = 3;
 const MAX_METHODS = 2;
+
+const STEP_LABEL: Record<QuestionStep, string> = {
+  major: "전공",
+  mode: "탐색 방식",
+  interests: "관심 분야",
+  readiness: "경험·도구",
+  feasibility: "기간·자료",
+  review: "최종 확인",
+};
 
 type QuestionStep = (typeof QUESTION_STEPS)[number];
 type TutorialStep = (typeof ALL_STEPS)[number];
@@ -57,6 +70,11 @@ type TutorialDraft = {
   conditions: Conditions;
 };
 
+type ResearchTutorialScreenProps = {
+  presentation?: "page" | "overlay";
+  onRequestClose?: () => void;
+};
+
 type StepCopy = {
   title: string;
   description: string;
@@ -65,7 +83,7 @@ type StepCopy = {
 const STEP_COPY: Record<TutorialStep, StepCopy> = {
   welcome: {
     title: "나만의 프로젝트를 AI와 설계해 볼까요?",
-    description: "전공과 관심을 한 단계씩 정리하면 지금 가능한 과제·프로젝트·연구 주제의 조건이 구체화돼요.",
+    description: "지금 편한 방식을 골라 시작하세요. 진행 중인 답은 이 브라우저에 자동으로 저장돼요.",
   },
   major: {
     title: "지금 공부하고 있는 전공은 무엇인가요?",
@@ -256,14 +274,19 @@ function SelectionButton({
   );
 }
 
-export function ResearchTutorialScreen() {
+export function ResearchTutorialScreen({
+  presentation = "page",
+  onRequestClose,
+}: ResearchTutorialScreenProps = {}) {
   const router = useRouter();
   const topRef = useRef<HTMLDivElement>(null);
+  const markServiceEntered = useProfileStore((state) => state.markServiceEntered);
   const hasHydrated = useResearchStore((state) => state.hasHydrated);
   const storedConditions = useResearchStore((state) => state.conditions);
   const storedIdeaMode = useResearchStore((state) => state.ideaMode);
   const result = useResearchStore((state) => state.result);
   const beginIdeaCoDesign = useResearchStore((state) => state.beginIdeaCoDesign);
+  const saveIdeaDraft = useResearchStore((state) => state.saveIdeaDraft);
 
   const [draft, setDraft] = useState<TutorialDraft>(() => createDraft(emptyConditions, null));
   const [ready, setReady] = useState(false);
@@ -272,9 +295,18 @@ export function ResearchTutorialScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    markServiceEntered();
+  }, [markServiceEntered]);
+
+  useEffect(() => {
     if (!hasHydrated || ready) return;
-    const saved = restoreDraft(browserStorage()?.getItem(STORAGE_KEY) ?? "");
+    const fromFullForm = typeof window !== "undefined"
+      && new URLSearchParams(window.location.search).get("source") === "full";
+    const saved = fromFullForm
+      ? null
+      : restoreDraft(browserStorage()?.getItem(STORAGE_KEY) ?? "");
     setDraft(saved ?? createDraft(storedConditions, storedIdeaMode));
+    if (fromFullForm) window.history.replaceState(null, "", window.location.pathname);
     setReady(true);
   }, [hasHydrated, ready, storedConditions, storedIdeaMode]);
 
@@ -285,8 +317,11 @@ export function ResearchTutorialScreen() {
 
   const step = draft.step;
   const copy = STEP_COPY[step];
-  const questionIndex = QUESTION_STEPS.indexOf(step as QuestionStep);
-  const progress = questionIndex < 0 ? 0 : ((questionIndex + 1) / QUESTION_STEPS.length) * 100;
+  const completedInputSteps = QUESTION_STEPS
+    .filter((item) => item !== "review")
+    .filter((item) => !issueForStep(item, draft)).length;
+  const totalInputSteps = QUESTION_STEPS.length - 1;
+  const progress = (completedInputSteps / totalInputSteps) * 100;
   const majorSuggestions = draft.conditions.majorArea
     ? MAJOR_SUGGESTIONS[draft.conditions.majorArea]
     : [];
@@ -335,12 +370,22 @@ export function ResearchTutorialScreen() {
     if (index > 0) goTo(ALL_STEPS[index - 1]);
   };
 
-  const resetAndStart = () => {
-    const fresh = createDraft(emptyConditions, null);
-    fresh.step = "major";
-    setIssue(null);
-    setCustomInterest("");
-    setDraft(fresh);
+  const startGuided = () => {
+    const next = QUESTION_STEPS
+      .filter((item) => item !== "review")
+      .find((item) => issueForStep(item, draft)) ?? "review";
+    goTo(next);
+  };
+
+  const skipToNext = () => {
+    const index = ALL_STEPS.indexOf(step);
+    if (index < ALL_STEPS.length - 1) goTo(ALL_STEPS[index + 1]);
+  };
+
+  const switchToFullForm = () => {
+    saveIdeaDraft({ ideaMode: draft.ideaMode, conditions: draft.conditions });
+    browserStorage()?.setItem(STORAGE_KEY, JSON.stringify(draft));
+    router.push("/research");
   };
 
   const addCustomInterest = () => {
@@ -386,6 +431,14 @@ export function ResearchTutorialScreen() {
     router.push("/co-design");
   };
 
+  const closeTutorial = () => {
+    if (onRequestClose) {
+      onRequestClose();
+      return;
+    }
+    router.push("/home");
+  };
+
   if (!ready) {
     return (
       <div className={styles.loading}>
@@ -399,19 +452,35 @@ export function ResearchTutorialScreen() {
     if (step === "welcome") {
       return (
         <div className={styles.welcome}>
-          <div className={styles.welcomeMark}><Lightbulb size={30} /></div>
           <div className={styles.promiseList}>
-            <p><Route size={19} /> 긴 조건표 대신 한 단계씩</p>
-            <p><Sparkles size={19} /> 가능한 후보 2개를 비교</p>
-            <p><ShieldCheck size={19} /> 최종 확인 전 기존 기록 유지</p>
+            <p><Sparkles size={19} /> 가능한 후보 2개와 비교 근거를 만들어요.</p>
+            <p><ShieldCheck size={19} /> 두 방식 모두 자동 저장되며 언제든 바꿀 수 있어요.</p>
           </div>
-          <button type="button" className={styles.primaryButton} onClick={resetAndStart}>
-            AI 프로젝트 설계 시작하기 <ArrowRight size={19} />
-          </button>
-          <div className={styles.welcomeLinks}>
-            {result ? <Link href="/result">기존 프로젝트 이어보기</Link> : null}
-            <Link href="/research">한 번에 입력하기</Link>
+          <div className={styles.pathGrid}>
+            <button type="button" className={`${styles.pathCard} ${styles.pathCardPrimary}`} onClick={startGuided}>
+              <span className={styles.pathIcon}><Route size={25} /></span>
+              <span className={styles.pathCopy}>
+                <small>{completedInputSteps ? `${completedInputSteps}/${totalInputSteps}개 답변 저장됨` : "처음 시작하거나 아직 막막하다면"}</small>
+                <strong>{completedInputSteps ? "한 단계씩 이어가기" : "한 단계씩 질문받기"}</strong>
+                <span>전공부터 기간까지 한 번에 하나씩 정리해요.</span>
+              </span>
+              <ArrowRight size={20} aria-hidden="true" />
+            </button>
+            <button type="button" className={styles.pathCard} onClick={switchToFullForm}>
+              <span className={styles.pathIcon}><SlidersHorizontal size={25} /></span>
+              <span className={styles.pathCopy}>
+                <small>이미 생각해 둔 조건이 있다면</small>
+                <strong>한 화면에서 직접 입력</strong>
+                <span>전체 조건을 펼쳐 놓고 원하는 순서로 조정해요.</span>
+              </span>
+              <ArrowRight size={20} aria-hidden="true" />
+            </button>
           </div>
+          {result ? (
+            <Link href="/result" className={styles.resumeResult}>
+              <Lightbulb size={19} /> 기존 프로젝트 결과 이어보기 <ChevronRight size={17} />
+            </Link>
+          ) : null}
         </div>
       );
     }
@@ -620,7 +689,7 @@ export function ResearchTutorialScreen() {
           <div key={row.label} className={styles.reviewRow}>
             <strong>{row.label}</strong>
             <span>{row.value || "확인 필요"}</span>
-          <button type="button" onClick={() => goTo(row.step as TutorialStep)}>
+            <button type="button" onClick={() => goTo(row.step as TutorialStep)}>
               수정 <ChevronRight size={15} />
             </button>
           </div>
@@ -634,22 +703,65 @@ export function ResearchTutorialScreen() {
   };
 
   return (
-    <div className={styles.page}>
+    <div className={[styles.page, presentation === "overlay" ? styles.overlayPage : ""].filter(Boolean).join(" ")}>
       <header className={styles.header}>
-        <BrandLogo href="/home" compact />
-        <Link href="/home" className={styles.exitLink}>나가기</Link>
+        {presentation === "overlay" ? (
+          <div className={styles.overlayTitle}>
+            <span><FlaskConical size={18} aria-hidden="true" /></span>
+            <div><strong>프로젝트 빠른 시작</strong><small>진행 내용은 자동 저장돼요</small></div>
+          </div>
+        ) : (
+          <BrandLogo href="/home" compact />
+        )}
+        <div className={styles.headerActions}>
+          {step !== "welcome" ? (
+            <button type="button" onClick={() => goTo("welcome")}>방식 바꾸기</button>
+          ) : null}
+          {presentation === "overlay" ? (
+            <button type="button" className={styles.exitLink} onClick={closeTutorial} aria-label="프로젝트 빠른 시작 닫기">
+              <X size={19} aria-hidden="true" /> 닫기
+            </button>
+          ) : (
+            <Link href="/home" className={styles.exitLink}>{step === "welcome" ? "나가기" : "저장하고 나가기"}</Link>
+          )}
+        </div>
       </header>
 
       <div
         ref={topRef}
         className={styles.progressWrap}
         tabIndex={-1}
-        aria-label={step === "welcome" ? "튜토리얼 시작 전" : "튜토리얼 진행률"}
+        aria-label={step === "welcome" ? "튜토리얼 시작 전" : "프로젝트 조건 준비 진행률"}
       >
-        <div className={styles.progressTrack}>
-          <span style={{ width: progress + "%" }} />
+        <div className={styles.progressSummary}>
+          <div className={styles.progressTrack}>
+            <span style={{ width: progress + "%" }} />
+          </div>
+          <strong>{step === "welcome" ? "시작 전" : completedInputSteps + " / " + totalInputSteps + " 확인"}</strong>
         </div>
-        <strong>{step === "welcome" ? "시작 전" : (questionIndex + 1) + " / " + QUESTION_STEPS.length}</strong>
+        {step !== "welcome" ? (
+          <nav className={styles.stepNav} aria-label="프로젝트 설계 단계 바로가기">
+            {QUESTION_STEPS.map((item, index) => {
+              const current = step === item;
+              const answered = item === "review"
+                ? QUESTION_STEPS.filter((candidate) => candidate !== "review")
+                    .every((candidate) => !issueForStep(candidate, draft))
+                : !issueForStep(item, draft);
+              return (
+                <button
+                  type="button"
+                  key={item}
+                  className={[styles.stepNavItem, current ? styles.stepNavCurrent : "", answered ? styles.stepNavAnswered : ""].filter(Boolean).join(" ")}
+                  aria-current={current ? "step" : undefined}
+                  onClick={() => goTo(item)}
+                >
+                  <span>{answered ? <Check size={13} strokeWidth={3} /> : index + 1}</span>
+                  {STEP_LABEL[item]}
+                </button>
+              );
+            })}
+          </nav>
+        ) : null}
       </div>
 
       <main className={[
@@ -690,9 +802,16 @@ export function ResearchTutorialScreen() {
 
       {step !== "welcome" ? (
         <footer className={styles.actions}>
-          <button type="button" className={styles.secondaryButton} onClick={goBack} disabled={submitting}>
-            <ArrowLeft size={18} /> 이전
-          </button>
+          <div className={styles.actionGroup}>
+            <button type="button" className={styles.secondaryButton} onClick={goBack} disabled={submitting}>
+              <ArrowLeft size={18} /> 이전
+            </button>
+            {step !== "review" ? (
+              <button type="button" className={styles.skipButton} onClick={skipToNext} disabled={submitting}>
+                나중에 답하기
+              </button>
+            ) : null}
+          </div>
           <p><ShieldCheck size={18} /> 최종 확인 전까지 기존 기록은 바뀌지 않아요.</p>
           {step === "review" ? (
             <button type="button" className={styles.primaryButton} onClick={startCoDesign} disabled={submitting}>

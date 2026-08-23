@@ -6,11 +6,9 @@ import {
   ArrowRight,
   BookOpen,
   BriefcaseBusiness,
-  CalendarCheck2,
   CheckCircle2,
   Compass,
   FileCheck2,
-  FileText,
   FlaskConical,
   Mail,
   Menu,
@@ -24,12 +22,13 @@ import {
 import { useState } from "react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { brandScene } from "@/lib/brand-assets";
+import { useProfileStore } from "@/store/profile-store";
 import styles from "./landing-page.module.css";
 
 const NAV_ITEMS = [
   { href: "#about", label: "서비스 소개" },
-  { href: "#solution", label: "해결 방식" },
-  { href: "#flow", label: "이용 흐름" },
+  { href: "#journeys", label: "두 가지 여정" },
+  { href: "#flow", label: "교수 연결 흐름" },
   { href: "#trust", label: "신뢰 원칙" },
 ] as const;
 
@@ -63,10 +62,10 @@ const FLOW = [
   },
   {
     number: "02",
-    title: "근거로 교수를 찾다",
+    title: "역할이 다른 교수를 찾다",
     description:
-      "학교와 학과의 공식 정보를 바탕으로, 내 고민과 연결되는 교수의 전문 분야와 대화 주제를 제안합니다.",
-    points: ["학교 공식 정보와 출처", "내 고민과 교수 전문 분야의 연결점", "교수에게 확인할 첫 질문"],
+      "같은 학과 교수님을 가장 가까운 시작점으로 먼저 보고, 다른 학과에서는 내 관심 주제와 방법에 맞는 후보를 비교합니다.",
+    points: ["같은 학과 교수 한 명부터", "주제·방법 역할이 다른 타 학과 후보", "추천 이유·공식 근거·직접 확인할 항목"],
     image: brandScene.find.w1440,
     alt: "학생이 학교 공식 정보를 바탕으로 교수 연결 이유를 살펴보는 장면",
   },
@@ -75,32 +74,55 @@ const FLOW = [
     title: "첫 대화와 다음 행동을 잇다",
     description:
       "교수 정보를 읽는 데서 끝내지 않습니다. 첫 질문과 연락 초안을 준비하고, 면담에서 얻은 조언을 다음 행동으로 바꿔요.",
-    points: ["논문 한입과 첫 질문", "학생이 검토하는 이메일 초안", "면담 후 7일 행동"],
+    points: ["논문 한입과 첫 질문", "학생이 검토하는 이메일 초안", "면담 후 7일 행동과 성장 기록"],
     image: brandScene.connect.w1440,
     alt: "학생이 교수와 대화를 준비하고 다음 행동을 연결하는 장면",
   },
 ] as const;
 
+const JOURNEYS = [
+  {
+    icon: SearchCheck,
+    eyebrow: "교수 연결 여정",
+    title: "내 고민을 함께 이야기할 교수님을 찾아요",
+    description:
+      "전공·수업·진로 고민을 정리하고, 공식 교수 정보에서 연결 이유를 확인한 뒤 첫 만남을 준비합니다.",
+    steps: ["3분 고민 정리", "근거가 보이는 교수 3인 피칭", "논문·질문·이메일·면담 준비"],
+    href: "/tutorial",
+    cta: "교수 연결 시작하기",
+  },
+  {
+    icon: FlaskConical,
+    eyebrow: "프로젝트 여정",
+    title: "관심을 실행 가능한 프로젝트로 구체화해요",
+    description:
+      "AI와 공통 질문 뒤 맞춤 질문을 나누고, 프로젝트 후보를 고르면 필요한 전문성을 가진 교수를 다시 찾습니다.",
+    steps: ["공통 3문항과 맞춤 2문항", "프로젝트 후보와 실행 조건 비교", "주제·방법·확장 역할별 교수 추천"],
+    href: "/research/tutorial",
+    cta: "프로젝트 설계 시작하기",
+  },
+] as const;
+
 const OUTCOMES = [
   {
-    icon: Compass,
-    title: "교수 연결 이유",
-    description: "내 고민과 교수의 공개 분야가 어디서 만나는지 핵심만 확인합니다.",
+    icon: Sparkles,
+    title: "AI 맞춤 공동설계",
+    description: "공통 질문 3개 뒤에는 앞선 답변을 반영한 맞춤 질문 2개로 프로젝트의 문제·방법·범위를 좁힙니다.",
   },
   {
-    icon: FileText,
-    title: "논문 한입 메모",
-    description: "원문이 있을 때 문제·방법·결과·한계를 내 질문과 연결해 읽습니다.",
+    icon: FlaskConical,
+    title: "프로젝트 맞춤 교수 추천",
+    description: "선택한 프로젝트를 기준으로 공식 후보 안에서 주제·방법·확장 역할이 다른 교수를 확인합니다.",
   },
   {
-    icon: Mail,
-    title: "첫 질문과 이메일 초안",
-    description: "예의를 갖춘 초안을 만들고 내가 검토·수정한 뒤 직접 사용합니다.",
+    icon: Route,
+    title: "나의 성장과정",
+    description: "처음 남긴 고민부터 프로젝트 설계, 교수 연결과 다음 행동까지 실제 저장한 경험을 한곳에서 이어 봅니다.",
   },
   {
-    icon: CalendarCheck2,
-    title: "면담 후 7일 행동",
-    description: "수업·프로젝트·진로 중 바로 실행할 작은 행동을 기록합니다.",
+    icon: MessageCircleQuestion,
+    title: "나의 AI 교수님과 대화 지도",
+    description: "진로·프로젝트 대화에서 나온 질문·발견·결정·다음 행동을 카드로 보고, 내가 고른 내용만 성장 메모로 남깁니다.",
   },
 ] as const;
 
@@ -113,6 +135,7 @@ const AUDIENCES = [
 
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const markServiceEntered = useProfileStore((state) => state.markServiceEntered);
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -131,7 +154,7 @@ export function LandingPage() {
           </nav>
 
           <div className={styles.headerActions}>
-            <Link href="/home" className={styles.resumeLink}>
+            <Link href="/home" className={styles.resumeLink} onClick={markServiceEntered}>
               이어하기
             </Link>
             <Link href="/tutorial" className={styles.headerCta}>
@@ -158,7 +181,7 @@ export function LandingPage() {
                 {item.label}
               </a>
             ))}
-            <Link href="/home" onClick={closeMenu}>
+            <Link href="/home" onClick={() => { markServiceEntered(); closeMenu(); }}>
               이어하기
             </Link>
             <Link href="/tutorial" className={styles.mobileMenuCta} onClick={closeMenu}>
@@ -175,11 +198,13 @@ export function LandingPage() {
               <h1 id="landing-title">
                 막막한 전공·진로 고민,
                 <br />
-                이제 <em>누구와 이야기할지</em>부터 찾으세요.
+                이제 <em>누구와 이야기할지</em>부터
+                <br className={styles.desktopBreak} /> 찾으세요.
               </h1>
               <p>
-                고민을 정리하고, 학교 공식 정보로 교수를 찾고,
-                <br className={styles.desktopBreak} /> 첫 질문과 다음 행동까지 준비합니다.
+                공식 정보로 교수 연결을 준비하고,
+                <br className={styles.desktopBreak} /> AI와 프로젝트를 구체화해
+                <br className={styles.desktopBreak} /> 첫 만남과 성장 기록까지 이어갑니다.
               </p>
               <div className={styles.heroActions}>
                 <Link href="/tutorial" className={styles.primaryCta}>
@@ -191,7 +216,7 @@ export function LandingPage() {
               </div>
               <div className={styles.trustNote}>
                 <ShieldCheck size={18} aria-hidden="true" />
-                <span>학교 공식 정보 기반 · 교수에게 자동으로 연락하지 않아요</span>
+                <span>단국대학교 공식 교수 정보 기반 · 교수에게 자동으로 연락하지 않아요</span>
               </div>
             </div>
 
@@ -248,19 +273,61 @@ export function LandingPage() {
           <div className={styles.promiseInner}>
             <Sparkles size={28} aria-hidden="true" />
             <h2 id="promise-title">
-              그래서 검색이 아니라,
+              그래서 교수 검색 화면이 아니라,
               <br />
-              <em>대화를 시작하는 과정</em>을 설계했습니다.
+              <em>고민이 행동으로 자라는 과정</em>을 설계했습니다.
             </h2>
-            <p>AI는 고민과 근거를 정리하고, 진짜 방향 설계는 교수와의 대화에서 시작됩니다.</p>
+            <p>AI는 생각과 근거를 정리하고, 실제 교수와의 대화와 학생의 선택이 다음 방향을 만듭니다.</p>
+          </div>
+        </section>
+
+        <section id="journeys" className={styles.journeySection} aria-labelledby="journey-title">
+          <div className={styles.sectionInner}>
+            <div className={`${styles.sectionHeading} ${styles.journeyHeading}`}>
+              <h2 id="journey-title">지금 필요한 여정부터 시작할 수 있어요.</h2>
+              <p>교수를 먼저 만나도, 프로젝트를 먼저 설계해도 괜찮아요. 두 여정은 성장 기록에서 다시 연결됩니다.</p>
+            </div>
+
+            <div className={styles.journeyGrid}>
+              {JOURNEYS.map((journey) => {
+                const Icon = journey.icon;
+                return (
+                  <article key={journey.eyebrow} className={styles.journeyCard}>
+                    <div className={styles.journeyCardHeading}>
+                      <span className={styles.journeyIcon} aria-hidden="true"><Icon size={24} /></span>
+                      <span className={styles.journeyEyebrow}>{journey.eyebrow}</span>
+                    </div>
+                    <h3>{journey.title}</h3>
+                    <p>{journey.description}</p>
+                    <ol className={styles.journeySteps}>
+                      {journey.steps.map((step, index) => (
+                        <li key={step}>
+                          <span>{index + 1}</span>
+                          <strong>{step}</strong>
+                        </li>
+                      ))}
+                    </ol>
+                    <Link href={journey.href} className={styles.journeyCta}>
+                      {journey.cta} <ArrowRight size={17} aria-hidden="true" />
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className={styles.growthBridge}>
+              <Route size={20} aria-hidden="true" />
+              <p><strong>두 여정의 기록은 사라지지 않아요.</strong> 관심 변화, 선택한 프로젝트, 연결한 교수와 다음 행동을 ‘나의 성장과정’에서 다시 확인합니다.</p>
+              <Link href="/portfolio">성장과정 보기 <ArrowRight size={16} aria-hidden="true" /></Link>
+            </div>
           </div>
         </section>
 
         <section id="flow" className={styles.flowSection} aria-labelledby="flow-title">
           <div className={styles.sectionInner}>
             <div className={styles.sectionHeading}>
-              <h2 id="flow-title">처음 와도, 다음 할 일이 한눈에 보여요.</h2>
-              <p>고민을 입력하는 순간부터 첫 대화 이후까지 하나의 흐름으로 이어집니다.</p>
+              <h2 id="flow-title">교수 연결은 이렇게 첫 만남까지 이어져요.</h2>
+              <p>고민을 입력하는 순간부터 교수 선택, 대화 준비와 면담 이후의 행동까지 한 흐름으로 이어집니다.</p>
             </div>
 
             <div className={styles.flowList}>
@@ -298,16 +365,16 @@ export function LandingPage() {
             <div className={styles.outcomeHeading}>
               <div>
                 <h2 id="outcome-title">
-                  첫 매칭 이후,
+                  첫 교수 연결 이후,
                   <br />
-                  <em>이런 준비</em>까지 할 수 있어요.
+                  <em>프로젝트와 성장</em>까지 이어져요.
                 </h2>
-                <p>모든 결과는 내가 확인하고 수정할 수 있습니다.</p>
+                <p>추천 한 번으로 끝내지 않고, 생각이 구체화된 과정을 내가 확인하고 다시 이어갈 수 있습니다.</p>
               </div>
               <figure className={styles.outcomeMedia}>
                 <Image
-                  src={brandScene.paperBite.w1440}
-                  alt="학생과 AI 가이드가 교수의 공개 논문 정보를 읽고 질문을 준비하는 모습"
+                  src={brandScene.make.w1440}
+                  alt="학생과 AI 가이드가 관심을 실행 가능한 프로젝트로 구체화하는 모습"
                   fill
                   sizes="(max-width: 767px) 100vw, 43vw"
                 />
@@ -392,14 +459,14 @@ export function LandingPage() {
               <h2 id="closing-title">
                 혼자 고민하던 시간을,
                 <br />
-                <em>첫 대화의 시작</em>으로 바꿔보세요.
+                <em>나만의 성장 흐름</em>으로 바꿔보세요.
               </h2>
-              <p>가입 없이 3분이면 기본 방향과 첫 교수 연결을 확인할 수 있어요.</p>
+              <p>가입 없이 3분이면 첫 방향을 정리할 수 있고, 이후 교수 연결·프로젝트·성장 기록을 이 기기에서 이어갈 수 있어요.</p>
               <div className={styles.closingActions}>
                 <Link href="/tutorial" className={styles.primaryCta}>
                   3분 방향 찾기 <ArrowRight size={19} aria-hidden="true" />
                 </Link>
-                <Link href="/home" className={styles.closingResume}>
+                <Link href="/home" className={styles.closingResume} onClick={markServiceEntered}>
                   이어하기 <ArrowRight size={16} aria-hidden="true" />
                 </Link>
               </div>
@@ -426,13 +493,13 @@ export function LandingPage() {
         <div className={styles.footerInner}>
           <div className={styles.footerBrand}>
             <BrandLogo href="/" inverse />
-            <p>대학생의 고민과 교수의 전문성을 첫 대화로 연결합니다.</p>
+            <p>대학생의 고민을 교수 연결, 프로젝트와 다음 행동으로 이어갑니다.</p>
           </div>
           <nav aria-label="푸터 메뉴">
             <a href="#about">서비스 소개</a>
             <a href="#flow">이용 흐름</a>
             <a href="#trust">신뢰 원칙</a>
-            <Link href="/home">서비스 홈</Link>
+            <Link href="/home" onClick={markServiceEntered}>서비스 홈</Link>
           </nav>
           <div className={styles.footerTeam}>
             <span>TEAM TRION</span>

@@ -53,6 +53,10 @@ export function PortfolioBuilderScreen() {
   const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
   const mentorLoopEntries = useResearchStore((state) => state.mentorLoopEntries);
   const discovery = useResearchStore((state) => state.professorDiscoverySummary);
+  const selectedPaper = useResearchStore((state) => state.selectedProfessorPaper);
+  const growthDirectionBaseline = useResearchStore((state) => state.growthDirectionBaseline);
+  const growthProjectHistory = useResearchStore((state) => state.growthProjectHistory);
+  const growthProfessorHistory = useResearchStore((state) => state.growthProfessorHistory);
   const questCards = useQuestStore((state) => state.cards);
 
   const [activeStep, setActiveStep] = useState<StepId>("topic");
@@ -72,14 +76,20 @@ export function PortfolioBuilderScreen() {
   }, [result, selectedTopicId]);
 
   const match = matches.find((item) => item.professor.id === selectedProfessorId) ?? matches[0] ?? null;
+  const historicalProfessor = [...growthProfessorHistory]
+    .reverse()
+    .find((item) => item.selectedAt) ?? growthProfessorHistory.at(-1) ?? null;
+  const historicalProject = growthProjectHistory.at(-1) ?? null;
   const loopKey = topic && match ? `${topic.id}:${match.professor.id}` : null;
   const loop = loopKey ? mentorLoopEntries[loopKey] : null;
   const draft = loopKey ? knockKitDrafts[loopKey] : null;
 
-  const professorName = match
+  const rawProfessorName = match?.professor.name ?? historicalProfessor?.name ?? "";
+  const rawProfessorTitle = match?.professor.title ?? historicalProfessor?.title ?? "교수";
+  const professorName = rawProfessorName
     ? maskPersonal
-      ? `${match.professor.name.slice(0, 1)}○○ 교수님`
-      : `${match.professor.name} ${match.professor.title}`
+      ? `${rawProfessorName.slice(0, 1)}○○ 교수님`
+      : `${rawProfessorName} ${rawProfessorTitle}`
     : "";
 
   /** 수정 전후는 좌우로 비교해야 의미가 보이므로 줄 목록과 별개로 둡니다. */
@@ -106,13 +116,18 @@ export function PortfolioBuilderScreen() {
      * 그때 고른 전공·관심 분야·진로 고민이 들어옵니다.
      */
     topic: [
-      conditions.major || discovery?.major
-        ? `전공: ${conditions.major || discovery?.major}` : "",
-      conditions.interests.length || discovery?.interests.length
-        ? `관심 분야: ${(conditions.interests.length ? conditions.interests : discovery?.interests ?? []).join(" · ")}` : "",
-      discovery?.careerConcerns.length ? `진로 고민: ${discovery.careerConcerns.join(" · ")}` : "",
-      topic ? `선택한 주제: ${topic.title}` : "",
-      topic ? `연구질문: ${topic.question}` : "",
+      conditions.major || discovery?.major || growthDirectionBaseline?.major
+        ? `전공: ${conditions.major || discovery?.major || growthDirectionBaseline?.major}` : "",
+      conditions.interests.length || discovery?.interests.length || growthDirectionBaseline?.interests.length
+        ? `관심 분야: ${(conditions.interests.length
+          ? conditions.interests
+          : discovery?.interests.length
+            ? discovery.interests
+            : growthDirectionBaseline?.interests ?? []).join(" · ")}` : "",
+      discovery?.careerConcerns.length || growthDirectionBaseline?.careerConcerns.length
+        ? `진로 고민: ${(discovery?.careerConcerns.length ? discovery.careerConcerns : growthDirectionBaseline?.careerConcerns ?? []).join(" · ")}` : "",
+      topic || historicalProject ? `선택한 주제: ${topic?.title ?? historicalProject?.title}` : "",
+      topic || historicalProject ? `연구질문: ${topic?.question ?? historicalProject?.question}` : "",
     ].filter(Boolean),
     professor: match
       ? [
@@ -121,9 +136,20 @@ export function PortfolioBuilderScreen() {
           `연결 이유: ${match.reason}`,
           `직접 확인할 점: ${match.doesNotEstablish.join(" · ")}`,
         ]
-      : [],
-    paper: cardsForTool(questCards, "paper-bite").map((card) =>
-      `${card.title}: ${card.body}${card.evidence?.page ? ` (p.${card.evidence.page})` : ""}`),
+      : historicalProfessor
+        ? [
+            `연결한 교수: ${professorName}`,
+            `소속: ${historicalProfessor.college ? `${historicalProfessor.college} · ` : ""}${historicalProfessor.department}`,
+            `연결 이유: ${historicalProfessor.reason}`,
+          ]
+        : [],
+    paper: [
+      ...(selectedPaper ? [
+        `선택한 논문: ${selectedPaper.title}${selectedPaper.publishedDate ? ` (${selectedPaper.publishedDate})` : ""}`,
+      ] : []),
+      ...cardsForTool(questCards, "paper-bite").map((card) =>
+        `${card.title}: ${card.body}${card.evidence?.page ? ` (p.${card.evidence.page})` : ""}`),
+    ],
     prepare: [
       ...(draft ? draft.questions.map((question, i) => `준비한 질문 ${i + 1}: ${question}`) : []),
       ...cardsForTool(questCards, "first-line").map((card) => `첫마디(${card.title}): ${card.body}`),
@@ -134,7 +160,7 @@ export function PortfolioBuilderScreen() {
       ...(loop ? loop.sevenDayActions.filter(Boolean).map((action, i) => `${i + 1}. ${action}`) : []),
       ...cardsForTool(questCards, "next-seed").map((card) => `${card.title}: ${card.body}`),
     ],
-  }), [conditions, discovery, topic, match, professorName, questCards, draft, loop, revision]);
+  }), [conditions, discovery, growthDirectionBaseline, historicalProject, topic, match, historicalProfessor, professorName, selectedPaper, questCards, draft, loop, revision]);
 
   if (!hasHydrated) {
     return (

@@ -9,11 +9,13 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock3,
+  Compass,
   LoaderCircle,
   MessageCircleQuestion,
   RotateCcw,
   ShieldCheck,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/brand-logo";
@@ -43,6 +45,7 @@ import {
   getDepartmentsForCollege,
   type ProfessorAcademicTaxonomy,
 } from "@/lib/professor-academic-taxonomy";
+import { useProfileStore } from "@/store/profile-store";
 import { useResearchStore } from "@/store/research-store";
 import styles from "./professor-tutorial.module.css";
 
@@ -58,6 +61,12 @@ type StoredDraft = {
   step: TutorialStep;
   context: ProfessorDiscoveryContext;
   directMajor: boolean;
+};
+
+type ProfessorTutorialScreenProps = {
+  taxonomy: ProfessorAcademicTaxonomy;
+  presentation?: "page" | "overlay";
+  onRequestClose?: () => void;
 };
 
 const STEP_COPY: Record<TutorialStep, { eyebrow: string; title: string; description: string }> = {
@@ -187,10 +196,11 @@ function ChoiceButton({
 
 export function ProfessorTutorialScreen({
   taxonomy,
-}: {
-  taxonomy: ProfessorAcademicTaxonomy;
-}) {
+  presentation = "page",
+  onRequestClose,
+}: ProfessorTutorialScreenProps) {
   const router = useRouter();
+  const markServiceEntered = useProfileStore((state) => state.markServiceEntered);
   const setLoading = useResearchStore((state) => state.setProfessorMatchLoading);
   const setMatches = useResearchStore((state) => state.setProfessorMatches);
   const setDiscoveryTopic = useResearchStore((state) => state.setProfessorDiscoveryTopic);
@@ -213,6 +223,10 @@ export function ProfessorTutorialScreen({
   const [loadingPhase, setLoadingPhase] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    markServiceEntered();
+  }, [markServiceEntered]);
 
   useEffect(() => {
     const saved = restoreDraft(tutorialStorage()?.getItem(STORAGE_KEY) ?? "");
@@ -556,9 +570,20 @@ export function ProfessorTutorialScreen({
     if (index >= 0 && index < ALL_STEPS.length - 1) setStep(ALL_STEPS[index + 1]);
   };
 
+  const closeTutorial = () => {
+    if (onRequestClose) {
+      onRequestClose();
+      return;
+    }
+    router.push("/home");
+  };
+
   if (isMatching) {
     return (
-      <main id="main-content" className={styles.loadingPage}>
+      <main
+        id="main-content"
+        className={`${styles.loadingPage} ${presentation === "overlay" ? styles.overlayLoadingPage : ""}`}
+      >
         <div className={styles.loadingCard} aria-live="polite">
           <div className={styles.processingVisual}>
             <Image src={brandLogoV2.mark} alt="" width={86} height={86} priority unoptimized />
@@ -580,12 +605,32 @@ export function ProfessorTutorialScreen({
   }
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${presentation === "overlay" ? styles.overlayPage : ""}`}>
       <header className={styles.header}>
-        <BrandLogo href="/" tagline="전공·진로 첫 대화" className={styles.brand} />
+        {presentation === "overlay" ? (
+          <div className={styles.overlayTitle}>
+            <span><Compass size={19} aria-hidden="true" /></span>
+            <div>
+              <strong>교수 찾기 빠른 시작</strong>
+              <small>답변은 이 브라우저에 자동 저장돼요</small>
+            </div>
+          </div>
+        ) : (
+          <BrandLogo href="/home" tagline="전공·진로 첫 대화" className={styles.brand} />
+        )}
         <div className={styles.headerMeta}>
           <span><ShieldCheck size={15} /> 입력은 이 브라우저에 임시저장돼요</span>
           {step !== "welcome" && <button type="button" onClick={resetTutorial}><RotateCcw size={15} /> 처음부터</button>}
+          {presentation === "overlay" && (
+            <button
+              type="button"
+              className={styles.closeButton}
+              onClick={closeTutorial}
+              aria-label="교수 찾기 빠른 시작 닫기"
+            >
+              <X size={18} aria-hidden="true" /> 닫기
+            </button>
+          )}
         </div>
       </header>
 

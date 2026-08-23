@@ -1,5 +1,5 @@
-import { LandingPage } from "@/components/landing/landing-page";
+import { EntryGate } from "@/components/landing/entry-gate";
 
 export default function Page() {
-  return <LandingPage />;
+  return <EntryGate />;
 }
