@@ -140,6 +140,8 @@ export function QuestHubScreen() {
   const hasHydrated = useQuestStore((state) => state.hasHydrated);
   const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
   const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
+  const selectedProfessorId = useResearchStore((state) => state.selectedProfessorId);
+  const professorMatches = useResearchStore((state) => state.professorMatches);
   const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
   const mentorLoopEntries = useResearchStore((state) => state.mentorLoopEntries);
   const cards = useQuestStore((state) => state.cards);
@@ -159,8 +161,13 @@ export function QuestHubScreen() {
   const emailCount = cardsForTool(cards, "email-guard").length + Object.keys(knockKitDrafts).length;
   const afterCount = cardsForTool(cards, "next-seed").length + Object.keys(mentorLoopEntries).length;
   const beforeCount = paperCount + questionCount + emailCount;
+  const selectedProfessor = professorMatches.find(
+    (match) => match.professor.id === selectedProfessorId,
+  )?.professor ?? null;
+  const hasConnectedProfessor = Boolean(selectedProfessor)
+    || favoriteProfessorIds.length > 0;
 
-  const primary = favoriteProfessorIds.length === 0
+  const primary = !hasConnectedProfessor
       ? {
           icon: Compass,
           heading: "먼저 대화할 교수를 고를 차례예요",
@@ -172,7 +179,9 @@ export function QuestHubScreen() {
     : paperCount === 0
       ? {
           icon: BookOpenCheck,
-          heading: "교수님의 연구를 살펴볼 차례예요",
+          heading: selectedProfessor
+            ? `${selectedProfessor.name} 교수님의 연구를 살펴볼 차례예요`
+            : "교수님의 연구를 살펴볼 차례예요",
           taskTitle: "논문 한입 준비하기",
           description: "공식 프로필의 논문을 문제·방법·결과·질문으로 가볍게 정리해요.",
           cta: "논문 한입 시작하기",

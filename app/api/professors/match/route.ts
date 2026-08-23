@@ -153,9 +153,12 @@ export async function POST(request: Request) {
   // 학생이 거절한 교수는 다시 찾을 때 후보에서 뺍니다.
   const excludeIds = stringArray(raw?.excludeIds, 20, 64);
 
-  const baseline = matchOfficialProfessors(topic, { excludeIds });
   const isProjectMentorRequest = !topic.id.startsWith("discovery:")
     && !topic.id.startsWith("context:");
+  const baseline = matchOfficialProfessors(topic, {
+    excludeIds,
+    journey: isProjectMentorRequest ? "project" : "student",
+  });
   let response = baseline;
   if (isProjectMentorRequest) {
     try {

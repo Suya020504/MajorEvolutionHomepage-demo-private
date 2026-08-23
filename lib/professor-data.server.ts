@@ -3,6 +3,7 @@ import "server-only";
 import dkuRuntime from "@/data/professors/runtime/dku-professors.json";
 import {
   buildProfessorAcademicTaxonomy,
+  comparableDepartmentName,
   type ProfessorAcademicTaxonomy,
 } from "@/lib/professor-academic-taxonomy";
 import { PROFESSOR_MATCH_POLICY } from "@/lib/professor-domain";
@@ -537,7 +538,7 @@ function evaluateProfessor(
   const departmentMatchesMajor = Boolean(
     context.normalizedMajor
     && index.departments.some((department) =>
-      normalizedContains(department, context.normalizedMajor)),
+      comparableDepartmentName(department) === comparableDepartmentName(context.normalizedMajor)),
   );
 
   let role: ProfessorMatchRole = "CONTEXT";
@@ -640,6 +641,10 @@ function hasOfficialMatchEvidence(candidate: EvaluatedProfessor): boolean {
   return candidate.hasRelevantEvidence
     && sources.officialProfile
     && (sources.researchFields || sources.matchedPublication);
+}
+
+function hasOfficialProfileEvidence(candidate: EvaluatedProfessor): boolean {
+  return candidate.match.decisionBasis.sources.officialProfile;
 }
 
 function compareForRole(
@@ -762,6 +767,33 @@ export function getProfessorAcademicTaxonomy(): ProfessorAcademicTaxonomy {
   );
 }
 
+function presentAsHomeDepartment(
+  candidate: EvaluatedProfessor,
+  topic: ProfessorMatchTopic,
+): ProfessorMatch {
+  const professor = candidate.match.professor;
+  const relatedEvidence = candidate.hasRelevantEvidence
+    ? candidate.match.matchedTerms.slice(0, 2)
+    : [];
+  const relatedNote = relatedEvidence.length > 0
+    ? ` 공식 연구분야의 ‘${relatedEvidence.join(", ")}’도 입력한 관심과 연결됩니다.`
+    : " 관심 주제와 연구분야의 직접 연결은 교수님께 확인해야 합니다.";
+
+  return {
+    ...candidate.match,
+    role: "CONTEXT",
+    strength: candidate.hasRelevantEvidence ? candidate.match.strength : "LIMITED",
+    matchedTerms: unique([professor.department, ...relatedEvidence]).slice(0, 3),
+    reason: `학생이 입력한 전공 ‘${topic.major}’와 공식 프로필의 소속 ‘${professor.department}’이 같은 학과로 확인되어, 가장 가까운 전공 맥락의 첫 대화 후보로 제안합니다.${relatedNote}`,
+    doesNotEstablish: unique([
+      ...candidate.match.doesNotEstablish,
+      ...(!candidate.hasRelevantEvidence
+        ? ["학생의 관심 주제와 교수 연구분야의 직접 일치"]
+        : []),
+    ]),
+  };
+}
+
 /**
  * AI 재정렬에 전달할 공식 근거 후보 풀입니다.
  * 교수 전체 명단을 모델에 넘기지 않고, 기존 결정 규칙으로 역할별 상위 후보만 좁힙니다.
@@ -797,7 +829,7 @@ export function getOfficialProfessorRoleCandidates(
 export function matchOfficialProfessors(
   topic: ProfessorMatchTopic,
   /** 학생이 거절한 교수. 다시 찾을 때 후보에서 제외합니다. */
-  options: { excludeIds?: string[] } = {},
+  options: { excludeIds?: string[]; journey?: "student" | "project" } = {},
 ): ProfessorMatchResponse {
   const excluded = new Set(options.excludeIds ?? []);
   // 주제 쪽 계산은 교수와 무관하므로 루프 밖에서 한 번만 합니다.
@@ -807,37 +839,128 @@ export function matchOfficialProfessors(
     .map((professor) => evaluateProfessor(professor, topic, context))
     .sort(compareEvaluatedProfessors);
   const officialCandidates = evaluated.filter(hasOfficialMatchEvidence);
+
+  /*
+   * 프로젝트 멘토 연결은 기존의 주제·방법·확장 역할 구성을 유지합니다.
+   * AI 재정렬이 실패해도 학생 개인 매칭용 '같은 학과 우선' 규칙이 섞이지 않습니다.
+   */
+  if (options.journey === "project") {
+    const projectUsedIds = new Set<string>();
+    const projectMatchByRole = new Map<ProfessorMatchRole, ProfessorMatch>();
+
+    for (const role of ["TOPIC", "METHOD", "CONTEXT"] as const) {
+      const roleKey = roleDecisionKey[role];
+      const candidate = officialCandidates
+        .filter((item) =>
+          !projectUsedIds.has(item.match.professor.id)
+          && item.match.decisionBasis.roleMatches[roleKey])
+        .sort((left, right) => compareForRole(role, left, right))[0];
+      if (!candidate) continue;
+      projectUsedIds.add(candidate.match.professor.id);
+      projectMatchByRole.set(role, presentAsRole(candidate, role));
+    }
+
+    for (const role of ["TOPIC", "METHOD", "CONTEXT"] as const) {
+      if (projectMatchByRole.has(role)) continue;
+      const candidate = officialCandidates
+        .filter((item) => !projectUsedIds.has(item.match.professor.id))
+        .sort((left, right) => compareForRole(role, left, right))[0];
+      if (!candidate) continue;
+      projectUsedIds.add(candidate.match.professor.id);
+      projectMatchByRole.set(role, presentAsRole(candidate, role));
+    }
+
+    return {
+      topicId: topic.id,
+      matches: (["TOPIC", "METHOD", "CONTEXT"] as const)
+        .map((role) => projectMatchByRole.get(role))
+        .filter((match): match is ProfessorMatch => Boolean(match)),
+      selectionPolicy: PROFESSOR_MATCH_POLICY,
+      generatedAt: new Date().toISOString(),
+      officialRecordCount: dataset.official_record_count,
+      scopeStatus: dataset.scope_status,
+      coverageGaps,
+      note: `${dataset.note} 단국대학교 공식 교수 ${dataset.official_record_count.toLocaleString("ko-KR")}명 안에서 선택한 프로젝트의 주제 연결형·방법 연결형·확장 관점형을 공식 근거와 안정적 교수 ID 순서로 선택합니다.`,
+      rankingSource: "official-rules",
+      rankingModel: null,
+    };
+  }
+
+  const officialProfileCandidates = evaluated.filter(hasOfficialProfileEvidence);
   const usedProfessorIds = new Set<string>();
   const matchByRole = new Map<ProfessorMatchRole, ProfessorMatch>();
 
-  // 세 역할을 우열 없이 한 명씩 먼저 찾고, 근거가 부족한 역할은 다른 공식 근거 후보로 채웁니다.
-  for (const role of ["TOPIC", "METHOD", "CONTEXT"] as const) {
+  /*
+   * 첫 후보는 학생이 상대적으로 접근하기 쉬운 같은 학과 교수입니다.
+   * 같은 학과라는 공식 소속 근거와 관심 주제 근거는 분리해서 설명합니다.
+   */
+  const homeDepartmentCandidate = officialProfileCandidates
+    .filter((item) => item.match.decisionBasis.departmentMatchesMajor)
+    .sort((left, right) => {
+      if (left.hasRelevantEvidence !== right.hasRelevantEvidence) {
+        return left.hasRelevantEvidence ? -1 : 1;
+      }
+      return compareEvaluatedProfessors(left, right);
+    })[0];
+
+  if (homeDepartmentCandidate) {
+    usedProfessorIds.add(homeDepartmentCandidate.match.professor.id);
+    matchByRole.set("CONTEXT", presentAsHomeDepartment(homeDepartmentCandidate, topic));
+  } else {
+    const contextCandidate = [...officialCandidates]
+      .sort((left, right) => compareForRole("CONTEXT", left, right))[0];
+    if (contextCandidate) {
+      usedProfessorIds.add(contextCandidate.match.professor.id);
+      matchByRole.set("CONTEXT", presentAsRole(contextCandidate, "CONTEXT"));
+    }
+  }
+
+  /*
+   * 나머지 두 후보는 학생 학과 밖에서 주제·방법 근거를 한 명씩 찾습니다.
+   * 역할 직접 근거를 우선하고, 가능하면 서로 다른 학과를 제안합니다.
+   */
+  const usedExternalDepartments = new Set<string>();
+  const homeCollege = normalize(
+    topic.college
+      || homeDepartmentCandidate?.match.professor.college
+      || "",
+  );
+  const externalCandidates = officialCandidates.filter(
+    (item) => !item.match.decisionBasis.departmentMatchesMajor,
+  );
+  for (const role of ["TOPIC", "METHOD"] as const) {
     const roleKey = roleDecisionKey[role];
-    const candidate = officialCandidates
-      .filter((item) =>
-        !usedProfessorIds.has(item.match.professor.id)
-        && item.match.decisionBasis.roleMatches[roleKey])
-      .sort((left, right) => compareForRole(role, left, right))[0];
+    const findCandidate = (requireDirectRole: boolean, requireNewDepartment: boolean) =>
+      externalCandidates
+        .filter((item) => {
+          if (usedProfessorIds.has(item.match.professor.id)) return false;
+          if (requireDirectRole && !item.match.decisionBasis.roleMatches[roleKey]) return false;
+          const departmentKey = normalize(item.match.professor.department);
+          return !requireNewDepartment || !usedExternalDepartments.has(departmentKey);
+        })
+        .sort((left, right) => {
+          const leftSharesCollege = Boolean(
+            homeCollege
+            && normalizedContains(normalize(left.match.professor.college), homeCollege),
+          );
+          const rightSharesCollege = Boolean(
+            homeCollege
+            && normalizedContains(normalize(right.match.professor.college), homeCollege),
+          );
+          if (leftSharesCollege !== rightSharesCollege) return leftSharesCollege ? -1 : 1;
+          return compareForRole(role, left, right);
+        })[0];
+    const candidate = findCandidate(true, true)
+      ?? findCandidate(true, false)
+      ?? findCandidate(false, true)
+      ?? findCandidate(false, false);
     if (!candidate) continue;
     usedProfessorIds.add(candidate.match.professor.id);
+    usedExternalDepartments.add(normalize(candidate.match.professor.department));
     matchByRole.set(role, presentAsRole(candidate, role));
   }
 
-  for (const role of ["TOPIC", "METHOD", "CONTEXT"] as const) {
-    if (matchByRole.has(role)) continue;
-    /*
-     * 특정 역할의 직접 근거가 부족하더라도 전체 정렬의 다음 교수를 그대로
-     * 집어넣지 않습니다. 역할별 공식 근거 → 같은 전공 순으로 다시 비교해
-     * 의학과·상담학처럼 학생 입력과 동떨어진 후보가 우연히 채워지는 일을 줄입니다.
-     */
-    const candidate = officialCandidates
-      .filter((item) => !usedProfessorIds.has(item.match.professor.id))
-      .sort((left, right) => compareForRole(role, left, right))[0];
-    if (!candidate) continue;
-    usedProfessorIds.add(candidate.match.professor.id);
-    matchByRole.set(role, presentAsRole(candidate, role));
-  }
-  const matches = (["TOPIC", "METHOD", "CONTEXT"] as const)
+  const matches = (["CONTEXT", "TOPIC", "METHOD"] as const)
     .map((role) => matchByRole.get(role))
     .filter((match): match is ProfessorMatch => Boolean(match));
 
@@ -849,7 +972,7 @@ export function matchOfficialProfessors(
     officialRecordCount: dataset.official_record_count,
     scopeStatus: dataset.scope_status,
     coverageGaps,
-    note: `${dataset.note} 단국대학교 공식 교수 ${dataset.official_record_count.toLocaleString("ko-KR")}명 안에서 주제 연결형·방법 연결형·확장 관점형을 먼저 찾고, 공식 근거와 안정적 교수 ID 순서의 결정적 규칙으로 선택합니다.`,
+    note: `${dataset.note} 단국대학교 공식 교수 ${dataset.official_record_count.toLocaleString("ko-KR")}명 안에서 같은 학과 교수 1명을 먼저 확인하고, 학생 학과 밖에서 주제 연결형·방법 연결형을 공식 근거와 안정적 교수 ID 순서로 선택합니다.`,
     rankingSource: "official-rules",
     rankingModel: null,
   };

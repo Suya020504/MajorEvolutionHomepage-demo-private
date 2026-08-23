@@ -64,7 +64,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </a>
         {children}
         <InstallPrompt />
-        <Analytics />
+        {process.env.VERCEL === "1" && <Analytics />}
         <GoogleAnalytics />
       </body>
     </html>

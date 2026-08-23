@@ -10,6 +10,10 @@ const projectProfessorHubSource = readFileSync(
   new URL("../../components/screens/project-professor-hub-screen.tsx", import.meta.url),
   "utf8",
 );
+const questHubSource = readFileSync(
+  new URL("../../components/screens/quest-hub-screen.tsx", import.meta.url),
+  "utf8",
+);
 
 test("서비스 탭은 교수 여정 뒤 프로젝트 여정 순서로 이어진다", () => {
   const labels = [
@@ -35,4 +39,11 @@ test("맞춤 교수 추천 탭은 프로젝트 진행 상태마다 막히지 않
   assert.match(projectProfessorHubSource, /맞춤 교수 추천 확인하기/);
   assert.match(projectProfessorHubSource, /rankingSource === "ai-reranked"/);
   assert.match(projectProfessorHubSource, /\/result#professor-connection/);
+});
+
+test("피칭에서 고른 교수는 즐겨찾기 없이도 대화 준비의 연결 교수로 인정한다", () => {
+  assert.match(questHubSource, /selectedProfessorId/);
+  assert.match(questHubSource, /professorMatches\.find/);
+  assert.match(questHubSource, /hasConnectedProfessor/);
+  assert.match(questHubSource, /교수님의 연구를 살펴볼 차례예요/);
 });
