@@ -1,5 +1,7 @@
 import type { PaperAnalysisRequest, PaperAnalysisResult } from "@/lib/paper-analysis";
 import type {
+  CoDesignFollowUpRequest,
+  CoDesignFollowUpResponse,
   CoDesignRequest,
   CoDesignResponse,
 } from "@/lib/co-design-ai";
@@ -31,4 +33,10 @@ export function requestPaperAnalysis(
 
 export function requestCoDesignCandidates(body: CoDesignRequest): Promise<CoDesignResponse> {
   return postJson<CoDesignResponse>("/api/ai/co-design", body);
+}
+
+export function requestCoDesignFollowUpQuestions(
+  body: CoDesignFollowUpRequest,
+): Promise<CoDesignFollowUpResponse> {
+  return postJson<CoDesignFollowUpResponse>("/api/ai/co-design/questions", body);
 }

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Brain,
@@ -27,13 +27,19 @@ import {
 } from "@/components/app/primitives";
 import { guideCharacter } from "@/lib/brand-assets";
 import {
+  CO_DESIGN_BASE_QUESTION_COUNT,
+  CO_DESIGN_TOTAL_QUESTION_COUNT,
+  DEFAULT_FOLLOW_UP_QUESTIONS,
   IDEA_MODES,
+  composeCoDesignQuestions,
   conditionContext,
   modeById,
-  questionsForMode,
   type IdeaMode,
 } from "@/data/co-design";
-import { requestCoDesignCandidates } from "@/lib/ai-client";
+import {
+  requestCoDesignCandidates,
+  requestCoDesignFollowUpQuestions,
+} from "@/lib/ai-client";
 import { candidatesToTopics } from "@/lib/co-design-ai";
 import { missingRequired } from "@/lib/recommend";
 import { useResearchStore } from "@/store/research-store";
@@ -46,12 +52,17 @@ const modeIcon: Record<IdeaMode, typeof Brain> = {
 
 export function CoDesignScreen() {
   const router = useRouter();
+  const questionPanelRef = useRef<HTMLElement>(null);
+  const hasHydrated = useResearchStore((state) => state.hasHydrated);
   const conditions = useResearchStore((state) => state.conditions);
   const ideaMode = useResearchStore((state) => state.ideaMode);
   const step = useResearchStore((state) => state.coDesignStep);
   const answers = useResearchStore((state) => state.coDesignAnswers);
+  const followUpQuestions = useResearchStore((state) => state.coDesignFollowUpQuestions);
+  const questionSource = useResearchStore((state) => state.coDesignQuestionSource);
   const setIdeaMode = useResearchStore((state) => state.setIdeaMode);
   const answerCoDesign = useResearchStore((state) => state.answerCoDesign);
+  const setFollowUpQuestions = useResearchStore((state) => state.setCoDesignFollowUpQuestions);
   const previousQuestion = useResearchStore((state) => state.previousCoDesignQuestion);
   const completeCoDesign = useResearchStore((state) => state.completeCoDesign);
 
@@ -60,19 +71,22 @@ export function CoDesignScreen() {
   const [showEvidence, setShowEvidence] = useState(false);
   const [error, setError] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [generatingFollowUps, setGeneratingFollowUps] = useState(false);
+  const [followUpNotice, setFollowUpNotice] = useState("");
 
   const mode = modeById(ideaMode);
   const questions = useMemo(
-    () => (ideaMode ? questionsForMode(ideaMode) : []),
-    [ideaMode],
+    () => (ideaMode ? composeCoDesignQuestions(ideaMode, followUpQuestions) : []),
+    [followUpQuestions, ideaMode],
   );
   const question = questions[step];
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!ideaMode || missingRequired(conditions).length > 0) {
       router.replace("/research/tutorial");
     }
-  }, [conditions, ideaMode, router]);
+  }, [conditions, hasHydrated, ideaMode, router]);
 
   useEffect(() => {
     const previous = question
@@ -84,15 +98,57 @@ export function CoDesignScreen() {
     setError("");
   }, [answers, question]);
 
-  if (!ideaMode || !mode || !question) return null;
+  useEffect(() => {
+    if (step === 0) return;
+    const frame = window.requestAnimationFrame(() => {
+      const panel = questionPanelRef.current;
+      if (!panel) return;
+      const top = panel.getBoundingClientRect().top + window.scrollY - 72;
+      window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [step]);
+
+  if (!hasHydrated || !ideaMode || !mode || !question) return null;
 
   const submitAnswer = async () => {
-    if (generating) return;
+    if (generating || generatingFollowUps) return;
     const value = (custom.trim() || selected).trim();
     if (!value) {
       setError("답변을 하나 선택하거나 직접 입력해 주세요.");
       return;
     }
+    const isFollowUpGate = step === CO_DESIGN_BASE_QUESTION_COUNT - 1
+      && followUpQuestions.length === 0;
+    if (isFollowUpGate) {
+      const confirmedBaseAnswers = [
+        ...answers.filter((answer) => answer.questionId !== question.id),
+        {
+          questionId: question.id,
+          label: question.contextLabel,
+          value,
+          status: "사용자 확인" as const,
+        },
+      ];
+      setGeneratingFollowUps(true);
+      setFollowUpNotice("");
+      try {
+        const response = await requestCoDesignFollowUpQuestions({
+          mode: ideaMode,
+          conditions,
+          answers: confirmedBaseAnswers,
+        });
+        setFollowUpQuestions(response.questions, "ai");
+      } catch {
+        setFollowUpQuestions(DEFAULT_FOLLOW_UP_QUESTIONS, "fallback");
+        setFollowUpNotice("AI 연결이 지연되어 검수된 기본 후속 질문으로 이어갑니다.");
+      } finally {
+        setGeneratingFollowUps(false);
+      }
+      answerCoDesign(value);
+      return;
+    }
+
     const isLast = answerCoDesign(value);
     if (isLast) {
       const finalAnswers = [
@@ -141,7 +197,7 @@ export function CoDesignScreen() {
     <AppShell
       title="전공 진화 실험실 — 만들다"
       onBack={() => router.push("/research/tutorial")}
-      step={{ current: step + 1, total: questions.length }}
+      step={{ current: step + 1, total: CO_DESIGN_TOTAL_QUESTION_COUNT }}
       className="research-screen co-design-screen"
     >
       <div className="co-design-heading">
@@ -196,10 +252,14 @@ export function CoDesignScreen() {
       )}
 
       <div className="co-workspace">
-        <section className="co-question-panel" aria-labelledby="co-question-title">
+        <section ref={questionPanelRef} className="co-question-panel" aria-labelledby="co-question-title">
           <div className="co-ai-label">
             <span><Sparkles size={15} /> AI 공동설계</span>
-            <small>{mode.shortLabel}</small>
+            <small>
+              {step >= CO_DESIGN_BASE_QUESTION_COUNT
+                ? questionSource === "fallback" ? "기본 후속 질문" : "내 답변 맞춤 질문"
+                : mode.shortLabel}
+            </small>
           </div>
           <h2 id="co-question-title">{question.prompt}</h2>
           <p className="co-question-helper">{question.helper}</p>
@@ -250,14 +310,16 @@ export function CoDesignScreen() {
             <SecondaryButton
               type="button"
               onClick={previousQuestion}
-              disabled={step === 0 || generating}
+              disabled={step === 0 || generating || generatingFollowUps}
             >
               이전 질문
             </SecondaryButton>
-            <PrimaryButton type="button" onClick={() => void submitAnswer()} disabled={generating}>
+            <PrimaryButton type="button" onClick={() => void submitAnswer()} disabled={generating || generatingFollowUps}>
               {generating
                 ? "후보 2개 구성 중…"
-                : step === questions.length - 1
+                : generatingFollowUps
+                  ? "내 답변에 맞는 질문 만드는 중…"
+                : step === CO_DESIGN_TOTAL_QUESTION_COUNT - 1
                   ? "후보 2개 만들기"
                   : "답변하고 다음 질문"}
               <ArrowRight size={17} />
@@ -288,7 +350,7 @@ export function CoDesignScreen() {
       </div>
 
       <p className="co-helper-strip">
-        <Info size={17} /> 한 번에 한 질문씩 답하면 비교 가능한 후보 2개로 정리해 드려요.
+        <Info size={17} /> {followUpNotice || "공통 질문 3개 뒤에는 앞선 답변에 맞는 후속 질문 2개가 이어져요."}
       </p>
     </AppShell>
   );

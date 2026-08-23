@@ -2845,6 +2845,7 @@ strong {
 
 .co-workspace { display: grid; gap: 14px; }
 .co-question-panel {
+  scroll-margin-top: 72px;
   padding: 18px;
   border: 1px solid rgba(118, 88, 245, 0.32);
   border-radius: 22px;

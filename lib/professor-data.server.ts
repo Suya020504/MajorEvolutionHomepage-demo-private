@@ -762,6 +762,38 @@ export function getProfessorAcademicTaxonomy(): ProfessorAcademicTaxonomy {
   );
 }
 
+/**
+ * AI 재정렬에 전달할 공식 근거 후보 풀입니다.
+ * 교수 전체 명단을 모델에 넘기지 않고, 기존 결정 규칙으로 역할별 상위 후보만 좁힙니다.
+ */
+export function getOfficialProfessorRoleCandidates(
+  topic: ProfessorMatchTopic,
+  options: { excludeIds?: string[]; limitPerRole?: number } = {},
+): ProfessorMatch[] {
+  const excluded = new Set(options.excludeIds ?? []);
+  const limitPerRole = Math.max(1, Math.min(options.limitPerRole ?? 4, 6));
+  const context = buildTopicMatchContext(topic);
+  const officialCandidates = officialProfessors
+    .filter((professor) => !excluded.has(professor.id))
+    .map((professor) => evaluateProfessor(professor, topic, context))
+    .filter(hasOfficialMatchEvidence);
+  const result: ProfessorMatch[] = [];
+  const usedPairs = new Set<string>();
+
+  for (const role of ["TOPIC", "METHOD", "CONTEXT"] as const) {
+    const roleCandidates = [...officialCandidates]
+      .sort((left, right) => compareForRole(role, left, right))
+      .slice(0, limitPerRole);
+    for (const candidate of roleCandidates) {
+      const pairKey = `${candidate.match.professor.id}:${role}`;
+      if (usedPairs.has(pairKey)) continue;
+      usedPairs.add(pairKey);
+      result.push(presentAsRole(candidate, role));
+    }
+  }
+  return result;
+}
+
 export function matchOfficialProfessors(
   topic: ProfessorMatchTopic,
   /** 학생이 거절한 교수. 다시 찾을 때 후보에서 제외합니다. */
@@ -818,5 +850,7 @@ export function matchOfficialProfessors(
     scopeStatus: dataset.scope_status,
     coverageGaps,
     note: `${dataset.note} 단국대학교 공식 교수 ${dataset.official_record_count.toLocaleString("ko-KR")}명 안에서 주제 연결형·방법 연결형·확장 관점형을 먼저 찾고, 공식 근거와 안정적 교수 ID 순서의 결정적 규칙으로 선택합니다.`,
+    rankingSource: "official-rules",
+    rankingModel: null,
   };
 }

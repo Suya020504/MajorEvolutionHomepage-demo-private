@@ -86,6 +86,29 @@ const COMMON_QUESTIONS: CoDesignQuestion[] = [
   },
 ];
 
+export const CO_DESIGN_BASE_QUESTION_COUNT = 3;
+export const CO_DESIGN_TOTAL_QUESTION_COUNT = 5;
+
+/** API를 사용할 수 없을 때도 사용자가 흐름을 끝낼 수 있게 하는 검수된 후속 질문입니다. */
+export const DEFAULT_FOLLOW_UP_QUESTIONS: [CoDesignQuestion, CoDesignQuestion] = [
+  {
+    id: "adaptive-1",
+    prompt: "지금 조건에서 가장 현실적으로 먼저 시도할 방법은 무엇인가요?",
+    helper: "확인 가능한 자료와 현재 경험을 기준으로 첫 방법을 정해 봐요.",
+    options: ["문헌조사", "데이터 분석", "설문·인터뷰", "작은 프로토타입 실험"],
+    contextLabel: "맞춤 우선 방법",
+    allowCustom: true,
+  },
+  {
+    id: "adaptive-2",
+    prompt: "완료 시점에 어떤 결과가 남으면 이번 탐색이 의미 있을까요?",
+    helper: "기간 안에 확인할 수 있는 결과물과 성공 기준을 함께 정해요.",
+    options: ["연구계획서", "분석 리포트", "작동하는 프로토타입", "교수 면담용 브리프"],
+    contextLabel: "맞춤 목표 결과",
+    allowCustom: true,
+  },
+];
+
 const MODE_FIRST_QUESTION: Record<IdeaMode, CoDesignQuestion> = {
   free: COMMON_QUESTIONS[0],
   trend: {
@@ -106,8 +129,23 @@ const MODE_FIRST_QUESTION: Record<IdeaMode, CoDesignQuestion> = {
   },
 };
 
-export function questionsForMode(mode: IdeaMode): CoDesignQuestion[] {
-  return [MODE_FIRST_QUESTION[mode], ...COMMON_QUESTIONS.slice(1)];
+export function baseQuestionsForMode(mode: IdeaMode): CoDesignQuestion[] {
+  return [MODE_FIRST_QUESTION[mode], ...COMMON_QUESTIONS.slice(1, CO_DESIGN_BASE_QUESTION_COUNT)];
+}
+
+export function composeCoDesignQuestions(
+  mode: IdeaMode,
+  followUps: CoDesignQuestion[],
+): CoDesignQuestion[] {
+  return [...baseQuestionsForMode(mode), ...followUps.slice(0, 2)];
+}
+
+export function expectedCoDesignQuestionIds(mode: IdeaMode): string[] {
+  return [
+    ...baseQuestionsForMode(mode).map((question) => question.id),
+    "adaptive-1",
+    "adaptive-2",
+  ];
 }
 
 export type ConfirmedAnswer = {

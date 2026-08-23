@@ -4,8 +4,10 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import {
+  CO_DESIGN_TOTAL_QUESTION_COUNT,
+  composeCoDesignQuestions,
   modeById,
-  questionsForMode,
+  type CoDesignQuestion,
   type ConfirmedAnswer,
   type IdeaMode,
 } from "@/data/co-design";
@@ -116,6 +118,8 @@ type ResearchState = {
   ideaMode: IdeaMode | null;
   coDesignStep: number;
   coDesignAnswers: ConfirmedAnswer[];
+  coDesignFollowUpQuestions: CoDesignQuestion[];
+  coDesignQuestionSource: "ai" | "fallback" | null;
   result: RecommendResult | null;
   resultOrigin: "ai" | "reviewed-fallback" | null;
   groundingNote: string | null;
@@ -123,7 +127,7 @@ type ResearchState = {
   professorMatches: ProfessorMatch[];
   professorCoverage: Pick<
     ProfessorMatchResponse,
-    "officialRecordCount" | "scopeStatus" | "coverageGaps" | "note"
+    "officialRecordCount" | "scopeStatus" | "coverageGaps" | "note" | "rankingSource" | "rankingModel"
   > | null;
   professorMatchStatus: "idle" | "loading" | "success" | "error";
   professorMatchError: string | null;
@@ -171,6 +175,10 @@ type ResearchState = {
 
   submit: () => string[]; // 누락 항목 반환 (빈 배열이면 공동설계 진입 가능)
   answerCoDesign: (value: string) => boolean; // 마지막 질문이면 true
+  setCoDesignFollowUpQuestions: (
+    questions: [CoDesignQuestion, CoDesignQuestion],
+    source: "ai" | "fallback",
+  ) => void;
   previousCoDesignQuestion: () => void;
   completeCoDesign: (
     topics?: [ResearchTopic, ResearchTopic],
@@ -203,6 +211,8 @@ type ResearchState = {
 const invalidatedResearchState = () => ({
   coDesignStep: 0,
   coDesignAnswers: [] as ConfirmedAnswer[],
+  coDesignFollowUpQuestions: [] as CoDesignQuestion[],
+  coDesignQuestionSource: null as "ai" | "fallback" | null,
   result: null,
   resultOrigin: null,
   groundingNote: null,
@@ -285,6 +295,8 @@ export function migrateResearchState(
       professorDiscoverySummary: null,
       selectedProfessorId: null,
     } : {}),
+    // v5부터 마지막 두 질문이 API 맞춤형으로 바뀌어 이전 고정 질문 진행 상태를 재사용하지 않습니다.
+    ...(persistedVersion < 5 ? invalidatedResearchState() : {}),
   };
 }
 
@@ -294,6 +306,8 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   ideaMode: null,
   coDesignStep: 0,
   coDesignAnswers: [],
+  coDesignFollowUpQuestions: [],
+  coDesignQuestionSource: null,
   result: null,
   resultOrigin: null,
   groundingNote: null,
@@ -442,6 +456,8 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     set({
       coDesignStep: 0,
       coDesignAnswers: [],
+      coDesignFollowUpQuestions: [],
+      coDesignQuestionSource: null,
       result: null,
       resultOrigin: null,
       groundingNote: null,
@@ -462,9 +478,9 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
   },
 
   answerCoDesign: (value) => {
-    const { ideaMode, coDesignStep, coDesignAnswers } = get();
+    const { ideaMode, coDesignStep, coDesignAnswers, coDesignFollowUpQuestions } = get();
     if (!ideaMode || !value.trim()) return false;
-    const questions = questionsForMode(ideaMode);
+    const questions = composeCoDesignQuestions(ideaMode, coDesignFollowUpQuestions);
     const question = questions[coDesignStep];
     if (!question) return true;
     const answer: ConfirmedAnswer = {
@@ -485,6 +501,9 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     return isLast;
   },
 
+  setCoDesignFollowUpQuestions: (coDesignFollowUpQuestions, coDesignQuestionSource) =>
+    set({ coDesignFollowUpQuestions, coDesignQuestionSource }),
+
   previousCoDesignQuestion: () =>
     set((state) => ({
       coDesignStep: Math.max(0, state.coDesignStep - 1),
@@ -492,7 +511,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
 
   completeCoDesign: (topics, groundingNote) => {
     const { conditions, ideaMode, coDesignAnswers } = get();
-    if (!ideaMode || coDesignAnswers.length < questionsForMode(ideaMode).length) return;
+    if (!ideaMode || coDesignAnswers.length < CO_DESIGN_TOTAL_QUESTION_COUNT) return;
     const result = topics
       ? compareTopicPair(conditions, topics)
       : recommend(conditions);
@@ -571,6 +590,8 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
         scopeStatus: response.scopeStatus,
         coverageGaps: response.coverageGaps,
         note: response.note,
+        rankingSource: response.rankingSource,
+        rankingModel: response.rankingModel,
       },
       professorMatchStatus: "success",
       professorMatchError: null,
@@ -655,6 +676,8 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       ideaMode: null,
       coDesignStep: 0,
       coDesignAnswers: [],
+      coDesignFollowUpQuestions: [],
+      coDesignQuestionSource: null,
       result: null,
       resultOrigin: null,
       groundingNote: null,
@@ -675,7 +698,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     }),
 }), {
   name: "major-evolution-research-v1",
-  version: 4,
+  version: 5,
   migrate: migrateResearchState,
   storage: createJSONStorage(() => localStorage),
   skipHydration: true,
