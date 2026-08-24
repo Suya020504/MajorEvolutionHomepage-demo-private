@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "test": "node --test \"scripts/tests/**/*.test.mjs\"",
     "test:favorite-paper": "node --test scripts/tests/favorite-paper-flow.test.mjs",
     "test:co-design": "node --test scripts/tests/co-design-ai-flow.test.mjs",
     "test:navigation": "node --test scripts/tests/service-navigation-flow.test.mjs",
