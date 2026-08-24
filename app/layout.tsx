@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/next";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 import { StoreHydrator } from "@/components/app/store-hydrator";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { brandScene } from "@/lib/brand-assets";
@@ -62,6 +64,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         </a>
         {children}
         <InstallPrompt />
+        <Analytics />
+        <GoogleAnalytics />
       </body>
     </html>
   );
