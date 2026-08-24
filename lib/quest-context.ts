@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { ResearchTopic } from "@/data/research-mvp";
 import type { ProfessorMatch } from "@/lib/professor-domain";
+import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
 
 export type QuestContext = {
@@ -21,16 +22,14 @@ export function useQuestContext(): QuestContext {
   const matches = useResearchStore((state) => state.professorMatches);
   const selectedProfessorId = useResearchStore((state) => state.selectedProfessorId);
   const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
+  const professorDiscoveryTopic = useResearchStore((state) => state.professorDiscoveryTopic);
 
   return useMemo(() => {
-    let topic: ResearchTopic | null = null;
-    if (result && selectedTopicId) {
-      if (result.kind === "ok") {
-        topic = result.candidates.find((c) => c.topic.id === selectedTopicId)?.topic ?? null;
-      } else if (result.kind === "insufficient" && result.candidate.topic.id === selectedTopicId) {
-        topic = result.candidate.topic;
-      }
-    }
+    const topic: ResearchTopic | null = resolveJourneyTopic({
+      result,
+      selectedTopicId,
+      professorDiscoveryTopic,
+    });
     /*
      * 교수 맥락은 두 신호에서 옵니다.
      *
@@ -43,7 +42,14 @@ export function useQuestContext(): QuestContext {
       ?? matches.find((item) => favoriteProfessorIds.includes(item.professor.id))
       ?? null;
     return { topic, match };
-  }, [result, selectedTopicId, matches, selectedProfessorId, favoriteProfessorIds]);
+  }, [
+    result,
+    selectedTopicId,
+    professorDiscoveryTopic,
+    matches,
+    selectedProfessorId,
+    favoriteProfessorIds,
+  ]);
 }
 
 /**

@@ -30,17 +30,12 @@ import type {
   ProfessorKnockKitDraft,
   ProfessorMatch,
 } from "@/lib/professor-domain";
+import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
 
 function selectedTopicFromStore(): ResearchTopic | null {
-  const { result, selectedTopicId } = useResearchStore.getState();
-  if (!result || !selectedTopicId) return null;
-  if (result.kind === "ok") {
-    return result.candidates.find((candidate) => candidate.topic.id === selectedTopicId)?.topic ?? null;
-  }
-  return result.kind === "insufficient" && result.candidate.topic.id === selectedTopicId
-    ? result.candidate.topic
-    : null;
+  const { result, selectedTopicId, professorDiscoveryTopic } = useResearchStore.getState();
+  return resolveJourneyTopic({ result, selectedTopicId, professorDiscoveryTopic });
 }
 
 function createDraft(topic: ResearchTopic, match: ProfessorMatch): ProfessorKnockKitDraft {

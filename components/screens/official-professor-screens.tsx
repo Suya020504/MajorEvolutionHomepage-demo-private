@@ -72,6 +72,12 @@ const ROLE_LABEL: Record<ProfessorMatchRole, string> = {
   CONTEXT: "확장 관점형",
 };
 
+function matchRoleLabel(match: ProfessorMatch): string {
+  return match.role === "CONTEXT" && match.decisionBasis.departmentMatchesMajor
+    ? "같은 학과 연결"
+    : ROLE_LABEL[match.role];
+}
+
 function officialDataStatusLabel(status: ProfessorDataStatus, subject: string): string {
   const labels: Record<ProfessorDataStatus, string> = {
     FOUND: `${subject} 확인`,
@@ -186,14 +192,14 @@ function MatchCard({
   context,
   onOpen,
   onOpenPaper,
-  onPrepareConversation,
+  onChoose,
   onReject,
 }: {
   match: ProfessorMatch;
   context: ProfessorDiscoveryContext;
   onOpen: () => void;
   onOpenPaper: () => void;
-  onPrepareConversation: () => void;
+  onChoose: () => void;
   onReject: () => void;
 }) {
   const professor = match.professor;
@@ -213,11 +219,41 @@ function MatchCard({
     professor.researchFields[0] ?? "",
   );
   const pitch = buildProfessorPitch(match, context, contextQuestions[0] ?? "");
+  const evidenceStrengthLabel = {
+    DIRECT: "직접 연결 근거 확인",
+    RELATED: "관련 근거 확인",
+    LIMITED: "확인 가능한 근거 제한",
+  }[match.strength];
+  const evidenceStatuses = [
+    {
+      label: "대학 공식 프로필",
+      value: match.decisionBasis.sources.officialProfile ? "확인됨" : "확인 필요",
+      verified: match.decisionBasis.sources.officialProfile,
+    },
+    {
+      label: "공식 연구분야",
+      value: match.decisionBasis.sources.researchFields
+        ? `${professor.researchFields.length}건 확인`
+        : "연결 근거 확인 필요",
+      verified: match.decisionBasis.sources.researchFields,
+    },
+    {
+      label: "관련 논문 근거",
+      value: match.decisionBasis.sources.matchedPublication
+        ? "연결 항목 확인"
+        : hasPublications ? "연구분야 중심 연결" : "공식 프로필 미기재",
+      verified: match.decisionBasis.sources.matchedPublication,
+    },
+  ];
+  const isHomeDepartment = match.role === "CONTEXT"
+    && match.decisionBasis.departmentMatchesMajor;
   const roleIcon = match.role === "TOPIC"
     ? <Compass size={16} aria-hidden="true" />
     : match.role === "METHOD"
       ? <FlaskConical size={16} aria-hidden="true" />
-      : <Globe2 size={16} aria-hidden="true" />;
+      : isHomeDepartment
+        ? <GraduationCap size={16} aria-hidden="true" />
+        : <Globe2 size={16} aria-hidden="true" />;
 
   const openPaperBite = () => {
     setPaperNotice(null);
@@ -238,7 +274,7 @@ function MatchCard({
   };
 
   return (
-    <article className={`match-card match-card--${match.role.toLocaleLowerCase()}`}>
+    <article className={`match-card match-card--${match.role.toLocaleLowerCase()}${isHomeDepartment ? " match-card--home-department" : ""}`}>
       <header className="match-card__head">
         <div className="match-card__casting">
           <span className="match-card__role">{roleIcon}{pitch.roleLabel}</span>
@@ -259,101 +295,134 @@ function MatchCard({
       <section className="match-card__pitch">
         <span><Sparkles size={14} aria-hidden="true" /> 공식 데이터 기반 캐스팅 한마디</span>
         <p>“{pitch.pitchLine}”</p>
-        <small>대학 공식 프로필과 학생 입력을 규칙으로 연결한 소개이며, 교수님의 실제 발언이 아닙니다.</small>
       </section>
 
-      <section className="match-card__block">
-        <h3><Link2 size={15} aria-hidden="true" /> 나와 연결된 점</h3>
-        <div className="match-card__connection">
-          <strong>내가 알려준 조건</strong>
-          <div className="match-card__chips">
-            {pitch.studentConnections.map((item) => <span key={item}>{item}</span>)}
-          </div>
-        </div>
-        <div className="match-card__connection">
-          <strong>공식 프로필에서 찾은 연결</strong>
-          <div className="match-card__chips match-card__chips--official">
-            {pitch.officialConnections.map((item) => <span key={item}>{item}</span>)}
-          </div>
-        </div>
-      </section>
-
-      <section className="match-card__block">
-        <h3><Lightbulb size={15} aria-hidden="true" /> 잠재적으로 배워볼 수 있는 것</h3>
-        <ul className="match-card__learning">
-          {pitch.potentialLearning.map((item) => <li key={item}>{item}</li>)}
-        </ul>
-      </section>
-
-      <section className="match-card__mentor">
-        <span>🧭 서비스가 제안한 탐색 역할</span>
-        <strong>{pitch.mentorRole}</strong>
-      </section>
+      <div className="match-card__chips match-card__chips--official" aria-label="공식 프로필 연결 근거">
+        {pitch.officialConnections.map((item) => <span key={item}>{item}</span>)}
+      </div>
 
       <section className="match-card__question">
         <h3><MessageCircleQuestion size={16} aria-hidden="true" /> 먼저 물어볼 질문</h3>
         <p>“{pitch.firstQuestion}”</p>
       </section>
 
-      <section className="match-card__block match-card__block--check">
-        <h3>직접 확인할 부분</h3>
-        <ul>
-          {pitch.verificationItems.map((item) => <li key={item}>{item}</li>)}
-        </ul>
-      </section>
-
-      <details className="match-card__evidence-details">
-        <summary>공식 근거와 출처 확인</summary>
-        <p>{match.reason}</p>
-        <ul className="match-card__evidence">
-          <li>
-            <ShieldCheck size={15} aria-hidden="true" />
-            <span>공식 프로필 연구분야 {professor.researchFields.length}건</span>
-          </li>
-          <li>
-            <BookOpenCheck size={15} aria-hidden="true" />
-            <span>
-              {hasPublications
-                ? `공식 프로필 노출 논문 ${professor.publicationCount}건`
-                : "공식 프로필에 논문 목록 미기재"}
-            </span>
-          </li>
-        </ul>
-        <p className="match-card__evidence-ids">근거 ID {match.evidenceIds.join(" · ")}</p>
-        <div className="match-card__source-row">
-          <button type="button" onClick={onOpen}>상세 근거 보기 <ArrowRight size={15} /></button>
-          <Link href={professor.officialProfileUrl} target="_blank" rel="noopener noreferrer">
-            대학 공식 프로필 <ExternalLink size={15} />
-          </Link>
-        </div>
-      </details>
-
-      {paperNotice && (
-        <p className="match-card__action-notice" role="status">{paperNotice}</p>
-      )}
-
       <footer className="match-card__actions">
-        <ProfessorFavoriteButton
-          professorId={professor.id}
-          professorName={professor.name}
-        />
-        <button
-          type="button"
-          className="match-card__paper"
-          disabled={!hasHydrated || !pitch.hasOfficialPublications}
-          onClick={openPaperBite}
-        >
-          <BookOpenCheck size={16} aria-hidden="true" />
-          {pitch.hasOfficialPublications
-            ? isFavorite ? "공식 논문 한입 보기" : "저장하고 공식 논문 한입"
-            : "공식 논문 미기재"}
+        <button type="button" className="match-card__conversation" onClick={onChoose}>
+          이 교수님과 첫 대화 준비하기 <ArrowRight size={17} aria-hidden="true" />
         </button>
-        <button type="button" className="match-card__conversation" onClick={onPrepareConversation}>
-          <MessageCircleQuestion size={16} aria-hidden="true" /> 첫 대화 준비하기
-        </button>
-        <button type="button" className="match-card__reject" onClick={onReject}>
-          <ThumbsDown size={15} /> 다른 교수님 만나보기
-        </button>
+        <details className="match-card__more">
+          <summary>추천 이유와 공식 근거 더 보기</summary>
+          <div className="match-card__more-content">
+            <section className="match-card__reason-panel">
+              <header>
+                <span><SearchCheck size={16} aria-hidden="true" /> 왜 이 교수님을 제안했나요?</span>
+                <em>{evidenceStrengthLabel}</em>
+              </header>
+              <p>{match.mentorFitReason?.trim() || match.reason}</p>
+              <div className="match-card__reason-grid">
+                <div>
+                  <strong>내가 입력한 조건</strong>
+                  <div className="match-card__chips">
+                    {pitch.studentConnections.map((item) => <span key={item}>{item}</span>)}
+                  </div>
+                </div>
+                <div>
+                  <strong>공식 프로필에서 연결된 항목</strong>
+                  <div className="match-card__chips match-card__chips--official">
+                    {pitch.officialConnections.map((item) => <span key={item}>{item}</span>)}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="match-card__basis-status">
+              <h3><ShieldCheck size={15} aria-hidden="true" /> 근거 확인 상태</h3>
+              <ul>
+                {evidenceStatuses.map((item) => (
+                  <li key={item.label} className={item.verified ? "is-verified" : "is-unverified"}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                  </li>
+                ))}
+              </ul>
+              {match.decisionBasis.matchedConcepts.length > 0 ? (
+                <div className="match-card__matched-concepts">
+                  <strong>조건에서 연결된 개념</strong>
+                  <p>{match.decisionBasis.matchedConcepts.join(" · ")}</p>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="match-card__block">
+              <h3><Lightbulb size={15} aria-hidden="true" /> 배워볼 수 있는 것</h3>
+              <ul className="match-card__learning">
+                {pitch.potentialLearning.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </section>
+
+            <section className="match-card__mentor">
+              <span>서비스가 제안한 탐색 역할</span>
+              <strong>{pitch.mentorRole}</strong>
+            </section>
+
+            <section className="match-card__block match-card__block--check">
+              <h3>직접 확인할 부분</h3>
+              <ul>
+                {pitch.verificationItems.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            </section>
+
+            <section className="match-card__evidence-details" aria-label="공식 근거와 출처">
+              <h3><Link2 size={15} aria-hidden="true" /> 공식 근거와 출처</h3>
+              <p>{match.reason}</p>
+              <ul className="match-card__evidence">
+                <li>
+                  <ShieldCheck size={15} aria-hidden="true" />
+                  <span>공식 프로필 연구분야 {professor.researchFields.length}건</span>
+                </li>
+                <li>
+                  <BookOpenCheck size={15} aria-hidden="true" />
+                  <span>
+                    {hasPublications
+                      ? `공식 프로필 노출 논문 ${professor.publicationCount}건`
+                      : "공식 프로필에 논문 목록 미기재"}
+                  </span>
+                </li>
+              </ul>
+              <p className="match-card__evidence-ids">근거 ID {match.evidenceIds.join(" · ")}</p>
+              <div className="match-card__source-row">
+                <button type="button" onClick={onOpen}>상세 근거 보기 <ArrowRight size={15} /></button>
+                <Link href={professor.officialProfileUrl} target="_blank" rel="noopener noreferrer">
+                  대학 공식 프로필 <ExternalLink size={15} />
+                </Link>
+              </div>
+            </section>
+
+            <div className="match-card__secondary-actions">
+              <ProfessorFavoriteButton
+                professorId={professor.id}
+                professorName={professor.name}
+              />
+              <button
+                type="button"
+                className="match-card__paper"
+                disabled={!hasHydrated || !pitch.hasOfficialPublications}
+                onClick={openPaperBite}
+              >
+                <BookOpenCheck size={16} aria-hidden="true" />
+                {pitch.hasOfficialPublications
+                  ? isFavorite ? "공식 논문 한입 보기" : "저장하고 공식 논문 한입"
+                  : "공식 논문 미기재"}
+              </button>
+              <button type="button" className="match-card__reject" onClick={onReject}>
+                <ThumbsDown size={15} /> 이 유형의 다른 교수 보기
+              </button>
+            </div>
+            {paperNotice && (
+              <p className="match-card__action-notice" role="status">{paperNotice}</p>
+            )}
+          </div>
+        </details>
       </footer>
     </article>
   );
@@ -542,7 +611,7 @@ export function OfficialProfessorsScreen({
     && Boolean(storedDiscoveryTopic);
 
   return (
-    <AppShell title="나의 교수님 — 찾다" backHref="/mentoring" className="find-professor-screen">
+    <AppShell title="조건 직접 입력" backHref="/professors" className="find-professor-screen">
       <SceneBanner
         scene={brandScene.find}
         alt="공식 자료로 관심 분야에 맞는 교수님을 찾는 장면"
@@ -583,7 +652,7 @@ export function OfficialProfessorsScreen({
       {searchAttempted && status === "loading" && (
         <Card className="official-professor-empty professor-match-loading" role="status">
           <LoaderCircle className="spin" size={26} />
-          <h2>공식 교수 1,051명을 세 관점으로 확인 중이에요</h2>
+          <h2>같은 학과와 맞춤 전문성을 함께 확인 중이에요</h2>
           <p>첫 요청은 공식 데이터를 여는 시간까지 약 3~10초 걸릴 수 있어요. 화면을 닫지 않아도 결과가 바로 이어집니다.</p>
           <div className="professor-match-loading__steps" aria-hidden="true">
             <span>입력 구조화</span>
@@ -678,7 +747,7 @@ export function ProfessorPitchScreen() {
 
   const runSearch = async (excludeIds: string[]) => {
     if (!storedDiscoveryTopic) {
-      router.push("/professors");
+      router.push("/professors/discover");
       return;
     }
     const useSaved = Boolean(savedTopic && savedTopic.title === context.topic.trim());
@@ -730,17 +799,20 @@ export function ProfessorPitchScreen() {
     router.push("/paper/reader?mode=bite&source=favorites");
   };
 
-  const prepareProfessorConversation = (match: ProfessorMatch) => {
+  const chooseProfessor = (match: ProfessorMatch) => {
     selectProfessor(match.professor.id);
-    router.push("/quest/first-line");
+    router.push("/quest");
   };
+  const hasHomeDepartmentMatch = matches.some(
+    (match) => match.role === "CONTEXT" && match.decisionBasis.departmentMatchesMajor,
+  );
 
   return (
     <AppShell title="교수님 3인 피칭" backHref="/professors" className="professor-pitch-screen">
       {!hasHydrated ? (
         <Card className="official-professor-empty" role="status">
           <LoaderCircle className="spin" size={26} />
-          <h2>저장한 피칭 결과를 불러오는 중이에요</h2>
+          <h1>저장한 피칭 결과를 불러오는 중이에요</h1>
         </Card>
       ) : status === "loading" ? (
         <Card className="official-professor-empty professor-match-loading" role="status">
@@ -765,9 +837,9 @@ export function ProfessorPitchScreen() {
           {matches.length === 0 ? (
             <Card className="official-professor-empty">
               <SearchCheck size={28} />
-              <h2>아직 보여드릴 피칭이 없어요</h2>
+              <h1>아직 보여드릴 피칭이 없어요</h1>
               <p>찾기 화면에서 전공·관심 분야와 진로 고민을 입력하면 세 관점의 교수님을 찾아드려요.</p>
-              <PrimaryButton onClick={() => router.push("/professors")}>
+              <PrimaryButton onClick={() => router.push("/professors/discover")}>
                 교수님 찾기로 가기 <ArrowRight size={17} />
               </PrimaryButton>
             </Card>
@@ -775,18 +847,22 @@ export function ProfessorPitchScreen() {
             <>
               <section className="professor-pitch-intro" aria-labelledby="professor-pitch-title">
                 <div className="professor-pitch-intro__copy">
-                  <span>TODAY&apos;S PROFESSOR CASTING</span>
-                  <h2 id="professor-pitch-title">🎤 교수님 {matches.length}인 피칭</h2>
-                  <p>점수 대신, 나와 연결된 이유와 배워볼 가능성·다음 행동을 비교해 보세요.</p>
+                  <h1 id="professor-pitch-title">세 분 중 한 분과 첫 대화를 시작해 보세요</h1>
+                  <p>
+                    {hasHomeDepartmentMatch
+                      ? "같은 학과 교수님을 가장 가까운 시작점으로 먼저 제안하고, 다른 학과에서는 내 관심 주제와 방법에 맞는 교수님을 찾아드렸어요."
+                      : "공식 데이터에서 같은 학과 교수를 확인하지 못해, 내 관심 주제와 방법을 넓혀 볼 세 분을 근거와 함께 제안했어요."}
+                  </p>
                   <small>
                     <ShieldCheck size={14} aria-hidden="true" />
-                    학생 입력과 대학 공식 프로필을 규칙으로 연결한 서비스 소개이며, 교수님의 실제 발언이 아닙니다.
+                    카드를 비교한 뒤 ‘첫 대화 준비하기’를 누르면 선택이 저장되고 다음 단계로 바로 이어집니다.
                   </small>
                 </div>
                 <div className="professor-pitch-intro__cast" aria-label="연결된 교수님">
                   {matches.map((match) => (
                     <div key={match.professor.id}>
                       <ProfessorPortrait professor={match.professor} variant={match.role} large />
+                      <strong>{matchRoleLabel(match)}</strong>
                       <span>{match.professor.name}</span>
                     </div>
                   ))}
@@ -800,7 +876,7 @@ export function ProfessorPitchScreen() {
               )}
 
               <div className="professor-pitch-toolbar">
-                <Link href="/professors">
+                <Link href="/professors/discover">
                   <SearchCheck size={16} aria-hidden="true" /> 조건 바꿔 다시 찾기
                 </Link>
                 {rejectedIds.length > 0 && (
@@ -824,7 +900,7 @@ export function ProfessorPitchScreen() {
                     context={context}
                     onOpen={() => openProfessor(match)}
                     onOpenPaper={() => openProfessorPaper(match)}
-                    onPrepareConversation={() => prepareProfessorConversation(match)}
+                    onChoose={() => chooseProfessor(match)}
                     onReject={() => rejectMatch(match.professor.id)}
                   />
                 ))}
@@ -883,7 +959,7 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
         <>
           <SectionHeading title="선택한 주제와의 연결" description="연결 역할과 공식 근거 ID를 확인하세요." />
           <Card className="official-match-detail">
-            <Tag tone={match.strength === "LIMITED" ? "warning" : "mint"}>{ROLE_LABEL[match.role]}</Tag>
+            <Tag tone={match.strength === "LIMITED" ? "warning" : "mint"}>{matchRoleLabel(match)}</Tag>
             <p>{match.reason}</p>
             <dl>
               <div><dt>근거 ID</dt><dd>{match.evidenceIds.join(" · ")}</dd></div>

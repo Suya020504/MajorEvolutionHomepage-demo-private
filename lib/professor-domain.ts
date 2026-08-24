@@ -111,6 +111,8 @@ export type ProfessorMatch = {
   matchedTerms: string[];
   doesNotEstablish: string[];
   decisionBasis: ProfessorMatchDecisionBasis;
+  /** 선택한 프로젝트 맥락을 기준으로 AI가 정리한 멘토 적합 이유. 공식 후보 안에서만 생성합니다. */
+  mentorFitReason?: string;
 };
 
 export type ProfessorMatchTopic = {
@@ -157,6 +159,8 @@ export type ProfessorMatchResponse = {
   scopeStatus: "SAMPLE" | "PARTIAL" | "COMPLETE";
   coverageGaps: ProfessorCoverageGap[];
   note: string;
+  rankingSource: "ai-reranked" | "official-rules";
+  rankingModel: string | null;
 };
 
 export type ProfessorKnockKitDraft = {

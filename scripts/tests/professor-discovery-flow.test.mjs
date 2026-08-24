@@ -71,6 +71,25 @@ test("공식 교수 데이터에서 안전한 단과대-학과 관계만 만든�
   assert.ok(taxonomy.colleges.every((college) => !college.name.includes(" · ")));
 });
 
+test("서비스 런타임 교수 데이터는 1,051명과 공식 출처 무결성을 유지한다", () => {
+  const runtime = JSON.parse(fs.readFileSync(
+    path.join(repositoryRoot, "data/professors/runtime/dku-professors.json"),
+    "utf8",
+  ));
+  assert.equal(runtime.schema_version, "1.0.0");
+  assert.equal(runtime.official_record_count, 1_051);
+  assert.equal(runtime.records.length, runtime.official_record_count);
+  assert.equal(new Set(runtime.records.map((record) => record.id)).size, runtime.records.length);
+  assert.ok(runtime.records.every((record) => record.university === "단국대학교"));
+  assert.ok(runtime.records.every((record) => record.name && record.department));
+  assert.ok(runtime.records.every((record) => /^https:\/\//.test(record.official_profile_url)));
+  assert.ok(runtime.records.every((record) => /^https:\/\//.test(record.source_url)));
+  assert.ok(runtime.records.every((record) => record.publication_count >= record.publications.length));
+  assert.ok(runtime.records.every((record) => record.publications.every(
+    (publication) => publication.official_profile_url === record.official_profile_url,
+  )));
+});
+
 test("일반 전공명은 유일한 공식 학과로 보정하고 중복 학과는 추측하지 않는다", () => {
   const taxonomy = taxonomyModule.buildProfessorAcademicTaxonomy([
     { college: "경영경제대학", departments: ["경제학과"] },
@@ -86,6 +105,21 @@ test("일반 전공명은 유일한 공식 학과로 보정하고 중복 학과�
     { college: "나대학", departments: ["융합학과"] },
   ], 2);
   assert.equal(taxonomyModule.findAcademicSelection(ambiguous, "융합학"), null);
+});
+
+test("같은 학과 판정은 부분 문자열이 아니라 공식 학과명 단위로 비교한다", () => {
+  assert.equal(
+    taxonomyModule.comparableDepartmentName("경제학"),
+    taxonomyModule.comparableDepartmentName("경제학과"),
+  );
+  assert.notEqual(
+    taxonomyModule.comparableDepartmentName("경제학과"),
+    taxonomyModule.comparableDepartmentName("식품자원경제학과"),
+  );
+  assert.notEqual(
+    taxonomyModule.comparableDepartmentName("행정학과"),
+    taxonomyModule.comparableDepartmentName("보건행정학과"),
+  );
 });
 
 test("기본 질문과 부전공 무결성을 검증한다", () => {
@@ -311,6 +345,10 @@ test("교수 3인 피칭은 학생 조건·공식 근거·서비스 제안을 �
     assert.match(pitch.firstQuestion, /무엇부터 시작/);
     assert.equal(pitch.hasOfficialPublications, true);
     assert.doesNotMatch(pitch.pitchLine, /궁합|점수|순위|지도 가능|모집 가능/);
+    if (role === "CONTEXT") {
+      assert.equal(pitch.roleLabel, "같은 학과 연결");
+      assert.match(pitch.mentorRole, /가까운 시작점/);
+    }
   }
 });
 
@@ -326,11 +364,23 @@ test("데스크톱 교수 찾기 폼은 결과 영역을 sticky로 가리지 않
     /\.find-professor-screen\s+\.context-panel\s*\{[^}]*position:\s*sticky/si,
   );
   assert.match(css, /\.find-professor-screen\s+\.context-panel\s*\{[^}]*position:\s*static/si);
-  assert.match(screen, /교수님 \{matches\.length\}인 피칭/);
+  assert.match(screen, /세 분 중 한 분과 첫 대화를 시작해 보세요/);
+  assert.match(screen, /hasHomeDepartmentMatch/);
+  assert.match(screen, /공식 데이터에서 같은 학과 교수를 확인하지 못해/);
   assert.match(screen, /공식 데이터 기반 캐스팅 한마디/);
   assert.doesNotMatch(screen, /> AI 캐스팅 한마디</);
   assert.match(screen, /서비스가 제안한 탐색 역할/);
-  assert.match(screen, /다른 교수님 만나보기/);
+  assert.match(screen, /이 교수님과 첫 대화 준비하기/);
+  assert.match(screen, /추천 이유와 공식 근거 더 보기/);
+  assert.match(screen, /왜 이 교수님을 제안했나요/);
+  assert.match(screen, /근거 확인 상태/);
+  assert.match(screen, /공식 프로필에서 연결된 항목/);
+  assert.match(screen, /공식 근거와 출처/);
+  assert.doesNotMatch(
+    css,
+    /\.match-card__actions\s*\{[^}]*grid-template-columns:\s*repeat\(2/si,
+    "첫 대화 준비와 더 보기는 같은 행에 배치하지 않아야 한다",
+  );
   assert.match(
     screen,
     /matches\.length > 0\s*&& !storedDiscoveryTopic[\s\S]*clearProfessorMatches\(\)/,
@@ -342,6 +392,11 @@ test("데스크톱 교수 찾기 폼은 결과 영역을 sticky로 가리지 않
     "저장된 결과는 검색 맥락이 있을 때만 노출해야 한다",
   );
   assert.match(css, /@media \(min-width: 1280px\)[\s\S]*\.match-grid/);
+  assert.match(
+    css,
+    /@media \(max-width: 700px\)[\s\S]*\.professor-pitch-screen \.match-grid[\s\S]*scroll-snap-type: inline mandatory/,
+    "모바일 피칭은 세로 장문 대신 한 장씩 넘기는 비교 구조여야 한다",
+  );
   assert.doesNotMatch(css, /var\(--border-subtle\)/);
 });
 
@@ -376,7 +431,8 @@ test("교수님 3인 피칭은 찾기 폼 아래가 아니라 전용 주소에�
 
   const pitchScreen = screen.slice(screen.indexOf("export function ProfessorPitchScreen()"));
   assert.match(pitchScreen, /<MatchCard/);
-  assert.match(pitchScreen, /다른 교수님 만나보기|onReject/);
+  assert.match(pitchScreen, /이 유형의 다른 교수 보기|onReject/);
+  assert.match(pitchScreen, /router\.push\("\/quest"\)/);
   assert.match(
     pitchScreen,
     /professorMatchTopicToDiscoveryContext\(storedDiscoveryTopic\)/,
@@ -414,4 +470,93 @@ test("새 연구주제로 전환하면 이전 교수 찾기 맥락과 포트폴�
     /persistedVersion < 4[\s\S]*professorDiscoverySummary:\s*null/,
     "v4 마이그레이션에서도 검색 결과 없는 이전 요약을 정리해야 한다",
   );
+});
+
+test("첫 교수 매칭은 같은 학과 한 명 뒤에 타 학과 주제·방법 후보를 둔다", () => {
+  const matcher = fs.readFileSync(
+    path.join(repositoryRoot, "lib/professor-data.server.ts"),
+    "utf8",
+  );
+  const route = fs.readFileSync(
+    path.join(repositoryRoot, "app/api/professors/match/route.ts"),
+    "utf8",
+  );
+
+  assert.match(matcher, /departmentMatchesMajor\)\s*\.sort/);
+  assert.match(matcher, /!item\.match\.decisionBasis\.departmentMatchesMajor/);
+  assert.match(matcher, /\["CONTEXT", "TOPIC", "METHOD"\]/);
+  assert.match(matcher, /homeCollege/);
+  assert.match(route, /journey: isProjectMentorRequest \? "project" : "student"/);
+  assert.match(
+    matcher,
+    /options\.journey === "project"[\s\S]*\["TOPIC", "METHOD", "CONTEXT"\]/,
+    "프로젝트 교수 추천의 역할 순서는 개인 매칭과 분리되어야 한다",
+  );
+});
+
+test("전공 아이디어 튜토리얼은 최종 확인 전 로컬 초안만 쓰고 한 번에 공동설계를 시작한다", () => {
+  const screen = fs.readFileSync(
+    path.join(repositoryRoot, "components/tutorial/research-tutorial-screen.tsx"),
+    "utf8",
+  );
+  const store = fs.readFileSync(
+    path.join(repositoryRoot, "store/research-store.ts"),
+    "utf8",
+  );
+  const route = fs.readFileSync(
+    path.join(repositoryRoot, "app/research/tutorial/page.tsx"),
+    "utf8",
+  );
+
+  assert.match(route, /ResearchTutorialScreen/);
+  assert.match(screen, /major-evolution-research-tutorial-v1/);
+  assert.match(
+    screen,
+    /QUESTION_STEPS = \["major", "mode", "interests", "readiness", "feasibility", "review"\]/,
+  );
+  assert.match(screen, /browserStorage\(\)\?\.setItem\(STORAGE_KEY, JSON\.stringify\(draft\)\)/);
+  assert.match(
+    screen,
+    /const startCoDesign = \(\) => \{[\s\S]*beginIdeaCoDesign\([\s\S]*router\.push\("\/co-design"\)/,
+  );
+
+  const atomicCommit = store.slice(
+    store.indexOf("  beginIdeaCoDesign: ({ ideaMode, conditions }) => {"),
+    store.indexOf("  submit: () => {"),
+  );
+  assert.match(atomicCommit, /if \(missing\.length\) return missing;[\s\S]*set\(\{/);
+  assert.match(atomicCommit, /\.\.\.invalidatedResearchState\(\)/);
+  assert.equal(
+    (atomicCommit.match(/\bset\(\{/g) ?? []).length,
+    1,
+    "최종 확인은 연구 상태를 한 번에 반영해야 한다",
+  );
+});
+
+test("프로젝트 설계는 단계형과 한 화면 입력을 오가며 건너뛰고 이어갈 수 있다", () => {
+  const tutorial = fs.readFileSync(
+    path.join(repositoryRoot, "components/tutorial/research-tutorial-screen.tsx"),
+    "utf8",
+  );
+  const fullForm = fs.readFileSync(
+    path.join(repositoryRoot, "components/screens/research-condition.tsx"),
+    "utf8",
+  );
+  const store = fs.readFileSync(
+    path.join(repositoryRoot, "store/research-store.ts"),
+    "utf8",
+  );
+
+  assert.match(tutorial, /한 단계씩 질문받기/);
+  assert.match(tutorial, /한 화면에서 직접 입력/);
+  assert.match(tutorial, /프로젝트 설계 단계 바로가기/);
+  assert.match(tutorial, /나중에 답하기/);
+  assert.match(tutorial, /저장하고 나가기/);
+  assert.match(tutorial, /saveIdeaDraft\(\{ ideaMode: draft\.ideaMode, conditions: draft\.conditions \}\)/);
+  assert.match(fullForm, /\/research\/tutorial\?source=full/);
+  assert.match(fullForm, /프로젝트 설계 단계/);
+  assert.match(fullForm, /설계 방식 선택으로 돌아가기/);
+  assert.match(fullForm, /renderCurrentStep\(\)/);
+  assert.match(fullForm, /현재 입력은 이 브라우저에 자동 저장돼요/);
+  assert.match(store, /saveIdeaDraft: \(\{ ideaMode, conditions \}\) =>/);
 });

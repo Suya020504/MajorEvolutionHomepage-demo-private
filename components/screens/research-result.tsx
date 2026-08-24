@@ -367,7 +367,7 @@ function ProfessorBlock({
   matches: ProfessorMatch[];
   coverage: Pick<
     ProfessorMatchResponse,
-    "officialRecordCount" | "scopeStatus" | "coverageGaps" | "note"
+    "officialRecordCount" | "scopeStatus" | "coverageGaps" | "note" | "rankingSource" | "rankingModel"
   > | null;
   status: "idle" | "loading" | "success" | "error";
   error: string | null;
@@ -378,7 +378,7 @@ function ProfessorBlock({
   if (scopeMessage) {
     return (
       <section id="professor-connection" className="prof-block">
-        <div className="section-heading"><h2>교수 공식 정보 연결</h2></div>
+        <div className="section-heading"><h2>프로젝트 멘토 교수 연결</h2></div>
         <Card className="prof-note prof-note--pending">
           <span><CircleAlert size={18} /></span>
           <div>
@@ -396,23 +396,23 @@ function ProfessorBlock({
   if (status === "idle" || status === "loading" || status === "error") {
     return (
       <section id="professor-connection" className="prof-block">
-        <div className="section-heading"><h2>교수 공식 정보 연결</h2></div>
+        <div className="section-heading"><h2>프로젝트 멘토 교수 연결</h2></div>
         <Card className="prof-note prof-note--pending">
           <span><CircleAlert size={18} /></span>
           <div>
             <strong>
               {status === "loading"
-                ? "공식 프로필 근거를 연결하고 있어요"
+                ? "공식 후보 안에서 프로젝트 멘토를 찾고 있어요"
                 : status === "error"
                   ? "공식 교수 연결을 완료하지 못했어요"
-                  : "선택한 주제와 공식 교수 데이터를 연결할 수 있어요"}
+                  : "선택한 아이디어를 발전시킬 멘토 교수를 연결할 수 있어요"}
             </strong>
             <p>
-              {error ?? "주제·방법·확장 관점별 연결 이유와 공식 근거 ID를 확인합니다."}
+              {error ?? "주제·방법·확장 관점별 공식 후보를 좁힌 뒤 AI가 프로젝트 맥락으로 재정렬합니다."}
             </p>
             {status !== "loading" && (
               <button type="button" className="prof-load-button" onClick={onLoad}>
-                <ShieldCheck size={16} /> {status === "error" ? "다시 연결하기" : "세 관점의 교수님 찾기"}
+                <ShieldCheck size={16} /> {status === "error" ? "다시 연결하기" : "프로젝트 멘토 찾기"}
               </button>
             )}
           </div>
@@ -423,12 +423,16 @@ function ProfessorBlock({
   }
   return (
     <section id="professor-connection" className="prof-block">
-      <div className="section-heading"><h2>교수 공식 정보 연결</h2></div>
+      <div className="section-heading"><h2>프로젝트 멘토 교수 연결</h2></div>
       <Card className="prof-note">
-        <span><ShieldCheck size={18} /></span>
+        <span>{coverage?.rankingSource === "ai-reranked" ? <Sparkles size={18} /> : <ShieldCheck size={18} />}</span>
         <div>
-          <strong>공식 근거로만 연결했어요</strong>
-          <p>{PROFESSOR_DATA_NOTE} 현재 {coverage?.officialRecordCount ?? matches.length}명의 단국대 공식 교수 레코드 안에서 비교했습니다.</p>
+          <strong>
+            {coverage?.rankingSource === "ai-reranked"
+              ? "AI가 공식 근거 후보 안에서 프로젝트 멘토를 골랐어요"
+              : "공식 근거 규칙으로 프로젝트 멘토를 연결했어요"}
+          </strong>
+          <p>{PROFESSOR_DATA_NOTE} 현재 {coverage?.officialRecordCount ?? matches.length}명의 단국대 공식 교수 레코드 안에서 비교했으며, 프로젝트 성공이나 면담 가능성을 보장하지 않습니다.</p>
         </div>
       </Card>
       <div className="official-match-grid">
@@ -472,7 +476,7 @@ function ProfessorBlock({
             <Tag tone={match.strength === "LIMITED" ? "warning" : "blue"}>{STRENGTH_LABEL[match.strength]}</Tag>
             {professor.researchFields.map((field) => <Tag key={field}>{field}</Tag>)}
           </div>
-          <p className="official-match-reason"><CircleCheck size={15} /> <span>{match.reason}</span></p>
+          <p className="official-match-reason"><CircleCheck size={15} /> <span>{match.mentorFitReason ?? match.reason}</span></p>
           <dl className="official-evidence-list">
             <div><dt>근거 ID</dt><dd>{match.evidenceIds.join(" · ")}</dd></div>
             <div>
