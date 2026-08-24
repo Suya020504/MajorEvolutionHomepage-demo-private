@@ -21,13 +21,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { BrandLogo } from "@/components/brand/brand-logo";
+import { LandingProductPreview } from "@/components/landing/landing-product-preview";
 import { brandScene } from "@/lib/brand-assets";
 import { useProfileStore } from "@/store/profile-store";
 import styles from "./landing-page.module.css";
 
 const NAV_ITEMS = [
   { href: "#about", label: "서비스 소개" },
-  { href: "#journeys", label: "두 가지 여정" },
+  { href: "#preview", label: "서비스 화면" },
   { href: "#flow", label: "교수 연결 흐름" },
   { href: "#trust", label: "신뢰 원칙" },
 ] as const;
@@ -210,8 +211,8 @@ export function LandingPage() {
                 <Link href="/tutorial" className={styles.primaryCta}>
                   3분 방향 찾기 <ArrowRight size={19} aria-hidden="true" />
                 </Link>
-                <a href="#flow" className={styles.secondaryCta}>
-                  서비스 흐름 보기 <ArrowRight size={18} aria-hidden="true" />
+                <a href="#preview" className={styles.secondaryCta}>
+                  실제 화면 보기 <ArrowRight size={18} aria-hidden="true" />
                 </a>
               </div>
               <div className={styles.trustNote}>
@@ -280,6 +281,8 @@ export function LandingPage() {
             <p>AI는 생각과 근거를 정리하고, 실제 교수와의 대화와 학생의 선택이 다음 방향을 만듭니다.</p>
           </div>
         </section>
+
+        <LandingProductPreview />
 
         <section id="journeys" className={styles.journeySection} aria-labelledby="journey-title">
           <div className={styles.sectionInner}>
@@ -497,6 +500,7 @@ export function LandingPage() {
           </div>
           <nav aria-label="푸터 메뉴">
             <a href="#about">서비스 소개</a>
+            <a href="#preview">서비스 화면</a>
             <a href="#flow">이용 흐름</a>
             <a href="#trust">신뢰 원칙</a>
             <Link href="/home" onClick={markServiceEntered}>서비스 홈</Link>

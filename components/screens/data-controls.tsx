@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   BookOpenCheck,
   CalendarCheck,
+  ChevronDown,
   Download,
   FileText,
   FlaskConical,
@@ -24,9 +25,19 @@ import { useQuestStore } from "@/store/quest-store";
 import { useResearchStore } from "@/store/research-store";
 import { useAiProfessorStore } from "@/store/ai-professor-store";
 import { useProfileStore } from "@/store/profile-store";
+import { buildConversationMap } from "@/lib/ai-conversation-map";
 import styles from "./data-controls.module.css";
 
 type CategoryGroup = "direction" | "meeting" | "ai";
+
+type RecordItem = {
+  id: string;
+  title: string;
+  description: string;
+  latestAt: string | null;
+  remove: () => void;
+  warning?: string;
+};
 
 type Category = {
   id: string;
@@ -34,10 +45,8 @@ type Category = {
   label: string;
   description: string;
   details: string[];
-  count: number;
+  items: RecordItem[];
   unit: string;
-  latestAt: string | null;
-  clear: () => void;
   icon: LucideIcon;
   tone: "violet" | "mint" | "blue";
 };
@@ -94,6 +103,25 @@ function hasProfileValue(profile: ReturnType<typeof useProfileStore.getState>["p
   );
 }
 
+function excerpt(value: string, max = 84): string {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  return normalized.length > max ? `${normalized.slice(0, max).trim()}…` : normalized;
+}
+
+const PROFESSOR_SOURCE_LABEL = {
+  student: "내 고민으로 연결",
+  project: "프로젝트로 연결",
+  paper: "논문에서 연결",
+} as const;
+
+const QUEST_TOOL_LABEL = {
+  "paper-bite": "논문 한입",
+  "first-line": "첫 질문",
+  "silence-rescue": "침묵 구조대",
+  "email-guard": "이메일 초안",
+  "next-seed": "다음 만남 씨앗",
+} as const;
+
 export function DataControls({ showHeading = true }: { showHeading?: boolean }) {
   const profile = useProfileStore((state) => state.profile);
   const clearProfile = useProfileStore((state) => state.clearProfile);
@@ -106,26 +134,159 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
   const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
   const mentorLoopEntries = useResearchStore((state) => state.mentorLoopEntries);
   const clearGrowthDirectionBaseline = useResearchStore((state) => state.clearGrowthDirectionBaseline);
-  const clearGrowthProjectHistory = useResearchStore((state) => state.clearGrowthProjectHistory);
-  const clearProfessorMatches = useResearchStore((state) => state.clearProfessorMatches);
-  const clearFavoriteProfessors = useResearchStore((state) => state.clearFavoriteProfessors);
-  const clearKnockKitDrafts = useResearchStore((state) => state.clearKnockKitDrafts);
-  const clearMentorLoopEntries = useResearchStore((state) => state.clearMentorLoopEntries);
+  const removeGrowthProjectRecord = useResearchStore((state) => state.removeGrowthProjectRecord);
+  const removeGrowthProfessorRecord = useResearchStore((state) => state.removeGrowthProfessorRecord);
+  const removeFavoriteProfessors = useResearchStore((state) => state.removeFavoriteProfessors);
+  const deleteKnockKitDraft = useResearchStore((state) => state.deleteKnockKitDraft);
+  const deleteMentorLoopEntry = useResearchStore((state) => state.deleteMentorLoopEntry);
   const cards = useQuestStore((state) => state.cards);
-  const clearCards = useQuestStore((state) => state.clearCards);
+  const deleteCard = useQuestStore((state) => state.deleteCard);
   const aiMessages = useAiProfessorStore((state) => state.messages);
   const aiGrowthNotes = useAiProfessorStore((state) => state.growthNotes);
   const aiMapDecisions = useAiProfessorStore((state) => state.mapDecisions);
-  const clearAiConversation = useAiProfessorStore((state) => state.clearConversation);
-  const clearAiGrowthNotes = useAiProfessorStore((state) => state.clearGrowthNotes);
+  const removeConversationBranch = useAiProfessorStore((state) => state.removeConversationBranch);
+  const removeGrowthNote = useAiProfessorStore((state) => state.removeGrowthNote);
 
-  const [pending, setPending] = useState<string | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ categoryId: string; itemId: string } | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  const draftValues = Object.values(knockKitDrafts);
-  const loopValues = Object.values(mentorLoopEntries);
-  const profileCount = hasProfileValue(profile) ? 1 : 0;
-  const professorCount = growthProfessorHistory.length || matches.length;
+  const professorNameById = new Map<string, { name: string; department: string }>();
+  for (const match of matches) {
+    professorNameById.set(match.professor.id, {
+      name: `${match.professor.name} ${match.professor.title}`.trim(),
+      department: match.professor.department,
+    });
+  }
+  for (const record of growthProfessorHistory) {
+    professorNameById.set(record.professorId, {
+      name: `${record.name} ${record.title}`.trim(),
+      department: record.department || record.college,
+    });
+  }
+
+  const professorLabel = (professorId: string) => professorNameById.get(professorId) ?? {
+    name: "저장한 교수님",
+    department: `교수 ID ${professorId}`,
+  };
+
+  const profileItems: RecordItem[] = hasProfileValue(profile) ? [{
+    id: "profile",
+    title: profile.name ? `${profile.name}님의 기본 정보` : "내 기본 정보",
+    description: [profile.school, profile.major, profile.grade].filter(Boolean).join(" · ")
+      || excerpt(profile.careerConcern || profile.interests.join(", ")),
+    latestAt: profile.updatedAt,
+    remove: clearProfile,
+  }] : [];
+
+  const directionItems: RecordItem[] = growthDirectionBaseline ? [{
+    id: "direction-baseline",
+    title: growthDirectionBaseline.major || "처음 저장한 진로 방향",
+    description: excerpt([
+      ...growthDirectionBaseline.interests,
+      ...growthDirectionBaseline.careerConcerns,
+    ].join(" · ")),
+    latestAt: growthDirectionBaseline.capturedAt,
+    remove: clearGrowthDirectionBaseline,
+  }] : [];
+
+  const projectItems: RecordItem[] = growthProjectHistory.map((record) => ({
+    id: record.topicId,
+    title: record.title,
+    description: excerpt(record.question || "선택한 프로젝트 질문"),
+    latestAt: record.selectedAt,
+    remove: () => removeGrowthProjectRecord(record.topicId),
+  }));
+
+  const professorItems: RecordItem[] = growthProfessorHistory.map((record) => ({
+    id: `${record.source}:${record.professorId}`,
+    title: `${record.name} ${record.title}`.trim(),
+    description: excerpt([
+      PROFESSOR_SOURCE_LABEL[record.source],
+      record.department || record.college,
+      record.reason,
+    ].filter(Boolean).join(" · ")),
+    latestAt: record.selectedAt || record.connectedAt,
+    remove: () => removeGrowthProfessorRecord(record.professorId, record.source),
+  }));
+
+  const favoriteItems: RecordItem[] = favoriteProfessorIds.map((professorId) => {
+    const professor = professorLabel(professorId);
+    const connectedAt = growthProfessorHistory.find(
+      (record) => record.professorId === professorId,
+    )?.connectedAt ?? null;
+    return {
+      id: professorId,
+      title: professor.name,
+      description: professor.department || "관심 교수로 저장됨",
+      latestAt: connectedAt,
+      remove: () => removeFavoriteProfessors([professorId]),
+    };
+  });
+
+  const questItems: RecordItem[] = cards.map((card) => ({
+    id: card.id,
+    title: card.title,
+    description: excerpt(`${QUEST_TOOL_LABEL[card.tool]} · ${card.body}`),
+    latestAt: card.updatedAt,
+    remove: () => deleteCard(card.id),
+  }));
+
+  const draftItems: RecordItem[] = Object.entries(knockKitDrafts).map(([key, draft]) => {
+    const professor = professorLabel(draft.professorId);
+    return {
+      id: key,
+      title: `${professor.name} 면담 요청 초안`,
+      description: excerpt(draft.agenda || draft.emailDraft || professor.department),
+      latestAt: draft.updatedAt,
+      remove: () => deleteKnockKitDraft(key),
+    };
+  });
+
+  const loopItems: RecordItem[] = Object.entries(mentorLoopEntries).map(([key, entry]) => {
+    const professor = professorLabel(entry.professorId);
+    return {
+      id: key,
+      title: `${professor.name} 면담 후 기록`,
+      description: excerpt(entry.feedbackSummary || entry.commitment || entry.after.question),
+      latestAt: entry.updatedAt,
+      remove: () => deleteMentorLoopEntry(key),
+    };
+  });
+
+  const conversationNodes = buildConversationMap(aiMessages, aiGrowthNotes);
+  const pairedUserIds = new Set(
+    conversationNodes.flatMap((node) => node.userMessage ? [node.userMessage.id] : []),
+  );
+  const conversationItems: RecordItem[] = [
+    ...conversationNodes.map((node) => ({
+      id: node.id,
+      title: node.title,
+      description: excerpt(`${node.topic} · ${node.summary}`),
+      latestAt: node.assistantMessage.createdAt,
+      remove: () => removeConversationBranch(node.id),
+      warning: node.childIds.length
+        ? `이 주제에서 갈라진 후속 대화 ${node.childIds.length}개도 함께 삭제돼요.`
+        : "이 질문과 AI 답변 한 묶음만 삭제해요.",
+    })),
+    ...aiMessages
+      .filter((message) => message.role === "user" && !pairedUserIds.has(message.id))
+      .map((message) => ({
+        id: message.id,
+        title: "답변 전 저장된 내 질문",
+        description: excerpt(message.content),
+        latestAt: message.createdAt,
+        remove: () => removeConversationBranch(message.id),
+      })),
+  ];
+
+  const growthNoteItems: RecordItem[] = aiGrowthNotes.map((note) => ({
+    id: note.id,
+    title: note.title,
+    description: excerpt(note.body),
+    latestAt: note.createdAt,
+    remove: () => removeGrowthNote(note.id),
+  }));
 
   const categories: Category[] = [
     {
@@ -134,10 +295,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "내 기본 정보",
       description: "반복 입력을 줄이기 위해 저장한 학교·전공·관심 정보",
       details: ["이름, 학교, 전공, 학년", "진로 고민과 관심 키워드"],
-      count: profileCount,
+      items: profileItems,
       unit: "개 프로필",
-      latestAt: profile.updatedAt,
-      clear: clearProfile,
       icon: UserRound,
       tone: "blue",
     },
@@ -147,10 +306,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "처음 진로 방향",
       description: "관심과 고민이 어떻게 변했는지 비교하는 첫 기준",
       details: ["처음 확인한 전공·관심사", "처음 남긴 진로 고민"],
-      count: growthDirectionBaseline ? 1 : 0,
+      items: directionItems,
       unit: "개 기준",
-      latestAt: growthDirectionBaseline?.capturedAt ?? null,
-      clear: clearGrowthDirectionBaseline,
       icon: History,
       tone: "violet",
     },
@@ -160,10 +317,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "프로젝트 설계 이력",
       description: "AI와 구체화하고 최종 선택한 프로젝트의 제목과 질문",
       details: ["선택한 프로젝트 제목", "프로젝트 질문과 선택 시각"],
-      count: growthProjectHistory.length,
+      items: projectItems,
       unit: "개 프로젝트",
-      latestAt: latestDate(growthProjectHistory.map((record) => record.selectedAt)),
-      clear: clearGrowthProjectHistory,
       icon: FlaskConical,
       tone: "violet",
     },
@@ -173,10 +328,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "교수 연결 결과",
       description: "추천된 교수와 연결 근거, 내가 선택한 교수 기록",
       details: ["학생·프로젝트 기준 추천 결과", "연결 이유와 선택한 교수"],
-      count: professorCount,
+      items: professorItems,
       unit: "명",
-      latestAt: latestDate(growthProfessorHistory.flatMap((record) => [record.selectedAt, record.connectedAt])),
-      clear: clearProfessorMatches,
       icon: GraduationCap,
       tone: "mint",
     },
@@ -186,10 +339,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "관심 교수",
       description: "다시 확인하려고 저장한 교수 목록",
       details: ["교수 즐겨찾기 ID", "공식 프로필을 다시 찾기 위한 연결값"],
-      count: favoriteProfessorIds.length,
+      items: favoriteItems,
       unit: "명",
-      latestAt: null,
-      clear: clearFavoriteProfessors,
       icon: Heart,
       tone: "mint",
     },
@@ -199,10 +350,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "대화 준비 카드",
       description: "논문 한입·첫 질문·침묵 구조대·다음 행동 카드",
       details: ["학생이 저장한 카드 제목과 내용", "논문 출처·교수·프로젝트 연결값"],
-      count: cards.length,
+      items: questItems,
       unit: "장",
-      latestAt: latestDate(cards.map((card) => card.updatedAt)),
-      clear: clearCards,
       icon: BookOpenCheck,
       tone: "blue",
     },
@@ -212,10 +361,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "면담 요청 초안",
       description: "교수님께 보낼 첫 연락과 면담 질문 준비 내용",
       details: ["자기소개와 질문 3개", "면담 안건과 이메일 초안"],
-      count: draftValues.length,
+      items: draftItems,
       unit: "건",
-      latestAt: latestDate(draftValues.map((draft) => draft.updatedAt)),
-      clear: clearKnockKitDrafts,
       icon: FileText,
       tone: "blue",
     },
@@ -225,10 +372,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "면담 후 성장 기록",
       description: "받은 피드백과 프로젝트 수정 전후, 7일 행동",
       details: ["면담 요약과 추천 자료", "수정 전후 비교와 다음 행동"],
-      count: loopValues.length,
+      items: loopItems,
       unit: "건",
-      latestAt: latestDate(loopValues.map((entry) => entry.updatedAt)),
-      clear: clearMentorLoopEntries,
       icon: CalendarCheck,
       tone: "mint",
     },
@@ -238,10 +383,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "AI 교수님 대화",
       description: "진로 고민과 프로젝트 방향을 정리한 대화",
       details: ["내 질문과 AI 답변", "대화 지도에서 남김·제외한 선택"],
-      count: aiMessages.length,
-      unit: "개 메시지",
-      latestAt: latestDate(aiMessages.map((message) => message.createdAt)),
-      clear: clearAiConversation,
+      items: conversationItems,
+      unit: "개 주제",
       icon: MessageCircleMore,
       tone: "violet",
     },
@@ -251,17 +394,15 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       label: "AI 성장 메모",
       description: "대화에서 골라 직접 성장과정에 저장한 메모",
       details: ["메모 제목과 본문", "원본 대화 연결값과 저장 시각"],
-      count: aiGrowthNotes.length,
+      items: growthNoteItems,
       unit: "개 메모",
-      latestAt: latestDate(aiGrowthNotes.map((note) => note.createdAt)),
-      clear: clearAiGrowthNotes,
       icon: Sparkles,
       tone: "violet",
     },
   ];
 
-  const totalRecords = categories.reduce((sum, category) => sum + category.count, 0);
-  const activeCategories = categories.filter((category) => category.count > 0).length;
+  const totalRecords = categories.reduce((sum, category) => sum + category.items.length, 0);
+  const activeCategories = categories.filter((category) => category.items.length > 0).length;
 
   const downloadBackup = () => {
     const payload = {
@@ -335,7 +476,7 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
 
       {GROUPS.map((group) => {
         const groupedCategories = categories.filter((category) => category.group === group.id);
-        const groupCount = groupedCategories.reduce((sum, category) => sum + category.count, 0);
+        const groupCount = groupedCategories.reduce((sum, category) => sum + category.items.length, 0);
         return (
           <section key={group.id} className={styles.group} aria-labelledby={`record-group-${group.id}`}>
             <header className={styles.groupHeading}>
@@ -348,13 +489,20 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
             <div className={styles.categoryGrid}>
               {groupedCategories.map((category) => {
                 const Icon = category.icon;
-                const isPending = pending === category.id;
+                const count = category.items.length;
+                const isExpanded = expandedCategory === category.id;
+                const categoryLatestAt = latestDate(category.items.map((item) => item.latestAt));
+                const visibleItems = [...category.items].sort((a, b) => {
+                  const aTime = a.latestAt ? new Date(a.latestAt).getTime() : 0;
+                  const bTime = b.latestAt ? new Date(b.latestAt).getTime() : 0;
+                  return bTime - aTime;
+                });
                 return (
                   <article key={category.id} className={`${styles.categoryCard} ${styles[`tone_${category.tone}`]}`}>
                     <div className={styles.categoryTop}>
                       <span className={styles.categoryIcon}><Icon size={21} aria-hidden="true" /></span>
-                      <span className={category.count ? styles.savedBadge : styles.emptyBadge}>
-                        {category.count ? `${category.count}${category.unit}` : "저장 전"}
+                      <span className={count ? styles.savedBadge : styles.emptyBadge}>
+                        {count ? `${count}${category.unit}` : "저장 전"}
                       </span>
                     </div>
                     <div className={styles.categoryCopy}>
@@ -365,43 +513,82 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
                       {category.details.map((detail) => <li key={detail}>{detail}</li>)}
                     </ul>
                     <div className={styles.categoryMeta}>
-                      <span>{category.count
-                        ? category.latestAt ? `최근 ${formatDate(category.latestAt)}` : "저장 시각 정보 없음"
+                      <span>{count
+                        ? categoryLatestAt ? `최근 ${formatDate(categoryLatestAt)}` : "저장 시각 정보 없음"
                         : "아직 저장된 내용이 없어요"}</span>
                     </div>
-                    {isPending ? (
-                      <div className={styles.confirmBox} role="alert">
-                        <strong>‘{category.label}’ 기록을 삭제할까요?</strong>
-                        <p>이 종류의 기록 {category.count}{category.unit}을 모두 삭제하며 되돌릴 수 없어요.</p>
-                        <div>
-                          <button type="button" onClick={() => setPending(null)}>취소</button>
-                          <button
-                            type="button"
-                            className={styles.dangerButton}
-                            onClick={() => {
-                              category.clear();
-                              setPending(null);
-                              setDone(`‘${category.label}’ 기록을 삭제했습니다.`);
-                            }}
-                          >
-                            삭제하기
-                          </button>
-                        </div>
+                    <button
+                      type="button"
+                      className={styles.manageButton}
+                      disabled={count === 0}
+                      aria-expanded={isExpanded}
+                      aria-controls={`record-items-${category.id}`}
+                      onClick={() => {
+                        setDone(null);
+                        setPending(null);
+                        setExpandedCategory(isExpanded ? null : category.id);
+                      }}
+                    >
+                      <span>{count ? isExpanded ? "항목 닫기" : `${count}개 항목별 관리` : "관리할 기록 없음"}</span>
+                      {count ? <ChevronDown size={16} aria-hidden="true" /> : null}
+                    </button>
+
+                    {isExpanded ? (
+                      <div id={`record-items-${category.id}`} className={styles.itemPanel}>
+                        <p className={styles.itemGuide}>삭제할 항목만 골라 정리하세요. 나머지 기록은 그대로 남아요.</p>
+                        <ul className={styles.itemList}>
+                          {visibleItems.map((item) => {
+                            const isPending = pending?.categoryId === category.id
+                              && pending.itemId === item.id;
+                            return (
+                              <li key={item.id} className={styles.recordItem}>
+                                <div className={styles.recordItemRow}>
+                                  <div className={styles.recordItemCopy}>
+                                    <strong>{item.title}</strong>
+                                    <p>{item.description || "저장된 세부 내용"}</p>
+                                    <time>{formatDate(item.latestAt)}</time>
+                                  </div>
+                                  {!isPending ? (
+                                    <button
+                                      type="button"
+                                      className={styles.itemDeleteButton}
+                                      aria-label={`${item.title} 삭제`}
+                                      onClick={() => {
+                                        setDone(null);
+                                        setPending({ categoryId: category.id, itemId: item.id });
+                                      }}
+                                    >
+                                      <Trash2 size={15} aria-hidden="true" />
+                                      삭제
+                                    </button>
+                                  ) : null}
+                                </div>
+                                {isPending ? (
+                                  <div className={styles.confirmBox} role="alert">
+                                    <strong>‘{item.title}’ 항목만 삭제할까요?</strong>
+                                    <p>{item.warning || "이 항목만 삭제하고 같은 종류의 다른 기록은 남겨둡니다."}</p>
+                                    <div>
+                                      <button type="button" onClick={() => setPending(null)}>취소</button>
+                                      <button
+                                        type="button"
+                                        className={styles.dangerButton}
+                                        onClick={() => {
+                                          item.remove();
+                                          setPending(null);
+                                          setDone(`‘${item.title}’ 항목만 삭제했습니다.`);
+                                        }}
+                                      >
+                                        이 항목 삭제
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </li>
+                            );
+                          })}
+                        </ul>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className={styles.deleteButton}
-                        disabled={category.count === 0}
-                        onClick={() => {
-                          setDone(null);
-                          setPending(category.id);
-                        }}
-                      >
-                        <Trash2 size={15} aria-hidden="true" />
-                        {category.count ? "이 종류 기록 삭제" : "삭제할 기록 없음"}
-                      </button>
-                    )}
+                    ) : null}
                   </article>
                 );
               })}

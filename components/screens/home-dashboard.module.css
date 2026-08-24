@@ -330,6 +330,396 @@
 .utilityList > a > svg:last-child { color: #929caf; transition: color 160ms ease, transform 160ms ease; }
 .utilityList > a:hover > svg:last-child { color: #6548df; transform: translateX(2px); }
 
+.aiMapPreviewSection {
+  position: relative;
+  overflow: hidden;
+  padding: 26px;
+  border: 1px solid #dce2ee;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 94% 0%, rgba(117, 87, 246, 0.09), transparent 31%),
+    #fff;
+  box-shadow: 0 13px 34px rgba(36, 50, 91, 0.075);
+}
+
+.aiMapPreviewSection::before {
+  position: absolute;
+  top: 0;
+  right: 26px;
+  left: 26px;
+  height: 3px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, #6548df, #31c9ae);
+  content: "";
+}
+
+.aiMapPreviewHeader {
+  display: grid;
+  gap: 16px;
+}
+
+.aiMapPreviewHeader > div:first-child {
+  min-width: 0;
+}
+
+.aiMapPreviewEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #6548df;
+  font-size: 11px;
+  font-weight: 790;
+}
+
+.aiMapPreviewHeader h2 {
+  margin-top: 8px;
+  color: #111a36;
+  font-size: 22px;
+  font-weight: 840;
+  letter-spacing: -0.035em;
+  line-height: 1.25;
+  word-break: keep-all;
+}
+
+.aiMapPreviewHeader p {
+  max-width: 680px;
+  margin-top: 7px;
+  color: #6d7890;
+  font-size: 12px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.aiMapPreviewMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.aiMapPreviewMetrics div {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e2e6ef;
+  border-radius: 12px;
+  background: rgba(249, 250, 254, 0.9);
+}
+
+.aiMapPreviewMetrics dt {
+  overflow: hidden;
+  color: #8b95aa;
+  font-size: 9px;
+  font-weight: 680;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aiMapPreviewMetrics dd {
+  margin-top: 3px;
+  color: #252f50;
+  font-size: 19px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.aiMapPreviewBody {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.aiMapMiniCanvas {
+  position: relative;
+  min-width: 0;
+  min-height: 250px;
+  overflow-x: auto;
+  padding: 18px 14px 16px;
+  border: 1px solid #e0e5ef;
+  border-radius: 17px;
+  background-color: #fafbfe;
+  background-image:
+    linear-gradient(#eaedf4 1px, transparent 1px),
+    linear-gradient(90deg, #eaedf4 1px, transparent 1px);
+  background-size: 22px 22px;
+  scrollbar-width: thin;
+}
+
+.aiMapStart {
+  display: flex;
+  width: fit-content;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto;
+  padding: 0 10px;
+  border: 1px solid #dce2ee;
+  border-radius: 9px;
+  color: #4b5874;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(36, 50, 91, 0.06);
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.aiMapStartLine {
+  display: block;
+  width: 1px;
+  height: 16px;
+  margin: 0 auto;
+  background: #bfc7d7;
+}
+
+.aiMapTree,
+.aiMapTree ol {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aiMapTree {
+  width: max-content;
+  min-width: 100%;
+  padding-bottom: 4px;
+}
+
+.aiMapTree ol {
+  padding-top: 18px;
+}
+
+.aiMapTreeItem {
+  position: relative;
+  padding: 18px 5px 0;
+  text-align: center;
+}
+
+.aiMapTree > .aiMapTreeItem {
+  padding-top: 0;
+}
+
+.aiMapTreeItem::before,
+.aiMapTreeItem::after {
+  position: absolute;
+  top: 0;
+  right: 50%;
+  width: 50%;
+  height: 18px;
+  border-top: 1px solid #bfc7d7;
+  content: "";
+}
+
+.aiMapTreeItem::after {
+  right: auto;
+  left: 50%;
+  border-left: 1px solid #bfc7d7;
+}
+
+.aiMapTreeItem:only-child::before,
+.aiMapTreeItem:only-child::after,
+.aiMapTree > .aiMapTreeItem::before,
+.aiMapTree > .aiMapTreeItem::after {
+  display: none;
+}
+
+.aiMapTreeItem:first-child::before,
+.aiMapTreeItem:last-child::after {
+  border: 0;
+}
+
+.aiMapTreeItem:last-child::before {
+  border-right: 1px solid #bfc7d7;
+  border-radius: 0 7px 0 0;
+}
+
+.aiMapTreeItem:first-child::after {
+  border-radius: 7px 0 0 0;
+}
+
+.aiMapTreeItem > ol::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 18px;
+  background: #bfc7d7;
+  content: "";
+}
+
+.aiMapNode {
+  display: grid;
+  width: 142px;
+  min-height: 76px;
+  margin-inline: auto;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #dce2ec;
+  border-radius: 11px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 5px 14px rgba(37, 49, 82, 0.055);
+}
+
+.aiMapNode > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #6548df;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.aiMapNode[data-type="insight"] > span { color: #90691f; }
+.aiMapNode[data-type="decision"] > span { color: #148874; }
+.aiMapNode[data-type="action"] > span { color: #2a64a2; }
+
+.aiMapNode strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #17213d;
+  font-size: 10px;
+  font-weight: 790;
+  line-height: 1.4;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.aiMapNode small {
+  color: #8b95aa;
+  font-size: 8px;
+}
+
+.aiMapMoreNodes {
+  display: block;
+  width: fit-content;
+  margin: 9px auto 0;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #6548df;
+  background: #f0edff;
+  font-size: 9px;
+  font-weight: 760;
+}
+
+.aiMapLatest {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 20px;
+  border-radius: 17px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(117, 87, 246, 0.54), transparent 42%),
+    #17214d;
+}
+
+.aiMapLatest > span {
+  color: #9ce3d5;
+  font-size: 10px;
+  font-weight: 760;
+}
+
+.aiMapLatest > strong {
+  margin-top: 10px;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 820;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+.aiMapLatest > p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 8px;
+  color: #ccd4ef;
+  font-size: 11px;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.aiMapLatest > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: auto;
+  padding: 0 14px;
+  border-radius: 11px;
+  color: #17214d;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.aiMapPreviewLoading,
+.aiMapPreviewEmpty {
+  margin-top: 20px;
+  border: 1px dashed #d8deea;
+  border-radius: 16px;
+  color: #6d7890;
+  background: #fafbfe;
+}
+
+.aiMapPreviewLoading {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.aiMapPreviewEmpty {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+  padding: 18px;
+}
+
+.aiMapPreviewEmpty > span {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 13px;
+  color: #6548df;
+  background: #f0edff;
+}
+
+.aiMapPreviewEmpty strong {
+  color: #222d48;
+  font-size: 14px;
+  font-weight: 790;
+}
+
+.aiMapPreviewEmpty p {
+  margin-top: 4px;
+  color: #7d879c;
+  font-size: 11px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.aiMapPreviewEmpty > a {
+  display: inline-flex;
+  min-height: 42px;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 11px;
+  color: #fff;
+  background: #5e43d9;
+  font-size: 12px;
+  font-weight: 790;
+}
+
 .visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .quickOverlayBackdrop {
@@ -365,6 +755,14 @@
 @media (min-width: 1024px) {
   .mobileHeader { display: none; }
   .dashboard { padding: 38px 42px 58px; }
+  .aiMapPreviewHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+  .aiMapPreviewMetrics { min-width: 286px; }
+  .aiMapPreviewBody { grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.65fr); }
+  .aiMapPreviewEmpty { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .aiMapPreviewEmpty > a { min-width: 164px; grid-column: auto; padding-inline: 16px; }
 }
 
 @media (max-width: 900px) and (min-width: 760px) {
@@ -392,6 +790,9 @@
   .mobileStepLabel { display: block; }
   .recentSection,
   .utilitySection { padding: 21px; border-radius: 19px; }
+  .aiMapPreviewSection { padding: 22px 18px; border-radius: 19px; }
+  .aiMapPreviewHeader h2 { font-size: 20px; }
+  .aiMapMiniCanvas { min-height: 228px; margin-inline: -2px; padding-inline: 10px; }
 
   .quickOverlayBackdrop {
     align-items: stretch;

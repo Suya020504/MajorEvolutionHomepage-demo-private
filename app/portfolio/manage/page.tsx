@@ -6,7 +6,7 @@ export default function Page() {
   return (
     <AppShell
       title="내 기록 관리"
-      backHref="/portfolio"
+      backHref="/profile"
       className="portfolio-screen"
       bottomNav={<ServiceBottomNav />}
     >

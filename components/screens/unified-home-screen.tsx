@@ -27,6 +27,7 @@ import type { LucideIcon } from "lucide-react";
 import { AppShell } from "@/components/app/primitives";
 import { ServiceBottomNav } from "@/components/app/side-nav";
 import { BrandLogo } from "@/components/brand/brand-logo";
+import { HomeAiMapPreview } from "@/components/screens/home-ai-map-preview";
 import { ProfessorQuickStartOverlay } from "@/components/screens/professor-quick-start-overlay";
 import { ProjectQuickStartOverlay } from "@/components/screens/project-quick-start-overlay";
 import type { ProfessorAcademicTaxonomy } from "@/lib/professor-academic-taxonomy";
@@ -454,6 +455,8 @@ export function UnifiedHomeScreen({
             })}
           </ol>
         </section>
+
+        <HomeAiMapPreview />
 
         <div className={styles.lowerGrid}>
           <section className={styles.recentSection} aria-labelledby="recent-title">

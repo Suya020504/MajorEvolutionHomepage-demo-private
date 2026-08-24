@@ -70,6 +70,7 @@
   font-size: 19px;
   font-weight: 820;
   letter-spacing: -0.025em;
+  word-break: keep-all;
 }
 
 .primaryCopy p {
@@ -78,6 +79,12 @@
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.5;
+  word-break: keep-all;
+}
+
+.primaryCopy,
+.primaryActions {
+  min-width: 0;
 }
 
 .primaryActions {
@@ -98,6 +105,8 @@
   box-shadow: 0 4px 12px rgba(59, 46, 158, 0.17);
   font-size: 15px;
   font-weight: 800;
+  text-align: center;
+  word-break: keep-all;
 }
 
 .primaryButton:hover { background: #5739db; }
@@ -241,6 +250,8 @@
 
 .utilityLinks a:hover { color: var(--brand-purple); transform: translateX(2px); }
 
+.utilityLinks a:last-child { border-bottom: 0; }
+
 .utilityLinks a > svg:first-child { color: var(--text-secondary); }
 
 .trustNote {
@@ -253,7 +264,7 @@
   font-weight: 720;
 }
 
-@media (min-width: 720px) {
+@media (min-width: 1024px) {
   .shell :global(.screen-content) { padding: 0 44px 58px; }
   .hub { padding-top: 22px; }
   .mobileHeader { display: none; }
@@ -269,8 +280,25 @@
   .primaryIcon { width: 58px; height: 58px; }
   .primaryCopy h2 { font-size: 24px; }
   .primaryActions { align-content: center; }
-  .primaryButton { min-height: 56px; }
+  .primaryButton { min-height: 56px; white-space: nowrap; }
   .row { min-height: 84px; padding: 0 8px; }
+}
+
+/*
+ * 560px 모바일 셸이 유지되는 720~1023px에서도 카드가 데스크톱 3열로
+ * 되돌아가지 않도록 명시적으로 잠급니다. 오래 열린 탭이나 공통 카드 재사용
+ * 화면에서도 한국어가 한 글자씩 세로로 무너지는 것을 막는 방어 규칙입니다.
+ */
+@media (max-width: 1023px) {
+  .primaryTask {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .primaryCopy,
+  .primaryActions,
+  .primaryButton {
+    width: 100%;
+  }
 }
 
 @media (max-width: 420px) {
