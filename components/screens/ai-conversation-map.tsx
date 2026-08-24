@@ -53,6 +53,13 @@ const TYPE_ICONS = {
   action: ListChecks,
 } satisfies Record<ConversationMapNodeType, typeof CircleHelp>;
 
+const JOURNEY_LABELS = {
+  question: "생각 씨앗",
+  insight: "발견한 단서",
+  decision: "선택한 갈림길",
+  action: "다음 발걸음",
+} satisfies Record<ConversationMapNodeType, string>;
+
 function excerpt(value: string, max = 260) {
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length > max ? `${normalized.slice(0, max).trim()}…` : normalized;
@@ -112,8 +119,8 @@ export function AiConversationMap({
       <header className={styles.mapHeader}>
         <div>
           <p className={styles.mapEyebrow}><Sparkles size={14} aria-hidden="true" /> 대화에서 자동 정리</p>
-          <h2 id="conversation-map-title">내 생각이 발전한 흐름</h2>
-          <p>노드를 누르면 그 생각이 나온 실제 대화와 앞뒤 연결을 확인할 수 있어요.</p>
+          <h2 id="conversation-map-title">대화가 자라는 나의 생각 지도</h2>
+          <p>긴 대화는 한 줄 핵심으로 접고, 새 질문이 생기면 실제 가지처럼 갈라져요. 노드를 누르면 원문과 앞뒤 흐름이 열려요.</p>
         </div>
         <div className={styles.mapSummary} aria-label="대화 지도 요약">
           <span><strong>{nodes.length}</strong>개 주제</span>
@@ -127,8 +134,8 @@ export function AiConversationMap({
           <div className={styles.mapCanvasToolbar}>
             <div>
               <MapIcon size={17} aria-hidden="true" />
-              <strong>주요 대화 흐름</strong>
-              <span>AI가 정리한 유형</span>
+              <strong>생각 진화 지도</strong>
+              <span>씨앗부터 다음 발걸음까지</span>
             </div>
             {excludedCount ? (
               <button
@@ -142,7 +149,10 @@ export function AiConversationMap({
             ) : null}
           </div>
 
-          <div className={styles.mapCanvas} aria-label="AI 교수님 주요 대화 흐름도">
+          <div className={styles.mapCanvas} aria-label="나의 생각 진화 갈래 지도">
+            <p className={styles.mapSignatureNote}>
+              <GitBranch size={14} aria-hidden="true" /> 대화가 깊어지면 새 질문은 옆 가지로 자라요
+            </p>
             <div className={styles.mapStartNode}>
               <span><MessageCircleMore size={17} aria-hidden="true" /></span>
               <div><strong>대화 시작</strong><small>내 고민을 말했어요</small></div>
@@ -172,10 +182,13 @@ export function AiConversationMap({
                 <button type="button" onClick={() => setShowExcluded(true)}>제외한 흐름 확인하기</button>
               </div>
             ) : (
-              <div className={styles.mapOutcomeNode}>
-                <Compass size={18} aria-hidden="true" />
-                <div><strong>지금의 방향</strong><small>남긴 핵심을 성장과정에서 이어가요</small></div>
-              </div>
+              <>
+                <ArrowDown className={styles.mapOutcomeArrow} size={18} aria-hidden="true" />
+                <div className={styles.mapOutcomeNode}>
+                  <Compass size={18} aria-hidden="true" />
+                  <div><strong>지금의 나침반</strong><small>남긴 핵심을 교수 만남과 프로젝트로 이어가요</small></div>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -241,7 +254,7 @@ export function AiConversationMap({
               </article>
               <article>
                 <span>AI 교수님 답변</span>
-                <p>{excerpt(selectedNode.assistantMessage.content, 360)}</p>
+                <p className={styles.nodeSourceFullText}>{selectedNode.assistantMessage.content}</p>
               </article>
             </section>
 
@@ -333,6 +346,7 @@ function ConversationTreeNode({
   onSelect: (id: string) => void;
 }) {
   const Icon = TYPE_ICONS[node.type];
+  const journeyLabel = JOURNEY_LABELS[node.type];
   const decision = decisions[node.id];
   const children = node.childIds
     .map((id) => nodes.find((candidate) => candidate.id === id))
@@ -346,21 +360,22 @@ function ConversationTreeNode({
         data-type={node.type}
         data-selected={selectedId === node.id ? "true" : "false"}
         data-decision={decision ?? "none"}
+        data-branching={children.length > 1 ? "true" : "false"}
         aria-pressed={selectedId === node.id}
         onClick={() => onSelect(node.id)}
       >
         <span className={styles.mapNodeMeta}>
-          <span><Icon size={14} aria-hidden="true" /> {node.typeLabel}</span>
+          <span><Icon size={14} aria-hidden="true" /> {journeyLabel}</span>
           <small>{node.topic}</small>
         </span>
         <strong>{node.title}</strong>
-        <p>{node.summary}</p>
+        <p>{node.mapSummary}</p>
         <span className={styles.mapNodeState}>
           {decision === "keep" ? <><Bookmark size={13} fill="currentColor" /> 핵심으로 남김</> : null}
           {decision === "exclude" ? <><EyeOff size={13} /> 지도에서 제외됨</> : null}
-          {!decision && children.length > 1 ? <><GitBranch size={13} /> {children.length}개 갈래로 확장</> : null}
+          {!decision && children.length > 1 ? <><GitBranch size={13} /> 생각 가지 {children.length}개가 열렸어요</> : null}
           {!decision && children.length <= 1 && node.isSaved ? <><Check size={13} /> 성장 메모에 반영</> : null}
-          {!decision && children.length <= 1 && !node.isSaved ? <>세부 대화 보기 <ArrowRight size={13} /></> : null}
+          {!decision && children.length <= 1 && !node.isSaved ? <>원문 대화 열기 <ArrowRight size={13} /></> : null}
         </span>
       </button>
       {children.length ? (

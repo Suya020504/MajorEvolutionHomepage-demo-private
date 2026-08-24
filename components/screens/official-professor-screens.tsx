@@ -63,19 +63,11 @@ import type {
 import { ProfessorMatchRequestAbortedError } from "@/lib/professor-match-http";
 import { resolveProfessorPortrait } from "@/lib/professor-photo";
 import { MAX_FAVORITE_PROFESSORS } from "@/lib/professor-paper-selection";
-import { buildProfessorPitch } from "@/lib/professor-pitch";
+import { buildProfessorPitch, professorMatchRoleLabel } from "@/lib/professor-pitch";
 import { useResearchStore } from "@/store/research-store";
 
-const ROLE_LABEL: Record<ProfessorMatchRole, string> = {
-  TOPIC: "주제 연결형",
-  METHOD: "방법 연결형",
-  CONTEXT: "확장 관점형",
-};
-
 function matchRoleLabel(match: ProfessorMatch): string {
-  return match.role === "CONTEXT" && match.decisionBasis.departmentMatchesMajor
-    ? "같은 학과 연결"
-    : ROLE_LABEL[match.role];
+  return professorMatchRoleLabel(match);
 }
 
 function officialDataStatusLabel(status: ProfessorDataStatus, subject: string): string {
@@ -495,7 +487,7 @@ export function OfficialProfessorsScreen({
       clearProfessorMatches();
     }
     setContext((current) => {
-      if (storedDiscoveryTopic && matches.length > 0) {
+      if (storedDiscoveryTopic) {
         return professorMatchTopicToDiscoveryContext(storedDiscoveryTopic);
       }
       const sourceMajor = current.major || conditions.major || "";
@@ -806,6 +798,10 @@ export function ProfessorPitchScreen() {
   const hasHomeDepartmentMatch = matches.some(
     (match) => match.role === "CONTEXT" && match.decisionBasis.departmentMatchesMajor,
   );
+  const homeDepartmentMatch = matches.find(
+    (match) => match.role === "CONTEXT" && match.decisionBasis.departmentMatchesMajor,
+  );
+  const matchedAffiliation = homeDepartmentMatch?.decisionBasis.matchedAcademicAffiliation;
 
   return (
     <AppShell title="교수님 3인 피칭" backHref="/professors" className="professor-pitch-screen">
@@ -850,8 +846,10 @@ export function ProfessorPitchScreen() {
                   <h1 id="professor-pitch-title">세 분 중 한 분과 첫 대화를 시작해 보세요</h1>
                   <p>
                     {hasHomeDepartmentMatch
-                      ? "같은 학과 교수님을 가장 가까운 시작점으로 먼저 제안하고, 다른 학과에서는 내 관심 주제와 방법에 맞는 교수님을 찾아드렸어요."
-                      : "공식 데이터에서 같은 학과 교수를 확인하지 못해, 내 관심 주제와 방법을 넓혀 볼 세 분을 근거와 함께 제안했어요."}
+                      ? matchedAffiliation
+                        ? `입력한 ${matchedAffiliation.label} ‘${matchedAffiliation.major}’의 공식 소속 교수님을 가까운 시작점으로 먼저 제안하고, 다른 학과에서는 내 관심 주제와 방법에 맞는 교수님을 찾아드렸어요.`
+                        : "입력한 학과의 공식 소속 교수님을 가까운 시작점으로 먼저 제안하고, 다른 학과에서는 내 관심 주제와 방법에 맞는 교수님을 찾아드렸어요."
+                      : "공식 데이터에서 입력한 주전공·부전공·복수전공 소속 교수를 확인하지 못해, 내 관심 주제와 방법을 넓혀 볼 세 분을 근거와 함께 제안했어요."}
                   </p>
                   <small>
                     <ShieldCheck size={14} aria-hidden="true" />

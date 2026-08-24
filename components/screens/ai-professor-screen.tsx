@@ -113,6 +113,12 @@ export function AiProfessorScreen() {
     messageEndRef.current?.scrollIntoView({ block: "nearest" });
   }, [isSending, messages.length]);
 
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("view") === "map") {
+      setViewMode("map");
+    }
+  }, []);
+
   const requestReply = async (conversation: GrowthProfessorMessage[]) => {
     setError("");
     setSavedMessageId(null);

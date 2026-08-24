@@ -15,6 +15,7 @@ import type {
   ProfessorDataStatus,
   ProfessorMatch,
   ProfessorMatchDecisionBasis,
+  ProfessorMatchedAcademicAffiliation,
   ProfessorMatchResponse,
   ProfessorMatchRole,
   ProfessorMatchStrength,
@@ -454,7 +455,9 @@ type TopicMatchContext = {
   evidenceText: string;
   topicTerms: string[];
   evidenceTopicTerms: string[];
-  normalizedMajor: string;
+  academicAffiliations: Array<Omit<ProfessorMatchedAcademicAffiliation, "officialDepartment"> & {
+    normalizedMajor: string;
+  }>;
   normalizedMethods: string[];
   /**
    * 주제 쪽에서 이미 걸린 개념만 남깁니다.
@@ -469,11 +472,39 @@ function buildTopicMatchContext(topic: ProfessorMatchTopic): TopicMatchContext {
   // 교수의 연구분야와 직접 일치하는 근거로 간주하지 않습니다.
   const evidenceText = normalize(buildProfessorEvidenceText(topic));
   const topicTerms = meaningfulTerms(evidenceText);
+  const primaryMajor = topic.major.trim();
+  const secondaryMajor = topic.secondaryMajor?.trim() ?? "";
+  const academicAffiliations: TopicMatchContext["academicAffiliations"] = [];
+  if (primaryMajor) {
+    academicAffiliations.push({
+      type: "PRIMARY",
+      label: "주전공",
+      college: topic.college?.trim() ?? "",
+      major: primaryMajor,
+      normalizedMajor: normalize(comparableDepartmentName(primaryMajor)),
+    });
+  }
+  if (
+    secondaryMajor
+    && topic.secondaryMajorType
+    && topic.secondaryMajorType !== "없음"
+    && !academicAffiliations.some((affiliation) =>
+      comparableDepartmentName(affiliation.major)
+        === comparableDepartmentName(secondaryMajor))
+  ) {
+    academicAffiliations.push({
+      type: "SECONDARY",
+      label: topic.secondaryMajorType.trim(),
+      college: topic.secondaryCollege?.trim() ?? "",
+      major: secondaryMajor,
+      normalizedMajor: normalize(comparableDepartmentName(secondaryMajor)),
+    });
+  }
   return {
     evidenceText,
     topicTerms,
     evidenceTopicTerms: topicTerms.filter((term) => !genericTerms.has(term)),
-    normalizedMajor: normalize(topic.major ?? ""),
+    academicAffiliations,
     normalizedMethods: topic.methods.map((method) => normalize(method)),
     activeConcepts: normalizedConcepts.filter((concept) =>
       concept.topicTerms.some((term) => normalizedContains(evidenceText, term))),
@@ -535,11 +566,15 @@ function evaluateProfessor(
   const publication = hasRelevantEvidence
     ? publicationEvidence(professor, evidenceTopicTerms, index.publicationTitles)
     : undefined;
-  const departmentMatchesMajor = Boolean(
-    context.normalizedMajor
-    && index.departments.some((department) =>
-      comparableDepartmentName(department) === comparableDepartmentName(context.normalizedMajor)),
-  );
+  const matchedAcademicAffiliation = context.academicAffiliations
+    .map((affiliation) => {
+      const officialDepartment = index.departments.find((department) =>
+        normalize(comparableDepartmentName(department)) === affiliation.normalizedMajor);
+      return officialDepartment ? { ...affiliation, officialDepartment } : null;
+    })
+    .find((affiliation) => Boolean(affiliation))
+    ?? null;
+  const departmentMatchesMajor = Boolean(matchedAcademicAffiliation);
 
   let role: ProfessorMatchRole = "CONTEXT";
   let strength: ProfessorMatchStrength = "LIMITED";
@@ -579,6 +614,17 @@ function evaluateProfessor(
   const decisionBasis: ProfessorMatchDecisionBasis = {
     matchedConcepts: conceptMatches.map((concept) => concept.label),
     departmentMatchesMajor,
+    ...(matchedAcademicAffiliation
+      ? {
+          matchedAcademicAffiliation: {
+            type: matchedAcademicAffiliation.type,
+            label: matchedAcademicAffiliation.label,
+            college: matchedAcademicAffiliation.college,
+            major: matchedAcademicAffiliation.major,
+            officialDepartment: matchedAcademicAffiliation.officialDepartment,
+          },
+        }
+      : {}),
     roleMatches: {
       topic: roleMatches.has("TOPIC"),
       method: roleMatches.has("METHOD"),
@@ -772,6 +818,10 @@ function presentAsHomeDepartment(
   topic: ProfessorMatchTopic,
 ): ProfessorMatch {
   const professor = candidate.match.professor;
+  const affiliation = candidate.match.decisionBasis.matchedAcademicAffiliation;
+  const affiliationLabel = affiliation?.label || "입력 전공";
+  const affiliationMajor = affiliation?.major || topic.major;
+  const officialDepartment = affiliation?.officialDepartment || professor.department;
   const relatedEvidence = candidate.hasRelevantEvidence
     ? candidate.match.matchedTerms.slice(0, 2)
     : [];
@@ -783,8 +833,8 @@ function presentAsHomeDepartment(
     ...candidate.match,
     role: "CONTEXT",
     strength: candidate.hasRelevantEvidence ? candidate.match.strength : "LIMITED",
-    matchedTerms: unique([professor.department, ...relatedEvidence]).slice(0, 3),
-    reason: `학생이 입력한 전공 ‘${topic.major}’와 공식 프로필의 소속 ‘${professor.department}’이 같은 학과로 확인되어, 가장 가까운 전공 맥락의 첫 대화 후보로 제안합니다.${relatedNote}`,
+    matchedTerms: unique([officialDepartment, ...relatedEvidence]).slice(0, 3),
+    reason: `학생이 입력한 ${affiliationLabel} ‘${affiliationMajor}’와 공식 프로필의 소속 ‘${officialDepartment}’이 같은 학과로 확인되어, 가장 가까운 전공 맥락의 첫 대화 후보로 제안합니다.${relatedNote}`,
     doesNotEstablish: unique([
       ...candidate.match.doesNotEstablish,
       ...(!candidate.hasRelevantEvidence
@@ -891,8 +941,9 @@ export function matchOfficialProfessors(
   const matchByRole = new Map<ProfessorMatchRole, ProfessorMatch>();
 
   /*
-   * 첫 후보는 학생이 상대적으로 접근하기 쉬운 같은 학과 교수입니다.
-   * 같은 학과라는 공식 소속 근거와 관심 주제 근거는 분리해서 설명합니다.
+   * 첫 후보는 학생이 상대적으로 접근하기 쉬운 학업 소속 교수입니다.
+   * 주전공과, 심층분석에서 입력한 부·복수전공을 함께 확인하되
+   * 공식 소속 근거와 관심 주제 근거는 분리해서 설명합니다.
    */
   const homeDepartmentCandidate = officialProfileCandidates
     .filter((item) => item.match.decisionBasis.departmentMatchesMajor)
@@ -900,6 +951,28 @@ export function matchOfficialProfessors(
       if (left.hasRelevantEvidence !== right.hasRelevantEvidence) {
         return left.hasRelevantEvidence ? -1 : 1;
       }
+      const strengthPriority: Record<ProfessorMatchStrength, number> = {
+        DIRECT: 0,
+        RELATED: 1,
+        LIMITED: 2,
+      };
+      const strengthDifference = strengthPriority[left.match.strength]
+        - strengthPriority[right.match.strength];
+      if (strengthDifference !== 0) return strengthDifference;
+      const basisDifference = compareDecisionBasis(
+        left.match.decisionBasis,
+        right.match.decisionBasis,
+      );
+      if (basisDifference !== 0) return basisDifference;
+      const affiliationPriority = (candidate: EvaluatedProfessor) => {
+        const affiliation = candidate.match.decisionBasis.matchedAcademicAffiliation;
+        if (affiliation?.type === "PRIMARY") return 0;
+        if (affiliation?.label === "복수전공") return 1;
+        if (affiliation?.label === "부전공") return 2;
+        return 3;
+      };
+      const affiliationDifference = affiliationPriority(left) - affiliationPriority(right);
+      if (affiliationDifference !== 0) return affiliationDifference;
       return compareEvaluatedProfessors(left, right);
     })[0];
 
@@ -916,13 +989,13 @@ export function matchOfficialProfessors(
   }
 
   /*
-   * 나머지 두 후보는 학생 학과 밖에서 주제·방법 근거를 한 명씩 찾습니다.
+   * 나머지 두 후보는 입력한 주·부·복수전공 학과 밖에서 주제·방법 근거를 한 명씩 찾습니다.
    * 역할 직접 근거를 우선하고, 가능하면 서로 다른 학과를 제안합니다.
    */
   const usedExternalDepartments = new Set<string>();
   const homeCollege = normalize(
-    topic.college
-      || homeDepartmentCandidate?.match.professor.college
+    homeDepartmentCandidate?.match.professor.college
+      || topic.college
       || "",
   );
   const externalCandidates = officialCandidates.filter(
@@ -972,7 +1045,7 @@ export function matchOfficialProfessors(
     officialRecordCount: dataset.official_record_count,
     scopeStatus: dataset.scope_status,
     coverageGaps,
-    note: `${dataset.note} 단국대학교 공식 교수 ${dataset.official_record_count.toLocaleString("ko-KR")}명 안에서 같은 학과 교수 1명을 먼저 확인하고, 학생 학과 밖에서 주제 연결형·방법 연결형을 공식 근거와 안정적 교수 ID 순서로 선택합니다.`,
+    note: `${dataset.note} 단국대학교 공식 교수 ${dataset.official_record_count.toLocaleString("ko-KR")}명 안에서 입력한 주전공·부전공·복수전공 중 공식 소속이 확인된 학과 교수 1명을 먼저 확인하고, 해당 학과 밖에서 주제 연결형·방법 연결형을 공식 근거와 안정적 교수 ID 순서로 선택합니다.`,
     rankingSource: "official-rules",
     rankingModel: null,
   };

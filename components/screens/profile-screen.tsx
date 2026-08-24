@@ -10,6 +10,7 @@ import {
   PencilLine,
   RotateCcw,
   Save,
+  Settings2,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -230,6 +231,14 @@ export function ProfileScreen() {
               <CheckCircle2 size={16} aria-hidden="true" />
               <div><strong>로컬 저장</strong><span>{formatUpdatedAt(profile.updatedAt)}</span></div>
             </div>
+            <Link href="/portfolio/manage" className={styles.recordsAction}>
+              <span><Settings2 size={18} aria-hidden="true" /></span>
+              <div>
+                <strong>내 기록 관리</strong>
+                <p>저장한 기록을 백업하거나 필요한 항목만 직접 정리해요.</p>
+              </div>
+              <ArrowRight size={17} aria-hidden="true" />
+            </Link>
             <div className={styles.previewAction}>
               <span><Sparkles size={18} aria-hidden="true" /></span>
               <div>

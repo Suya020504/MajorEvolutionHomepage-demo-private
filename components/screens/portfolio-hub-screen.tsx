@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -16,7 +17,6 @@ import {
   NotebookPen,
   Route,
   Search,
-  Settings2,
   Sprout,
   UserRound,
 } from "lucide-react";
@@ -25,7 +25,6 @@ import { AppShell } from "@/components/app/primitives";
 import { ServiceBottomNav } from "@/components/app/side-nav";
 import {
   HubList,
-  HubPrimaryTask,
   HubRow,
   HubUtilityLink,
   HubUtilityLinks,
@@ -124,18 +123,19 @@ export function PortfolioHubScreen() {
   const next = nextIndex === -1
     ? {
         icon: NotebookPen,
-        title: "지금까지 달라진 과정을 한 번 돌아보세요",
+        title: "성장 포트폴리오 정리하기",
         description: "저장한 단계만 골라 나의 성장 포트폴리오를 만들 수 있어요.",
-        cta: "포트폴리오 만들기",
+        cta: "정리하기",
         href: "/portfolio/builder",
       }
     : {
         icon: steps[nextIndex].icon,
-        title: `다음은 ${steps[nextIndex].label} 단계예요`,
+        title: `${steps[nextIndex].label} 기록하기`,
         description: steps[nextIndex].description,
-        cta: steps[nextIndex].id === "topic" ? "전공 아이디어 시작하기" : "다음 기록 만들기",
+        cta: steps[nextIndex].id === "topic" ? "아이디어 시작하기" : "가볍게 기록하기",
         href: steps[nextIndex].href,
       };
+  const NextRecordIcon = next.icon;
 
   const currentInterests = conditions.interests.length
     ? conditions.interests
@@ -168,6 +168,8 @@ export function PortfolioHubScreen() {
       : "저장되는 기록이 쌓이면 처음 고민과 지금의 방향을 비교해 보여드려요.";
   const visibleProjects = [...growthProjectHistory].reverse().slice(0, 3);
   const visibleProfessors = [...growthProfessorHistory].reverse().slice(0, 6);
+  const conversationCount = aiMessages.filter((message) => message.role === "user").length;
+  const conversationBranchCount = aiMessages.filter((message) => message.branchParentMessageId).length;
 
   return (
     <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
@@ -179,26 +181,66 @@ export function PortfolioHubScreen() {
         />
 
         <section className={growthStyles.aiProfessorSection} aria-labelledby="my-ai-professor-title">
-          <span className={growthStyles.aiProfessorIcon}><Bot size={25} aria-hidden="true" /></span>
           <div className={growthStyles.aiProfessorCopy}>
+            <span className={growthStyles.aiProfessorEyebrow}>
+              <Bot size={16} aria-hidden="true" />
+              성장과정의 중심
+            </span>
             <h2 id="my-ai-professor-title">나의 AI 교수님</h2>
-            <p>
+            <strong>대화가 쌓일수록, 내 고민의 변화가 보이기 시작해요.</strong>
+            <p className={growthStyles.aiProfessorSummary}>
               {aiGrowthNotes.at(-1)?.body
-                ?? "교수님을 만나기 전후, 진로 고민과 프로젝트 생각을 가볍게 대화하며 정리해요."}
+                ?? "진로 고민과 프로젝트 생각을 이어서 이야기하면, 중요한 변화와 다음 행동을 대화 지도로 정리해 드려요."}
             </p>
-            <small>
-              {aiMessages.length || aiGrowthNotes.length
-                ? `이어갈 대화 ${aiMessages.length}개 · 성장 메모 ${aiGrowthNotes.length}개`
-                : "실제 교수님의 지도는 대신하지 않고, 내 생각을 정리하는 데 집중해요."}
-            </small>
+            <dl className={growthStyles.aiProfessorStats} aria-label="나의 AI 교수님 기록 요약">
+              <div>
+                <dt>나눈 대화</dt>
+                <dd>{conversationCount}<span>회</span></dd>
+              </div>
+              <div>
+                <dt>성장 메모</dt>
+                <dd>{aiGrowthNotes.length}<span>개</span></dd>
+              </div>
+              <div>
+                <dt>대화 갈래</dt>
+                <dd>{conversationBranchCount}<span>개</span></dd>
+              </div>
+            </dl>
+            <div className={growthStyles.aiProfessorActions}>
+              <Link href="/portfolio/ai-professor" className={growthStyles.aiProfessorAction}>
+                {aiMessages.length ? "AI 교수님과 대화 이어가기" : "AI 교수님과 첫 대화 시작하기"}
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+              <small>실제 교수님의 지도를 대신하지 않고, 내 생각을 발견하고 정리하는 데 집중해요.</small>
+            </div>
           </div>
-          <Link href="/portfolio/ai-professor" className={growthStyles.aiProfessorAction}>
-            {aiMessages.length ? "대화 이어가기" : "가볍게 대화하기"}
-            <ArrowRight size={18} aria-hidden="true" />
-          </Link>
+          <div className={growthStyles.aiProfessorVisual} aria-hidden="true">
+            <span className={growthStyles.aiProfessorVisualLabel}>생각을 대화 지도로</span>
+            <Image
+              src="/mvp-assets/robot-pose-2.png"
+              alt=""
+              width={240}
+              height={240}
+              className={growthStyles.aiProfessorImage}
+            />
+            <i className={growthStyles.aiProfessorNodeOne} />
+            <i className={growthStyles.aiProfessorNodeTwo} />
+            <i className={growthStyles.aiProfessorNodeThree} />
+          </div>
         </section>
 
-        <HubPrimaryTask {...next} />
+        <section className={growthStyles.nextRecordCard} aria-labelledby="next-growth-record-title">
+          <span className={growthStyles.nextRecordIcon}><NextRecordIcon size={20} aria-hidden="true" /></span>
+          <div className={growthStyles.nextRecordCopy}>
+            <small>다음 기록 제안</small>
+            <h2 id="next-growth-record-title">{next.title}</h2>
+            <p>{next.description}</p>
+          </div>
+          <Link href={next.href} className={growthStyles.nextRecordAction}>
+            {next.cta}
+            <ArrowRight size={17} aria-hidden="true" />
+          </Link>
+        </section>
 
         <section className={growthStyles.storySection} aria-labelledby="growth-story-title">
           <header className={growthStyles.storyHeading}>
@@ -281,7 +323,6 @@ export function PortfolioHubScreen() {
 
         <HubUtilityLinks>
           <HubUtilityLink icon={FileText} href="/portfolio/builder">포트폴리오 만들기</HubUtilityLink>
-          <HubUtilityLink icon={Settings2} href="/portfolio/manage">내 기록 관리</HubUtilityLink>
         </HubUtilityLinks>
       </div>
     </AppShell>

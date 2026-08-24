@@ -11,6 +11,7 @@ export type ConversationMapNode = {
   topic: ConversationMapTopic;
   title: string;
   summary: string;
+  mapSummary: string;
   userMessage: AiProfessorMessage | null;
   assistantMessage: AiProfessorMessage;
   isSaved: boolean;
@@ -38,19 +39,48 @@ function shorten(value: string, max: number) {
 }
 
 function classifyType(userText: string, assistantText: string, title: string): ConversationMapNodeType {
-  const combined = `${userText} ${assistantText}`;
-  if (/다음\s*(행동|단계|걸음)|실행|이번\s*주/.test(title)) return "action";
-  if (/결정|선택|정하기|확정/.test(title)) return "decision";
-  if (/다음\s*(행동|단계|걸음)|이번\s*주|먼저\s*해|시작해|실행|연락|작성해|준비해/.test(combined)) {
-    return "action";
-  }
-  if (/결정|선택|정하기|정했|우선순위|확정|집중하기|방향으로/.test(combined)) {
-    return "decision";
-  }
-  if (/알게|발견|깨달|정리하면|핵심은|관심은|강점|가능성/.test(assistantText)) {
-    return "insight";
-  }
+  const normalizedTitle = normalize(title);
+  if (/다음\s*(행동|단계|걸음)|실행|이번\s*주|해볼\s*일/.test(normalizedTitle)) return "action";
+  if (/결정|선택|정하기|확정|우선순위/.test(normalizedTitle)) return "decision";
+  if (/발견|깨달|알게|핵심|정리|가능성|강점/.test(normalizedTitle)) return "insight";
+  if (/고민|질문|궁금|비교/.test(normalizedTitle)) return "question";
+
+  // 성장 대화 답변에는 항상 '다음 행동'이 포함되므로 답변 전체만으로 유형을
+  // 분류하면 모든 카드가 행동으로 보입니다. 제목과 학생의 실제 질문을 우선합니다.
+  if (/[?？]|어떤|무엇|어떻게|고민|궁금/.test(userText)) return "question";
+  if (/결정|선택|정하기|확정|우선순위/.test(userText)) return "decision";
+  if (/실행|시작|연락|작성|준비/.test(userText)) return "action";
+  if (/알게|발견|깨달|핵심은|관심은|강점|가능성/.test(assistantText)) return "insight";
   return "question";
+}
+
+const REFLECTION_SECTION = /(?:^|\s)(현재\s*고민|시도할\s*방향|다음\s*(?:행동|단계|걸음)|핵심|발견|선택)\s*[:：]\s*/g;
+
+function reflectionSections(value: string) {
+  const text = normalize(value);
+  const matches = [...text.matchAll(REFLECTION_SECTION)];
+  if (!matches.length) return [{ label: "", body: text }];
+
+  return matches.map((match, index) => {
+    const start = (match.index ?? 0) + match[0].length;
+    const end = matches[index + 1]?.index ?? text.length;
+    return { label: normalize(match[1]), body: text.slice(start, end).trim() };
+  });
+}
+
+function buildMapSummary(value: string, type: ConversationMapNodeType, title: string) {
+  const sections = reflectionSections(value).filter((section) => section.body);
+  const preferredLabels = type === "action"
+    ? [/다음/]
+    : type === "decision"
+      ? [/선택|시도할 방향/]
+      : /고민|질문/.test(title)
+        ? [/현재 고민/]
+        : [/시도할 방향|핵심|발견/, /현재 고민/];
+  const preferred = preferredLabels
+    .map((pattern) => sections.find((section) => pattern.test(section.label)))
+    .find(Boolean);
+  return shorten(preferred?.body || sections[0]?.body || value, 68);
 }
 
 function classifyTopic(value: string): ConversationMapTopic {
@@ -84,14 +114,17 @@ export function buildConversationMap(
     const parentId = requestedParentId && baseNodes.some((node) => node.id === requestedParentId)
       ? requestedParentId
       : lastAssistantId;
+    const title = shorten(reflectionTitle || userText || "대화에서 정리한 생각", 54);
+    const summarySource = reflectionBody || message.content;
 
     baseNodes.push({
       id: message.id,
       type,
       typeLabel: TYPE_LABELS[type],
       topic: classifyTopic(sourceForTopic),
-      title: shorten(reflectionTitle || userText || "대화에서 정리한 생각", 54),
-      summary: shorten(reflectionBody || message.content, 170),
+      title,
+      summary: shorten(summarySource, 170),
+      mapSummary: buildMapSummary(summarySource, type, title),
       userMessage: lastUserMessage,
       assistantMessage: message,
       isSaved: savedIds.has(message.id),

@@ -352,6 +352,76 @@ test("교수 3인 피칭은 학생 조건·공식 근거·서비스 제안을 �
   }
 });
 
+test("부전공·복수전공으로 연결된 교수는 해당 입력 구분을 피칭에 표시한다", () => {
+  const context = {
+    ...discoveryModule.EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
+    major: "경제학과",
+    secondaryMajorType: "부전공",
+    secondaryCollege: "SW융합대학",
+    secondaryMajor: "소프트웨어학과",
+    interests: ["AI·데이터"],
+    careerInterests: ["데이터·AI 직무"],
+  };
+  const professor = {
+    id: "professor:secondary-major",
+    university: "단국대학교",
+    college: "SW융합대학",
+    department: "소프트웨어학과",
+    departments: ["소프트웨어학과"],
+    associationStatuses: [],
+    name: "테스트",
+    title: "교수",
+    researchFields: ["인공지능"],
+    publications: [],
+    publicationCount: 0,
+    officialProfileUrl: "https://www.dankook.ac.kr/example",
+    sourceUrl: "https://www.dankook.ac.kr/example",
+    collectedAt: "2026-07-30T00:00:00.000Z",
+    status: "FOUND",
+    researchFieldsStatus: "FOUND",
+    publicationsStatus: "NOT_LISTED_ON_OFFICIAL_PROFILE",
+    failureReason: null,
+    profileEvidenceId: "profile:secondary-major",
+  };
+
+  for (const secondaryMajorType of ["부전공", "복수전공"]) {
+    const pitch = pitchModule.buildProfessorPitch(
+      {
+        professor,
+        role: "CONTEXT",
+        strength: "DIRECT",
+        reason: "공식 소속과 연구분야가 연결됩니다.",
+        evidenceIds: ["profile:secondary-major"],
+        matchedTerms: ["소프트웨어학과", "인공지능"],
+        doesNotEstablish: ["교수의 면담·지도·모집 가능 여부"],
+        decisionBasis: {
+          matchedConcepts: ["AI·데이터"],
+          departmentMatchesMajor: true,
+          matchedAcademicAffiliation: {
+            type: "SECONDARY",
+            label: secondaryMajorType,
+            college: "SW융합대학",
+            major: "소프트웨어학과",
+            officialDepartment: "소프트웨어학과",
+          },
+          roleMatches: { topic: true, method: false, context: true },
+          sources: {
+            officialProfile: true,
+            researchFields: true,
+            matchedPublication: false,
+          },
+        },
+      },
+      { ...context, secondaryMajorType },
+      "AI 분야를 탐색하려면 무엇부터 시작하면 좋을까요?",
+    );
+
+    assert.equal(pitch.roleLabel, `${secondaryMajorType} 연결`);
+    assert.match(pitch.pitchLine, new RegExp(`${secondaryMajorType}.*소프트웨어학과`));
+    assert.match(pitch.mentorRole, new RegExp(secondaryMajorType));
+  }
+});
+
 test("데스크톱 교수 찾기 폼은 결과 영역을 sticky로 가리지 않는다", () => {
   const css = fs.readFileSync(path.join(repositoryRoot, "app/globals.css"), "utf8");
   const screen = fs.readFileSync(
@@ -366,7 +436,7 @@ test("데스크톱 교수 찾기 폼은 결과 영역을 sticky로 가리지 않
   assert.match(css, /\.find-professor-screen\s+\.context-panel\s*\{[^}]*position:\s*static/si);
   assert.match(screen, /세 분 중 한 분과 첫 대화를 시작해 보세요/);
   assert.match(screen, /hasHomeDepartmentMatch/);
-  assert.match(screen, /공식 데이터에서 같은 학과 교수를 확인하지 못해/);
+  assert.match(screen, /공식 데이터에서 입력한 주전공·부전공·복수전공 소속 교수를 확인하지 못해/);
   assert.match(screen, /공식 데이터 기반 캐스팅 한마디/);
   assert.doesNotMatch(screen, /> AI 캐스팅 한마디</);
   assert.match(screen, /서비스가 제안한 탐색 역할/);
@@ -472,7 +542,7 @@ test("새 연구주제로 전환하면 이전 교수 찾기 맥락과 포트폴�
   );
 });
 
-test("첫 교수 매칭은 같은 학과 한 명 뒤에 타 학과 주제·방법 후보를 둔다", () => {
+test("첫 교수 매칭은 주전공·부전공·복수전공 중 한 명 뒤에 외부 주제·방법 후보를 둔다", () => {
   const matcher = fs.readFileSync(
     path.join(repositoryRoot, "lib/professor-data.server.ts"),
     "utf8",
@@ -484,6 +554,13 @@ test("첫 교수 매칭은 같은 학과 한 명 뒤에 타 학과 주제·방�
 
   assert.match(matcher, /departmentMatchesMajor\)\s*\.sort/);
   assert.match(matcher, /!item\.match\.decisionBasis\.departmentMatchesMajor/);
+  assert.match(matcher, /academicAffiliations/);
+  assert.match(matcher, /topic\.secondaryMajor/);
+  assert.match(matcher, /matchedAcademicAffiliation/);
+  assert.match(matcher, /officialDepartment/);
+  assert.match(matcher, /affiliation\?\.type === "PRIMARY"/);
+  assert.match(matcher, /affiliation\?\.label === "복수전공"/);
+  assert.match(matcher, /affiliation\?\.label === "부전공"/);
   assert.match(matcher, /\["CONTEXT", "TOPIC", "METHOD"\]/);
   assert.match(matcher, /homeCollege/);
   assert.match(route, /journey: isProjectMentorRequest \? "project" : "student"/);
@@ -492,6 +569,19 @@ test("첫 교수 매칭은 같은 학과 한 명 뒤에 타 학과 주제·방�
     /options\.journey === "project"[\s\S]*\["TOPIC", "METHOD", "CONTEXT"\]/,
     "프로젝트 교수 추천의 역할 순서는 개인 매칭과 분리되어야 한다",
   );
+
+  const store = fs.readFileSync(
+    path.join(repositoryRoot, "store/research-store.ts"),
+    "utf8",
+  );
+  const discoveryForm = fs.readFileSync(
+    path.join(repositoryRoot, "components/screens/professor-discovery-form.tsx"),
+    "utf8",
+  );
+  assert.match(store, /version:\s*7/);
+  assert.match(store, /persistedVersion < 7[\s\S]*secondaryMajor/);
+  assert.match(store, /selectionPolicy:\s*response\.selectionPolicy/);
+  assert.match(discoveryForm, /부·복수전공도 가까운 학과 연결 범위에 포함/);
 });
 
 test("전공 아이디어 튜토리얼은 최종 확인 전 로컬 초안만 쓰고 한 번에 공동설계를 시작한다", () => {

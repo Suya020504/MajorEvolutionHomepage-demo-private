@@ -643,7 +643,9 @@
 }
 
 .mapSection {
+  min-width: 0;
   padding-top: 24px;
+  container-type: inline-size;
 }
 
 .mapHeader {
@@ -705,8 +707,13 @@
 
 .mapWorkspace {
   display: grid;
+  min-width: 0;
   gap: 18px;
   align-items: start;
+}
+
+.mapWorkspace > * {
+  min-width: 0;
 }
 
 .mapCanvasWrap,
@@ -768,6 +775,8 @@
 
 .mapCanvas {
   min-height: 610px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
   padding: 25px 18px 30px;
   background-color: #fafbfe;
   background-image:
@@ -775,6 +784,29 @@
     linear-gradient(90deg, #e8ebf2 1px, transparent 1px);
   background-size: 26px 26px;
   background-position: -1px -1px;
+  scrollbar-width: thin;
+}
+
+.mapSignatureNote {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 14px;
+  padding: 7px 10px;
+  border: 1px solid #ded8fb;
+  border-radius: 999px;
+  color: #5b48bd;
+  text-align: center;
+  background: linear-gradient(100deg, rgba(244, 241, 255, 0.96), rgba(237, 252, 249, 0.96));
+  font-size: 9px;
+  font-weight: 760;
+  line-height: 1.4;
+}
+
+.mapSignatureNote svg {
+  flex: 0 0 auto;
 }
 
 .mapStartNode,
@@ -936,6 +968,14 @@
   opacity: 0.58;
 }
 
+.mapNode[data-branching="true"] {
+  border-color: transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(135deg, #7659f2, #28b99c) border-box;
+  box-shadow: 0 8px 22px rgba(101, 77, 223, 0.12);
+}
+
 .mapNodeMeta,
 .mapNodeMeta > span,
 .mapNodeState {
@@ -1025,7 +1065,8 @@
 
 .mapTree .mapNode {
   width: 232px;
-  min-height: 126px;
+  min-height: 112px;
+  margin-inline: auto;
   text-align: left;
 }
 
@@ -1095,6 +1136,12 @@
 .mapOutcomeNode {
   border-color: #cce9e3;
   background: #f5fffc;
+}
+
+.mapOutcomeArrow {
+  display: block;
+  margin: -12px auto 8px;
+  color: #75aa9f;
 }
 
 .mapOutcomeNode > svg {
@@ -1367,6 +1414,14 @@
   line-height: 1.55;
 }
 
+.nodeSources article p.nodeSourceFullText {
+  overflow: visible;
+  max-height: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: unset;
+}
+
 .nodeConnections h4 {
   display: flex;
   align-items: center;
@@ -1499,7 +1554,9 @@
     grid-template-columns: minmax(0, 1fr) 310px;
     align-items: start;
   }
+}
 
+@container (min-width: 1000px) {
   .mapWorkspace {
     grid-template-columns: minmax(0, 1fr) 370px;
   }
@@ -1509,6 +1566,174 @@
     top: 18px;
     max-height: calc(100svh - 36px);
     overflow-y: auto;
+  }
+}
+
+/* 지도 작업공간이 한 열이 되는 태블릿·모바일에서는 좌우 캔버스를 축소하지
+   않고, 부모 아래 갈래가 차례로 읽히는 세로 트리로 재배치합니다. */
+@container (max-width: 760px) {
+  .mapHeader {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .mapSummary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 6px;
+    padding: 9px;
+  }
+
+  .mapSummary span {
+    display: grid;
+    min-width: 0;
+    justify-items: center;
+    gap: 2px;
+    padding: 4px 2px;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .mapSummary strong {
+    margin-right: 0;
+  }
+
+  .mapCanvasWrap {
+    overflow: hidden;
+  }
+
+  .mapCanvasToolbar {
+    flex-wrap: wrap;
+  }
+
+  .mapCanvasToolbar > div {
+    min-width: 0;
+  }
+
+  .mapCanvasToolbar > div span {
+    display: none;
+  }
+
+  .mapCanvasToolbar button {
+    min-height: 40px;
+  }
+
+  .mapCanvas {
+    min-height: 0;
+    overflow-x: hidden;
+    padding: 20px 12px 24px;
+    background-size: 22px 22px;
+  }
+
+  .mapTree,
+  .mapTree ol {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    justify-content: stretch;
+    gap: 11px;
+  }
+
+  .mapTree {
+    padding: 0 0 18px;
+  }
+
+  .mapTree ol {
+    margin-top: 10px;
+    padding: 0 0 0 18px;
+    border-left: 2px solid #bbc4d5;
+  }
+
+  .mapTreeItem,
+  .mapTree > .mapTreeItem {
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  .mapTreeItem::before,
+  .mapTreeItem::after,
+  .mapTreeItem > ol::before {
+    display: none;
+  }
+
+  .mapTreeItem > ol > .mapTreeItem::before {
+    display: block;
+    top: 22px;
+    right: auto;
+    left: -18px;
+    width: 18px;
+    height: 1px;
+    border: 0;
+    background: #bbc4d5;
+  }
+
+  .mapTree .mapNode {
+    width: 100%;
+    min-height: 0;
+    margin-inline: 0;
+  }
+
+  .mapTree .mapNode > strong {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .mapTree .mapNode > p {
+    -webkit-line-clamp: 2;
+  }
+
+  .mapNodeMeta {
+    flex-wrap: wrap;
+  }
+
+  .mapOutcomeNode {
+    width: 100%;
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .mapNode,
+  .mapOutcomeNode,
+  .nodeDetail {
+    scroll-margin-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .mapFlow::before {
+    left: 13px;
+  }
+
+  .mapNodeRow {
+    min-height: 118px;
+    grid-template-columns: 27px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .mapConnector {
+    grid-column: 1;
+  }
+
+  .mapNodeRow[data-side="left"] .mapNode,
+  .mapNodeRow[data-side="right"] .mapNode {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .mapNodeRow[data-side="left"] .mapNode::after,
+  .mapNodeRow[data-side="right"] .mapNode::after {
+    right: auto;
+    left: -9px;
+    width: 9px;
+  }
+
+  .nodeDecisionBox > div,
+  .nodeConnections > div {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1598,93 +1823,24 @@
     justify-content: center;
     padding-inline: 10px;
   }
+}
 
-  .mapHeader {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 14px;
-  }
-
-  .mapSummary {
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .mapCanvasToolbar > div span {
-    display: none;
-  }
-
-  .mapCanvas {
-    min-height: 520px;
+@media (max-width: 420px) {
+  .mapCanvasToolbar {
     padding-inline: 12px;
-    background-size: 22px 22px;
   }
 
-  .mapTree,
-  .mapTree ol {
-    display: grid;
-    width: 100%;
-    min-width: 0;
-    justify-content: stretch;
-    gap: 11px;
-  }
-
-  .mapTree {
-    padding: 0 0 18px;
+  .mapCanvasToolbar strong {
+    font-size: 12px;
   }
 
   .mapTree ol {
-    margin-top: 10px;
-    padding: 0 0 0 18px;
-    border-left: 1px solid #bbc4d5;
+    padding-left: 14px;
   }
 
-  .mapTreeItem,
-  .mapTree > .mapTreeItem {
-    padding: 0;
-  }
-
-  .mapTreeItem::before,
-  .mapTreeItem::after,
-  .mapTreeItem > ol::before {
-    display: none;
-  }
-
-  .mapTree .mapNode {
-    width: 100%;
-    min-height: 0;
-  }
-
-  .mapFlow::before {
-    left: 13px;
-  }
-
-  .mapNodeRow {
-    min-height: 118px;
-    grid-template-columns: 27px minmax(0, 1fr);
-    gap: 8px;
-  }
-
-  .mapConnector {
-    grid-column: 1;
-  }
-
-  .mapNodeRow[data-side="left"] .mapNode,
-  .mapNodeRow[data-side="right"] .mapNode {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .mapNodeRow[data-side="left"] .mapNode::after,
-  .mapNodeRow[data-side="right"] .mapNode::after {
-    right: auto;
-    left: -9px;
-    width: 9px;
-  }
-
-  .nodeDecisionBox > div,
-  .nodeConnections > div {
-    grid-template-columns: 1fr;
+  .mapTreeItem > ol > .mapTreeItem::before {
+    left: -14px;
+    width: 14px;
   }
 }
 

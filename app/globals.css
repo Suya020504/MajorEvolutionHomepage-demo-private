@@ -7117,7 +7117,276 @@ strong {
   color: var(--brand-purple);
 }
 
+/*
+ * 첫 홈 진입에서 하단 탭의 역할을 한 단계씩 설명하는 AI 마스코트 가이드.
+ * 말풍선은 내비 내부의 절대 위치 요소로 두어 6열 탭 너비나 터치 영역을 바꾸지 않습니다.
+ */
+.service-bottom-nav__guide {
+  --nav-guide-anchor: 8.333%;
+  position: absolute;
+  z-index: 5;
+  right: 8px;
+  bottom: calc(100% + 13px);
+  left: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(112, 86, 226, 0.2);
+  border-radius: 21px;
+  color: var(--brand-navy-900);
+  background:
+    radial-gradient(circle at 10% 8%, rgba(136, 222, 207, 0.2), transparent 38%),
+    linear-gradient(145deg, #ffffff 12%, #f8f7ff 100%);
+  box-shadow: 0 18px 46px rgba(40, 49, 91, 0.18);
+  text-align: left;
+  animation: bottomNavGuideEnter 260ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.service-bottom-nav__guide::after {
+  position: absolute;
+  bottom: -8px;
+  left: calc(var(--nav-guide-anchor) - 8px);
+  width: 16px;
+  height: 16px;
+  border-right: 1px solid rgba(112, 86, 226, 0.2);
+  border-bottom: 1px solid rgba(112, 86, 226, 0.2);
+  background: #f8f7ff;
+  transform: rotate(45deg);
+  content: "";
+}
+
+.service-bottom-nav__guide-skip {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: 12px;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 9px;
+  color: #6f7891;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.service-bottom-nav__guide-message {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding-right: 38px;
+}
+
+.service-bottom-nav__guide-mascot {
+  display: grid;
+  width: 88px;
+  height: 82px;
+  place-items: center;
+  overflow: hidden;
+}
+
+.service-bottom-nav__guide-mascot img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px rgba(62, 73, 129, 0.13));
+}
+
+.service-bottom-nav__guide-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.service-bottom-nav__guide-copy > span {
+  color: #694edc;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.service-bottom-nav__guide-copy strong {
+  color: var(--brand-navy-900);
+  font-size: 16px;
+  font-weight: 880;
+  line-height: 1.35;
+  letter-spacing: -0.035em;
+  word-break: keep-all;
+}
+
+.service-bottom-nav__guide-copy p {
+  margin: 0;
+  color: #66718b;
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1.55;
+  letter-spacing: -0.018em;
+  word-break: keep-all;
+}
+
+.service-bottom-nav__guide-footer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(199, 207, 227, 0.58);
+}
+
+.service-bottom-nav__guide-progress {
+  display: flex;
+  min-width: 72px;
+  align-items: center;
+  gap: 5px;
+}
+
+.service-bottom-nav__guide-progress span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #d7dceb;
+  transition: width 180ms ease, background 180ms ease;
+}
+
+.service-bottom-nav__guide-progress span.is-complete {
+  background: #9adbd0;
+}
+
+.service-bottom-nav__guide-progress span.is-current {
+  width: 18px;
+  background: #6e50e6;
+}
+
+.service-bottom-nav__guide-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.service-bottom-nav__guide-actions button {
+  display: inline-flex;
+  min-width: 58px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 13px;
+  border: 1px solid #d8ddec;
+  border-radius: 12px;
+  color: #626c84;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.service-bottom-nav__guide-actions button.is-primary {
+  min-width: 78px;
+  border-color: #6748dd;
+  color: #fff;
+  background: linear-gradient(135deg, #7457ea, #5940d5);
+  box-shadow: 0 7px 16px rgba(93, 65, 212, 0.22);
+}
+
+.service-bottom-nav__guide button:focus-visible {
+  outline: 3px solid rgba(50, 207, 180, 0.48);
+  outline-offset: 2px;
+}
+
+.service-bottom-nav.is-guiding::before,
+.service-bottom-nav.is-guiding::after {
+  opacity: 0.42;
+}
+
+.service-bottom-nav.is-guiding a {
+  transition: opacity 160ms ease, transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.service-bottom-nav.is-guiding a:not(.is-guide-target) {
+  opacity: 0.44;
+}
+
+.service-bottom-nav a.is-guide-target {
+  z-index: 3;
+  color: var(--brand-navy-900);
+  background: #fff;
+  box-shadow: 0 5px 15px rgba(53, 65, 113, 0.16), inset 0 0 0 1px rgba(108, 78, 223, 0.16);
+  transform: translateY(-3px);
+}
+
+.service-bottom-nav a.is-guide-target::before {
+  background: var(--brand-purple);
+}
+
+.service-bottom-nav a.is-guide-target svg {
+  color: var(--brand-purple);
+}
+
+@keyframes bottomNavGuideEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 420px) {
+  .service-bottom-nav__guide {
+    gap: 10px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .service-bottom-nav__guide-message {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 8px;
+    padding-right: 26px;
+  }
+
+  .service-bottom-nav__guide-mascot {
+    width: 72px;
+    height: 74px;
+  }
+
+  .service-bottom-nav__guide-mascot img {
+    width: 76px;
+    height: 76px;
+  }
+
+  .service-bottom-nav__guide-copy strong {
+    font-size: 15px;
+  }
+
+  .service-bottom-nav__guide-copy p {
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+
+  .service-bottom-nav__guide-footer {
+    gap: 8px;
+  }
+
+  .service-bottom-nav__guide-actions button {
+    min-width: 54px;
+    padding-inline: 11px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .service-bottom-nav__guide,
+  .service-bottom-nav.is-guiding a,
+  .service-bottom-nav__guide-progress span {
+    animation: none;
+    transition: none;
+  }
+
   .segmented button,
   .reader-tabs button,
   .research-stepper button {

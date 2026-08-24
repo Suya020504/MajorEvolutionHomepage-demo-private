@@ -37,6 +37,7 @@ type AiProfessorState = {
   addUserMessage: (content: string, branchParentMessageId?: string | null) => AiProfessorMessage;
   addAssistantMessage: (response: GrowthProfessorResponse) => AiProfessorMessage;
   saveReflection: (messageId: string) => "saved" | "already-saved" | "missing";
+  removeConversationBranch: (messageId: string) => void;
   removeGrowthNote: (id: string) => void;
   setMapDecision: (messageId: string, decision: AiConversationMapDecision) => void;
   clearMapDecision: (messageId: string) => void;
@@ -56,6 +57,59 @@ function createId(prefix: string) {
 
 function trimText(value: string, max: number) {
   return value.trim().replace(/\s+/g, " ").slice(0, max);
+}
+
+function conversationBranchMessageIds(
+  messages: AiProfessorMessage[],
+  messageId: string,
+): Set<string> {
+  const assistantByUser = new Map<string, string>();
+  const userByAssistant = new Map<string, string>();
+  const parentByAssistant = new Map<string, string | null>();
+  let pendingUser: AiProfessorMessage | null = null;
+  let previousAssistantId: string | null = null;
+
+  for (const message of messages) {
+    if (message.role === "user") {
+      pendingUser = message;
+      continue;
+    }
+
+    if (pendingUser) {
+      assistantByUser.set(pendingUser.id, message.id);
+      userByAssistant.set(message.id, pendingUser.id);
+    }
+    parentByAssistant.set(
+      message.id,
+      pendingUser?.branchParentMessageId || previousAssistantId,
+    );
+    previousAssistantId = message.id;
+    pendingUser = null;
+  }
+
+  const rootAssistantId = parentByAssistant.has(messageId)
+    ? messageId
+    : assistantByUser.get(messageId) ?? null;
+  if (!rootAssistantId) return new Set([messageId]);
+
+  const removedAssistantIds = new Set([rootAssistantId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [assistantId, parentId] of parentByAssistant) {
+      if (parentId && removedAssistantIds.has(parentId) && !removedAssistantIds.has(assistantId)) {
+        removedAssistantIds.add(assistantId);
+        changed = true;
+      }
+    }
+  }
+
+  const removedMessageIds = new Set<string>(removedAssistantIds);
+  for (const assistantId of removedAssistantIds) {
+    const userId = userByAssistant.get(assistantId);
+    if (userId) removedMessageIds.add(userId);
+  }
+  return removedMessageIds;
 }
 
 export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get) => ({
@@ -108,6 +162,16 @@ export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get)
     set({ growthNotes: [...state.growthNotes, note].slice(-MAX_NOTES) });
     return "saved";
   },
+  removeConversationBranch: (messageId) => set((state) => {
+    const removedMessageIds = conversationBranchMessageIds(state.messages, messageId);
+    const mapDecisions = Object.fromEntries(
+      Object.entries(state.mapDecisions).filter(([id]) => !removedMessageIds.has(id)),
+    );
+    return {
+      messages: state.messages.filter((message) => !removedMessageIds.has(message.id)),
+      mapDecisions,
+    };
+  }),
   removeGrowthNote: (id) => set((state) => ({
     growthNotes: state.growthNotes.filter((note) => note.id !== id),
   })),

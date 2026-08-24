@@ -118,6 +118,48 @@
 .savedStatus strong { font-size: 12px; }
 .savedStatus span { color: #55766c; font-size: 10px; }
 
+.recordsAction {
+  display: grid;
+  min-height: 74px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid #ddd8fb;
+  border-radius: 14px;
+  color: var(--brand-navy-900);
+  background: linear-gradient(135deg, #f9f8ff, #f1effd);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.recordsAction:hover {
+  border-color: #bbb0f3;
+  box-shadow: 0 8px 20px rgba(75, 59, 159, 0.1);
+  transform: translateY(-1px);
+}
+
+.recordsAction:focus-visible {
+  outline: 3px solid rgba(50, 207, 180, 0.4);
+  outline-offset: 2px;
+}
+
+.recordsAction > span {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--brand-purple);
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(76, 59, 157, 0.08);
+}
+
+.recordsAction div { min-width: 0; }
+.recordsAction strong { font-size: 13px; }
+.recordsAction p { margin: 4px 0 0; color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
+.recordsAction > svg { color: #8b94aa; }
+
 .previewAction {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -213,6 +255,7 @@
   .summaryCopy { margin-top: 4px; }
   .tags,
   .savedStatus,
+  .recordsAction,
   .previewAction,
   .localNote { grid-column: 1 / -1; }
 }

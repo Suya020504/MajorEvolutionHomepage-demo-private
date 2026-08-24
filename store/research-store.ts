@@ -141,7 +141,7 @@ type ResearchState = {
   professorMatches: ProfessorMatch[];
   professorCoverage: Pick<
     ProfessorMatchResponse,
-    "officialRecordCount" | "scopeStatus" | "coverageGaps" | "note" | "rankingSource" | "rankingModel"
+    "officialRecordCount" | "scopeStatus" | "coverageGaps" | "note" | "selectionPolicy" | "rankingSource" | "rankingModel"
   > | null;
   professorMatchStatus: "idle" | "loading" | "success" | "error";
   professorMatchError: string | null;
@@ -224,6 +224,12 @@ type ResearchState = {
   selectProfessorPaper: (selection: ProfessorPaperSelection | null) => void;
   saveKnockKitDraft: (key: string, draft: ProfessorKnockKitDraft) => void;
   saveMentorLoopEntry: (key: string, entry: ProfessorMentorLoopEntry) => void;
+  removeGrowthProjectRecord: (topicId: string) => void;
+  removeGrowthProfessorRecord: (
+    professorId: string,
+    source: GrowthProfessorRecord["source"],
+  ) => void;
+  deleteKnockKitDraft: (key: string) => void;
   deleteMentorLoopEntry: (key: string) => void;
   /** 데이터 종류별 삭제. 학생이 각각 지울 수 있어야 합니다. */
   clearGrowthDirectionBaseline: () => void;
@@ -369,6 +375,22 @@ export function migrateResearchState(
     } : {}),
     // v5부터 마지막 두 질문이 API 맞춤형으로 바뀌어 이전 고정 질문 진행 상태를 재사용하지 않습니다.
     ...(persistedVersion < 5 ? invalidatedResearchState() : {}),
+    /*
+     * v7은 학생 소속 교수 한 자리를 주전공뿐 아니라 입력한 부·복수전공까지 넓혔습니다.
+     * 해당 입력으로 만든 이전 결과만 비우고, 입력 맥락과 성장 기록은 보존해 다시 찾을 수 있게 합니다.
+     */
+    ...(persistedVersion < 7
+      && state.professorDiscoveryTopic?.secondaryMajor
+      && state.professorDiscoveryTopic.secondaryMajorType !== "없음"
+      ? {
+          professorMatches: [],
+          professorCoverage: null,
+          professorMatchStatus: "idle" as const,
+          professorMatchError: null,
+          professorMatchTopicId: null,
+          professorRejectedIds: [],
+        }
+      : {}),
   };
 }
 
@@ -697,6 +719,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
         scopeStatus: response.scopeStatus,
         coverageGaps: response.coverageGaps,
         note: response.note,
+        selectionPolicy: response.selectionPolicy,
         rankingSource: response.rankingSource,
         rankingModel: response.rankingModel,
       },
@@ -761,6 +784,54 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     set((state) => ({
       mentorLoopEntries: { ...state.mentorLoopEntries, [key]: entry },
     })),
+  removeGrowthProjectRecord: (topicId) =>
+    set((state) => ({
+      growthProjectHistory: state.growthProjectHistory.filter(
+        (record) => record.topicId !== topicId,
+      ),
+    })),
+  removeGrowthProfessorRecord: (professorId, source) =>
+    set((state) => {
+      const growthProfessorHistory = state.growthProfessorHistory.filter(
+        (record) => !(record.professorId === professorId && record.source === source),
+      );
+      const currentSource = state.professorCoverage?.rankingSource === "ai-reranked"
+        ? "project"
+        : "student";
+      const removesCurrentMatch = source === currentSource;
+      const professorMatches = removesCurrentMatch
+        ? state.professorMatches.filter((match) => match.professor.id !== professorId)
+        : state.professorMatches;
+      const stillConnected = growthProfessorHistory.some(
+        (record) => record.professorId === professorId,
+      ) || professorMatches.some((match) => match.professor.id === professorId);
+
+      return {
+        growthProfessorHistory,
+        professorMatches,
+        selectedProfessorId: state.selectedProfessorId === professorId && !stillConnected
+          ? null
+          : state.selectedProfessorId,
+        selectedProfessorPaper: state.selectedProfessorPaper?.professorId === professorId
+          && source === "paper"
+          ? null
+          : state.selectedProfessorPaper,
+        ...(professorMatches.length === 0 && state.professorMatches.length > 0
+          ? {
+              professorCoverage: null,
+              professorMatchStatus: "idle" as const,
+              professorMatchError: null,
+              professorMatchTopicId: null,
+            }
+          : {}),
+      };
+    }),
+  deleteKnockKitDraft: (key) =>
+    set((state) => {
+      const knockKitDrafts = { ...state.knockKitDrafts };
+      delete knockKitDrafts[key];
+      return { knockKitDrafts };
+    }),
   deleteMentorLoopEntry: (key) =>
     set((state) => {
       const mentorLoopEntries = { ...state.mentorLoopEntries };
@@ -832,7 +903,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     }),
 }), {
   name: "major-evolution-research-v1",
-  version: 6,
+  version: 7,
   migrate: migrateResearchState,
   storage: createJSONStorage(() => localStorage),
   skipHydration: true,
