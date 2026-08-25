@@ -199,7 +199,7 @@ export function ProfileScreen() {
 
   return (
     <AppShell
-      title="마이페이지"
+      showHeader={false}
       className={styles.shell}
       bottomNav={<ServiceBottomNav />}
     >

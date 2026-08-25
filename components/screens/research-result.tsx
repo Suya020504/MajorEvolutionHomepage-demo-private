@@ -39,7 +39,10 @@ import type {
 } from "@/lib/professor-domain";
 import { resolveProfessorPortrait } from "@/lib/professor-photo";
 import { CRITERION_LABELS, type CriterionKey, type TopicWithChecks } from "@/lib/recommend";
-import { useResearchStore } from "@/store/research-store";
+import {
+  isCurrentProjectProfessorMatch,
+  useResearchStore,
+} from "@/store/research-store";
 
 const STATUS_TONE: Record<CheckStatus, string> = { "확인됨": "ok", "조건부": "cond", "확인 필요": "need" };
 function StatusPill({ status }: { status: CheckStatus }) {
@@ -360,6 +363,7 @@ function ProfessorBlock({
   status,
   error,
   scopeMessage,
+  scopeAction,
   onLoad,
   onSelectProfessor,
 }: {
@@ -372,6 +376,7 @@ function ProfessorBlock({
   status: "idle" | "loading" | "success" | "error";
   error: string | null;
   scopeMessage: string | null;
+  scopeAction?: { label: string; onClick: () => void };
   onLoad: () => void;
   onSelectProfessor: (id: string) => void;
 }) {
@@ -384,9 +389,15 @@ function ProfessorBlock({
           <div>
             <strong>현재 단국대학교 교수 데이터 파일럿이에요</strong>
             <p>{scopeMessage}</p>
-            <Link href="/professors" className="prof-load-button">
-              <ShieldCheck size={16} /> 교수 찾기에서 학교 확인하기
-            </Link>
+            {scopeAction ? (
+              <button type="button" className="prof-load-button" onClick={scopeAction.onClick}>
+                <ShieldCheck size={16} /> {scopeAction.label}
+              </button>
+            ) : (
+              <Link href="/research/tutorial?source=full" className="prof-load-button">
+                <ShieldCheck size={16} /> 학교 조건 바꾸기
+              </Link>
+            )}
           </div>
         </Card>
         <p className="prof-disclaimer">{PROFESSOR_DISCLAIMER}</p>
@@ -518,6 +529,11 @@ function ProfessorBlock({
         </Card>
       ))}
       {coverage && <p className="prof-scope-note">{coverage.note}</p>}
+      {matches.length > 0 ? (
+        <Link href="/project-professors" className="prof-load-button">
+          맞춤 교수 추천 탭에서 이어보기 <ArrowUpRight size={15} />
+        </Link>
+      ) : null}
       <p className="prof-disclaimer">{PROFESSOR_DISCLAIMER}</p>
     </section>
   );
@@ -537,7 +553,9 @@ export function ResearchResultScreen() {
   const professorCoverage = useResearchStore((s) => s.professorCoverage);
   const professorMatchStatus = useResearchStore((s) => s.professorMatchStatus);
   const professorMatchError = useResearchStore((s) => s.professorMatchError);
+  const professorMatchTopicId = useResearchStore((s) => s.professorMatchTopicId);
   const selectTopic = useResearchStore((s) => s.selectTopic);
+  const setSchool = useResearchStore((s) => s.setSchool);
   const setProfessorMatchLoading = useResearchStore((s) => s.setProfessorMatchLoading);
   const setProfessorMatches = useResearchStore((s) => s.setProfessorMatches);
   const setProfessorMatchError = useResearchStore((s) => s.setProfessorMatchError);
@@ -574,8 +592,11 @@ export function ResearchResultScreen() {
     window.setTimeout(() => setCooldown(false), 1200);
   };
 
-  const loadProfessorMatches = async (topic: TopicWithChecks["topic"]) => {
-    if (!isDankookUniversity(conditions.school)) return;
+  const loadProfessorMatches = async (
+    topic: TopicWithChecks["topic"],
+    university = conditions.school,
+  ) => {
+    if (!isDankookUniversity(university)) return;
     professorRequestRef.current?.abort();
     const requestController = new AbortController();
     professorRequestRef.current = requestController;
@@ -584,7 +605,7 @@ export function ResearchResultScreen() {
       const response = await requestProfessorMatches(
         topic,
         conditions.major ?? "",
-        conditions.school,
+        university,
         { signal: requestController.signal },
       );
       if (professorRequestRef.current !== requestController) return;
@@ -643,6 +664,10 @@ export function ResearchResultScreen() {
     : !isDankookUniversity(conditions.school)
       ? `${conditions.school} 학생도 연구 아이디어 기능은 이용할 수 있지만, 교수 연결 데이터는 아직 단국대학교 1,051명만 지원합니다.`
       : null;
+  const hasCurrentProjectMatches = isCurrentProjectProfessorMatch({
+    selectedTopicId,
+    professorMatchTopicId,
+  });
 
   const stickyAction = (
     <>
@@ -769,11 +794,18 @@ export function ResearchResultScreen() {
             return chosen ? (
               <ProfessorBlock
                 topic={chosen.topic}
-                matches={professorMatches}
-                coverage={professorCoverage}
-                status={professorMatchStatus}
-                error={professorMatchError}
+                matches={hasCurrentProjectMatches ? professorMatches : []}
+                coverage={hasCurrentProjectMatches ? professorCoverage : null}
+                status={hasCurrentProjectMatches ? professorMatchStatus : "idle"}
+                error={hasCurrentProjectMatches ? professorMatchError : null}
                 scopeMessage={professorScopeMessage}
+                scopeAction={!conditions.school.trim() ? {
+                  label: "단국대학교 재학생으로 확인하고 이어가기",
+                  onClick: () => {
+                    setSchool("단국대학교");
+                    void loadProfessorMatches(chosen.topic, "단국대학교");
+                  },
+                } : undefined}
                 onLoad={() => void loadProfessorMatches(chosen.topic)}
                 onSelectProfessor={selectProfessor}
               />

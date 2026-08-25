@@ -98,6 +98,13 @@ export function HomeAiMapPreview() {
     (node) => node.childIds.filter((id) => visibleIds.has(id)).length > 1,
   ).length;
   const latestNode = visibleNodes.at(-1) ?? null;
+  const mobilePreviewNodes = previewNodes.length
+    ? latestNode && latestNode.id !== previewNodes[0]?.id
+      ? [previewNodes[0]!, latestNode]
+      : [previewNodes[0]!]
+    : latestNode
+      ? [latestNode]
+      : [];
 
   return (
     <section className={styles.aiMapPreviewSection} aria-labelledby="home-ai-map-title">
@@ -136,6 +143,25 @@ export function HomeAiMapPreview() {
               <span className={styles.aiMapMoreNodes}>+ {visibleNodes.length - previewNodes.length}개 흐름</span>
             ) : null}
           </div>
+
+          <ol className={styles.aiMapMobileFlow} aria-label="나의 AI 대화 지도 핵심 흐름">
+            {mobilePreviewNodes.map((node) => {
+              const Icon = NODE_ICONS[node.type];
+              return (
+                <li key={node.id} data-type={node.type}>
+                  <span aria-hidden="true"><Icon size={15} /></span>
+                  <div>
+                    <strong>{node.title}</strong>
+                    <small>{node.typeLabel} · {node.topic}</small>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          <Link href="/portfolio/ai-professor?view=map" className={styles.aiMapMobileLink}>
+            전체 {visibleNodes.length}개 생각 흐름 보기 <ArrowRight size={16} aria-hidden="true" />
+          </Link>
 
           <aside className={styles.aiMapLatest} aria-label="최근 AI 대화 정리">
             <span>최근 정리된 생각</span>

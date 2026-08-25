@@ -6,7 +6,7 @@
   --tutorial-mint: var(--brand-mint-dark);
   --tutorial-radius: 12px;
   --tutorial-control: 52px;
-  min-height: 100vh;
+  min-height: var(--app-visual-viewport-height, 100dvh);
   color: var(--tutorial-navy);
   background: #fff;
 }
@@ -19,7 +19,7 @@
   min-height: 64px;
   align-items: center;
   justify-content: space-between;
-  padding: 0 clamp(20px, 4vw, 48px);
+  padding: var(--app-safe-top, 0px) max(clamp(20px, 4vw, 48px), var(--app-safe-right, 0px)) 0 max(clamp(20px, 4vw, 48px), var(--app-safe-left, 0px));
   border-bottom: 1px solid var(--tutorial-border);
   background: #fff;
 }
@@ -97,14 +97,14 @@
 .shell {
   display: grid;
   width: min(100%, 1280px);
-  min-height: calc(100vh - 64px);
+  min-height: calc(var(--app-visual-viewport-height, 100dvh) - 64px - var(--app-safe-top, 0px));
   margin: 0 auto;
   grid-template-columns: minmax(520px, 1.08fr) minmax(460px, 0.92fr);
 }
 
 .contextPanel {
   display: flex;
-  min-height: calc(100vh - 64px);
+  min-height: calc(var(--app-visual-viewport-height, 100dvh) - 64px - var(--app-safe-top, 0px));
   flex-direction: column;
   padding: clamp(36px, 4vw, 48px) clamp(32px, 4.5vw, 56px) 24px;
   border-right: 1px solid var(--tutorial-border);
@@ -598,7 +598,7 @@
 
 .loadingPage {
   display: grid;
-  min-height: 100vh;
+  min-height: var(--app-visual-viewport-height, 100dvh);
   place-items: center;
   padding: 28px;
   color: #071026;
@@ -685,15 +685,18 @@
   .chipGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 760px) {
-  .header { min-height: 56px; padding: 0 16px; }
+@media (max-width: 900px) {
+  .header {
+    min-height: calc(56px + var(--app-safe-top, 0px));
+    padding: var(--app-safe-top, 0px) max(16px, var(--app-safe-right, 0px)) 0 max(16px, var(--app-safe-left, 0px));
+  }
   .headerMeta span { display: none; }
   .headerMeta button { min-height: 42px; font-size: 12px; }
-  .shell { display: block; min-height: calc(100vh - 56px); }
+  .shell { display: block; min-height: calc(var(--app-visual-viewport-height, 100dvh) - 56px - var(--app-safe-top, 0px)); }
   .contextPanel { display: none; }
 
   .questionPanel {
-    min-height: calc(100vh - 56px);
+    min-height: calc(var(--app-visual-viewport-height, 100dvh) - 56px - var(--app-safe-top, 0px));
     justify-content: flex-start;
     padding: 20px 16px 24px;
   }
@@ -815,6 +818,8 @@
   .welcomeAction .smallNote { text-align: center; }
   .choiceGrid,
   .chipGrid { grid-template-columns: 1fr; gap: 8px; }
+  .chipGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chipGrid .choice { padding-right: 9px; padding-left: 12px; font-size: 12px; }
   .choice { min-height: 52px; }
 
   .fixedField {
@@ -865,8 +870,8 @@
 }
 
 .overlayPage .header {
-  min-height: 64px;
-  padding: 0 20px;
+  min-height: calc(64px + var(--app-safe-top, 0px));
+  padding: var(--app-safe-top, 0px) max(20px, var(--app-safe-right, 0px)) 0 max(20px, var(--app-safe-left, 0px));
 }
 
 .overlayPage .shell {
@@ -884,7 +889,50 @@
   height: 100%;
 }
 
-@media (min-width: 761px) and (max-height: 1080px) {
+.embeddedPage {
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+}
+
+.embeddedPage .header { position: static; }
+
+.embeddedPage .shell {
+  min-height: 0;
+  grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+}
+
+.embeddedPage .contextPanel,
+.embeddedPage .questionPanel {
+  min-height: clamp(660px, calc(100svh - 150px), 780px);
+}
+
+.embeddedPage .contextPanel {
+  padding-right: clamp(28px, 3vw, 42px);
+  padding-left: clamp(28px, 3vw, 42px);
+}
+
+.embeddedPage .questionPanel {
+  padding-right: clamp(24px, 3vw, 40px);
+  padding-left: clamp(24px, 3vw, 40px);
+}
+
+.embeddedPage .contextCopy h1 {
+  font-size: clamp(34px, 3vw, 42px);
+}
+
+.embeddedPage .questionBody {
+  max-height: none;
+  overflow: visible;
+}
+
+.embeddedLoadingPage {
+  min-height: clamp(520px, calc(100svh - 160px), 720px);
+  height: auto;
+}
+
+@media (min-width: 901px) and (max-height: 1080px) {
   .overlayPage .contextPanel {
     padding-top: 32px;
     padding-bottom: 18px;
@@ -917,10 +965,10 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .overlayPage .header {
-    min-height: 54px;
-    padding: 0 14px;
+    min-height: calc(54px + var(--app-safe-top, 0px));
+    padding: var(--app-safe-top, 0px) max(14px, var(--app-safe-right, 0px)) 0 max(14px, var(--app-safe-left, 0px));
   }
 
   .overlayPage .shell,
@@ -997,6 +1045,28 @@
 
 @media (max-width: 420px) {
   .overlayTitle small { display: none; }
+}
+
+@media (max-width: 900px) {
+  .embeddedPage .header { position: static; }
+
+  .embeddedPage .shell,
+  .embeddedPage .questionPanel {
+    min-height: 0;
+  }
+
+  .embeddedPage .questionPanel {
+    padding-bottom: 24px;
+  }
+
+  .embeddedPage .mobileHeroMedia {
+    height: clamp(118px, 18dvh, 150px);
+    aspect-ratio: auto;
+  }
+
+  .embeddedLoadingPage {
+    min-height: calc(var(--app-visual-viewport-height, 100dvh) - 180px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import { GoogleAnalytics } from "@/components/analytics/google-analytics";
+import { MobileViewportSync } from "@/components/app/mobile-viewport-sync";
 import { StoreHydrator } from "@/components/app/store-hydrator";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { brandScene } from "@/lib/brand-assets";
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="ko" className={pretendard.variable} data-scroll-behavior="smooth">
       <body>
+        <MobileViewportSync />
         <StoreHydrator />
         <a href="#main-content" className="skip-link">
           본문으로 건너뛰기

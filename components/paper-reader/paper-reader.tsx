@@ -25,6 +25,7 @@ import {
   PrimaryButton,
   Tag,
 } from "@/components/app/primitives";
+import { PaperReadingSteps } from "@/components/paper-reader/paper-reading-steps";
 import {
   extractPdfText,
   PdfReadError,
@@ -35,6 +36,7 @@ import {
 import { requestPaperAssistStream, type PaperReaderAssist } from "@/lib/paper-reader-client";
 import { useQuestContext } from "@/lib/quest-context";
 import { useQuestStore, type SavedQuestCard } from "@/store/quest-store";
+import { useResearchStore } from "@/store/research-store";
 
 /**
  * 논문 리더 (F14~F19).
@@ -64,6 +66,7 @@ export function PaperReader() {
   const saveCard = useQuestStore((state) => state.saveCard);
   const deleteCard = useQuestStore((state) => state.deleteCard);
   const cards = useQuestStore((state) => state.cards);
+  const selectedProfessorPaper = useResearchStore((state) => state.selectedProfessorPaper);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const [doc, setDoc] = useState<PdfDocument | null>(null);
@@ -159,8 +162,9 @@ export function PaperReader() {
       title: `${kind} · ${doc.fileName}`,
       body: body.trim(),
       evidence: { label: doc.fileName, page: evidencePage, href: null },
-      professorId: match?.professor.id ?? null,
+      professorId: selectedProfessorPaper?.professorId ?? match?.professor.id ?? null,
       topicId: topic?.id ?? null,
+      paperId: selectedProfessorPaper?.paperId ?? null,
     });
   };
 
@@ -201,14 +205,21 @@ export function PaperReader() {
   // ── 업로드 전 ───────────────────────────────────────────────
   if (!doc) {
     return (
-      <AppShell title="논문 리더" backHref="/quest" className="reader-screen">
+      <AppShell title="논문 리더" backHref="/paper/reader?mode=bite&source=favorites&step=card" className="reader-screen">
+        <PaperReadingSteps current={3} />
         <Card className="reader-drop">
           <Upload size={30} aria-hidden="true" />
-          <h1>논문 PDF를 올려 주세요</h1>
+          <h1>PDF를 넣고 논문을 해설·요약해요</h1>
           <p>
-            파일은 이 브라우저에서만 열립니다. 서버로 올리지 않고, AI에는 지금 보고 있는
-            페이지 내용만 보냅니다.
+            파일은 이 브라우저에서 열고, AI에는 현재 확인 중인 페이지와 앞뒤 페이지 내용만 보냅니다.
           </p>
+          {selectedProfessorPaper ? (
+            <div className="reader-selected-paper">
+              <small>앞에서 선택한 논문</small>
+              <strong>{selectedProfessorPaper.title}</strong>
+              <span>{selectedProfessorPaper.professorName} 교수 · 같은 논문의 PDF인지 확인해 주세요.</span>
+            </div>
+          ) : null}
           <input
             ref={fileInput}
             type="file"
@@ -220,7 +231,9 @@ export function PaperReader() {
             }}
           />
           <PrimaryButton onClick={() => fileInput.current?.click()} disabled={loading}>
-            {loading ? <><LoaderCircle className="spin" size={17} /> 읽는 중…</> : <><Upload size={17} /> PDF 선택</>}
+            {loading
+              ? <><LoaderCircle className="spin" size={17} /> PDF 읽는 중…</>
+              : <><Upload size={17} /> PDF 넣고 페이지별 해설·요약 시작</>}
           </PrimaryButton>
           {loadError && (
             <p className="reader-drop__error" role="alert"><CircleAlert size={15} /> {loadError}</p>
@@ -232,7 +245,8 @@ export function PaperReader() {
 
   // ── 리더 ────────────────────────────────────────────────────
   return (
-    <AppShell title="논문 리더" backHref="/quest" className="reader-screen">
+    <AppShell title="논문 리더" backHref="/paper/reader?mode=bite&source=favorites&step=card" className="reader-screen">
+      <PaperReadingSteps current={3} />
       <div className="reader-file">
         <FileText size={20} aria-hidden="true" />
         <div>

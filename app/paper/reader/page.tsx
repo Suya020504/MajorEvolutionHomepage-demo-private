@@ -4,11 +4,17 @@ import { PaperReaderShell } from "@/components/paper-reader/paper-reader-shell";
 export default async function PaperReaderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string; source?: string }>;
+  searchParams: Promise<{ mode?: string; source?: string; step?: string }>;
 }) {
-  const { mode, source } = await searchParams;
+  const { mode, source, step } = await searchParams;
+  if (mode === "pdf") return <PaperReader />;
   if (mode === "bite" || source === "favorites") {
-    return <PaperReaderShell openFavoritePickerOnLoad={source === "favorites"} />;
+    return (
+      <PaperReaderShell
+        startFromFavorites={source === "favorites"}
+        initialStep={step === "card" ? "card" : source === "favorites" ? "select" : "card"}
+      />
+    );
   }
 
   return <PaperReader />;

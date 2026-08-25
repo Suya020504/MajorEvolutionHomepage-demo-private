@@ -23,6 +23,7 @@ import { useState } from "react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { LandingProductPreview } from "@/components/landing/landing-product-preview";
 import { brandScene } from "@/lib/brand-assets";
+import { SERVICE_HOME_WITH_NAV_GUIDE } from "@/lib/service-navigation";
 import { useProfileStore } from "@/store/profile-store";
 import styles from "./landing-page.module.css";
 
@@ -54,10 +55,10 @@ const PROBLEMS = [
 const FLOW = [
   {
     number: "01",
-    title: "고민을 정리하다",
+    title: "교수 연결의 기본을 설정하다",
     description:
-      "긴 신청서 대신 한 번에 한 질문씩 답합니다. 3분 동안 전공·진로 고민과 지금 필요한 도움을 한 문장으로 정리해요.",
-    points: ["질문 하나씩 진행", "기본 분석 후 심층 분석 선택", "답은 언제든 수정 가능"],
+      "전공과 관심 분야만 두 단계로 설정합니다. 설정을 마치면 단국대학교 공식 교수 정보에서 연결 이유가 다른 세 분을 보여드려요.",
+    points: ["전공·관심 분야만 입력", "입력은 이 기기에 저장", "완료 후 교수 3인 피칭"],
     image: brandScene.home.w1440,
     alt: "학생과 AI 가이드가 캠퍼스에서 전공과 진로 방향을 정리하는 장면",
   },
@@ -87,8 +88,8 @@ const JOURNEYS = [
     eyebrow: "교수 연결 여정",
     title: "내 고민을 함께 이야기할 교수님을 찾아요",
     description:
-      "전공·수업·진로 고민을 정리하고, 공식 교수 정보에서 연결 이유를 확인한 뒤 첫 만남을 준비합니다.",
-    steps: ["3분 고민 정리", "근거가 보이는 교수 3인 피칭", "논문·질문·이메일·면담 준비"],
+      "전공과 관심 분야를 설정하고, 공식 교수 정보에서 연결 이유를 확인한 뒤 첫 만남을 준비합니다.",
+    steps: ["전공·관심 기본 설정", "근거가 보이는 교수 3인 피칭", "논문·질문·이메일·면담 준비"],
     href: "/tutorial",
     cta: "교수 연결 시작하기",
   },
@@ -123,7 +124,7 @@ const OUTCOMES = [
   {
     icon: MessageCircleQuestion,
     title: "나의 AI 교수님과 대화 지도",
-    description: "진로·프로젝트 대화에서 나온 질문·발견·결정·다음 행동을 카드로 보고, 내가 고른 내용만 성장 메모로 남깁니다.",
+    description: "진로·프로젝트 대화에서 나온 질문·발견·결정·다음 행동을 카드로 보고, 원문에서 새 갈래를 이어가거나 핵심만 성장 메모로 남깁니다.",
   },
 ] as const;
 
@@ -158,8 +159,8 @@ export function LandingPage() {
             <Link href="/home" className={styles.resumeLink} onClick={markServiceEntered}>
               이어하기
             </Link>
-            <Link href="/tutorial" className={styles.headerCta}>
-              3분 방향 찾기
+            <Link href={SERVICE_HOME_WITH_NAV_GUIDE} className={styles.headerCta} onClick={markServiceEntered}>
+              서비스 시작하기
             </Link>
           </div>
 
@@ -185,8 +186,12 @@ export function LandingPage() {
             <Link href="/home" onClick={() => { markServiceEntered(); closeMenu(); }}>
               이어하기
             </Link>
-            <Link href="/tutorial" className={styles.mobileMenuCta} onClick={closeMenu}>
-              3분 방향 찾기 <ArrowRight size={17} aria-hidden="true" />
+            <Link
+              href={SERVICE_HOME_WITH_NAV_GUIDE}
+              className={styles.mobileMenuCta}
+              onClick={() => { markServiceEntered(); closeMenu(); }}
+            >
+              서비스 시작하기 <ArrowRight size={17} aria-hidden="true" />
             </Link>
           </nav>
         )}
@@ -208,8 +213,8 @@ export function LandingPage() {
                 <br className={styles.desktopBreak} /> 첫 만남과 성장 기록까지 이어갑니다.
               </p>
               <div className={styles.heroActions}>
-                <Link href="/tutorial" className={styles.primaryCta}>
-                  3분 방향 찾기 <ArrowRight size={19} aria-hidden="true" />
+                <Link href={SERVICE_HOME_WITH_NAV_GUIDE} className={styles.primaryCta} onClick={markServiceEntered}>
+                  서비스 시작하기 <ArrowRight size={19} aria-hidden="true" />
                 </Link>
                 <a href="#preview" className={styles.secondaryCta}>
                   실제 화면 보기 <ArrowRight size={18} aria-hidden="true" />
@@ -464,10 +469,10 @@ export function LandingPage() {
                 <br />
                 <em>나만의 성장 흐름</em>으로 바꿔보세요.
               </h2>
-              <p>가입 없이 3분이면 첫 방향을 정리할 수 있고, 이후 교수 연결·프로젝트·성장 기록을 이 기기에서 이어갈 수 있어요.</p>
+              <p>가입 없이 전공과 관심 분야를 설정하면 첫 교수 연결을 확인할 수 있고, 이후 프로젝트와 성장 기록을 이 기기에서 이어갈 수 있어요.</p>
               <div className={styles.closingActions}>
-                <Link href="/tutorial" className={styles.primaryCta}>
-                  3분 방향 찾기 <ArrowRight size={19} aria-hidden="true" />
+                <Link href={SERVICE_HOME_WITH_NAV_GUIDE} className={styles.primaryCta} onClick={markServiceEntered}>
+                  서비스 시작하기 <ArrowRight size={19} aria-hidden="true" />
                 </Link>
                 <Link href="/home" className={styles.closingResume} onClick={markServiceEntered}>
                   이어하기 <ArrowRight size={16} aria-hidden="true" />

@@ -24,12 +24,12 @@ import {
   UsersRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useEffect } from "react";
 import { AppShell } from "@/components/app/primitives";
 import { ServiceBottomNav } from "@/components/app/side-nav";
-import { BrandLogo } from "@/components/brand/brand-logo";
 import { HomeAiMapPreview } from "@/components/screens/home-ai-map-preview";
-import { ProfessorQuickStartOverlay } from "@/components/screens/professor-quick-start-overlay";
-import { ProjectQuickStartOverlay } from "@/components/screens/project-quick-start-overlay";
+import { ProfessorQuickStartPanel } from "@/components/screens/professor-quick-start-panel";
+import { ProjectQuickStartPanel } from "@/components/screens/project-quick-start-panel";
 import type { ProfessorAcademicTaxonomy } from "@/lib/professor-academic-taxonomy";
 import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import {
@@ -140,10 +140,13 @@ export function UnifiedHomeScreen({
   const searchParams = useSearchParams();
   const professorQuickOpen = searchParams.get("professor") === "quick";
   const projectQuickOpen = searchParams.get("project") === "quick";
+  const quickPanelOpen = professorQuickOpen || projectQuickOpen;
   const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
   const result = useResearchStore((state) => state.result);
   const selectedTopicId = useResearchStore((state) => state.selectedTopicId);
   const matches = useResearchStore((state) => state.professorMatches);
+  const professorMatchStatus = useResearchStore((state) => state.professorMatchStatus);
+  const professorMatchTopicId = useResearchStore((state) => state.professorMatchTopicId);
   const selectedProfessorId = useResearchStore((state) => state.selectedProfessorId);
   const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
   const discoverySummary = useResearchStore((state) => state.professorDiscoverySummary);
@@ -153,12 +156,21 @@ export function UnifiedHomeScreen({
   const mentorLoopEntries = useResearchStore((state) => state.mentorLoopEntries);
   const hasQuestHydrated = useQuestStore((state) => state.hasHydrated);
   const questCards = useQuestStore((state) => state.cards);
+  const hasStoredProfessorPitch = professorMatchStatus === "success"
+    && matches.length > 0
+    && discoveryTopic !== null
+    && professorMatchTopicId === discoveryTopic.id;
 
-  if (!hasResearchHydrated || !hasQuestHydrated) {
+  useEffect(() => {
+    if (!hasResearchHydrated || !professorQuickOpen || !hasStoredProfessorPitch) return;
+    router.replace("/professors/pitch", { scroll: false });
+  }, [hasResearchHydrated, hasStoredProfessorPitch, professorQuickOpen, router]);
+
+  if (!hasResearchHydrated || !hasQuestHydrated || (professorQuickOpen && hasStoredProfessorPitch)) {
     return (
       <div className="research-loading">
         <LoaderCircle className="spin" />
-        <p>저장된 여정을 불러오고 있어요.</p>
+        <p>{professorQuickOpen && hasStoredProfessorPitch ? "저장한 교수 피칭을 불러오고 있어요." : "저장된 여정을 불러오고 있어요."}</p>
       </div>
     );
   }
@@ -194,11 +206,11 @@ export function UnifiedHomeScreen({
   let nextAction: NextAction;
   if (matches.length === 0 && !hasConcernContext) {
     nextAction = {
-      heading: "막막한 고민부터 가볍게 정리해 볼까요?",
-      supporting: "가입 없이 3분이면 지금 필요한 방향과 첫 교수 연결을 시작할 수 있어요.",
-      title: "나의 방향 3분 정리하기",
-      description: "몇 가지 선택으로 전공·진로 고민과 지금 필요한 도움을 정리해요.",
-      cta: "3분 방향 찾기",
+      heading: "전공과 관심 분야부터 가볍게 설정해 볼까요?",
+      supporting: "가입 없이 두 단계 기본 설정을 마치면 첫 교수 연결을 시작할 수 있어요.",
+      title: "교수 매칭 기본 설정",
+      description: "학교·전공과 관심 분야를 설정하면 공식 정보에서 연결 이유가 다른 교수 세 분을 보여드려요.",
+      cta: "기본 설정하기",
       href: "/home?professor=quick",
       icon: Compass,
     };
@@ -322,6 +334,9 @@ export function UnifiedHomeScreen({
   ];
   const currentStepId = steps.find((step) => !step.done)?.id ?? null;
   const completedStepCount = steps.filter((step) => step.done).length;
+  const currentStep = steps.find((step) => step.id === currentStepId) ?? steps[0]!;
+  const CurrentStepIcon = currentStep.icon;
+  const journeyComplete = currentStepId === null;
 
   const recentItems: RecentItem[] = [];
   if (selectedPaper) {
@@ -358,14 +373,27 @@ export function UnifiedHomeScreen({
       showHeader={false}
       bottomNav={<ServiceBottomNav />}
     >
-      <header className={styles.mobileHeader}>
-        <BrandLogo href="/home" compact />
-        <Link href="/profile" aria-label="내 정보 보기"><UserRound size={21} /></Link>
-      </header>
-
-      <div className={styles.dashboard}>
-        <div className={styles.primaryGrid}>
-          <section className={styles.nextAction} aria-labelledby="next-action-title">
+      <div
+        className={`${styles.dashboard} ${quickPanelOpen ? styles.quickDashboard : ""}`}
+        data-service-onboarding="home-content"
+      >
+        {professorQuickOpen ? (
+          <ProfessorQuickStartPanel
+            taxonomy={professorTaxonomy}
+            onClose={() => router.replace("/home", { scroll: false })}
+          />
+        ) : projectQuickOpen ? (
+          <ProjectQuickStartPanel
+            onClose={() => router.replace("/home", { scroll: false })}
+          />
+        ) : (
+          <>
+          <div className={styles.primaryGrid}>
+          <section
+            className={styles.nextAction}
+            aria-labelledby="next-action-title"
+            data-service-help="home-next-action"
+          >
             <span className={styles.heroGlow} aria-hidden="true" />
             <header className={styles.intro}>
               <h1>{nextAction.heading}</h1>
@@ -383,7 +411,11 @@ export function UnifiedHomeScreen({
             </div>
           </section>
 
-          <section className={styles.professorPanel} aria-labelledby="connected-professor-title">
+          <section
+            className={styles.professorPanel}
+            aria-labelledby="connected-professor-title"
+            data-service-help="home-professor"
+          >
             <div className={styles.sectionHeader}>
               <h2 id="connected-professor-title">나의 첫 교수 연결</h2>
             </div>
@@ -428,10 +460,36 @@ export function UnifiedHomeScreen({
           </section>
         </div>
 
-        <section className={styles.progressSection} aria-labelledby="journey-progress-title">
+        <section
+          className={styles.progressSection}
+          aria-labelledby="journey-progress-title"
+          data-service-help="home-progress"
+        >
           <div className={styles.progressHeading}>
             <h2 id="journey-progress-title">첫 대화 준비 진행률</h2>
             <strong>{completedStepCount}<span>/ {steps.length} 완료</span></strong>
+          </div>
+          <div className={styles.mobileProgressCard}>
+            <span className={styles.mobileProgressIcon} aria-hidden="true">
+              {journeyComplete ? <Check size={18} /> : <CurrentStepIcon size={18} />}
+            </span>
+            <div className={styles.mobileProgressCopy}>
+              <small>{journeyComplete ? "준비 완료" : "지금 할 일"}</small>
+              <strong>{journeyComplete ? "첫 대화 준비를 마쳤어요" : currentStep.label}</strong>
+            </div>
+            <Link href={journeyComplete ? "/portfolio" : currentStep.href}>
+              {journeyComplete ? "성장 보기" : "이어가기"} <ChevronRight size={16} aria-hidden="true" />
+            </Link>
+          </div>
+          <div
+            className={styles.mobileProgressTrack}
+            role="progressbar"
+            aria-label="첫 대화 준비 진행률"
+            aria-valuemin={0}
+            aria-valuemax={steps.length}
+            aria-valuenow={completedStepCount}
+          >
+            <span style={{ width: `${(completedStepCount / steps.length) * 100}%` }} />
           </div>
           <ol className={styles.progressRail}>
             {steps.map((step) => {
@@ -456,7 +514,9 @@ export function UnifiedHomeScreen({
           </ol>
         </section>
 
-        <HomeAiMapPreview />
+        <div data-service-help="home-ai-map">
+          <HomeAiMapPreview />
+        </div>
 
         <div className={styles.lowerGrid}>
           <section className={styles.recentSection} aria-labelledby="recent-title">
@@ -513,17 +573,9 @@ export function UnifiedHomeScreen({
             </div>
           </section>
         </div>
+          </>
+        )}
       </div>
-
-      {projectQuickOpen ? (
-        <ProjectQuickStartOverlay onClose={() => router.replace("/home", { scroll: false })} />
-      ) : null}
-      {professorQuickOpen ? (
-        <ProfessorQuickStartOverlay
-          taxonomy={professorTaxonomy}
-          onClose={() => router.replace("/home", { scroll: false })}
-        />
-      ) : null}
     </AppShell>
   );
 }

@@ -32,13 +32,13 @@ import {
 } from "@/components/app/primitives";
 import { ServiceBottomNav } from "@/components/app/side-nav";
 import {
+  HubAdaptiveLayout,
   HubList,
   HubPrimaryTask,
   HubRow,
   HubUtilityLink,
   HubUtilityLinks,
   ServiceHubIntro,
-  ServiceMobileHeader,
   serviceHubStyles as styles,
 } from "@/components/app/service-hub";
 import { SceneBanner } from "@/components/app/scene-banner";
@@ -142,7 +142,6 @@ const TOOL_NAME = new Map(TOOLS.map((tool) => [tool.id, tool.name]));
 export function QuestHubScreen() {
   const hasHydrated = useQuestStore((state) => state.hasHydrated);
   const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
-  const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
   const selectedProfessorId = useResearchStore((state) => state.selectedProfessorId);
   const professorMatches = useResearchStore((state) => state.professorMatches);
   const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
@@ -166,12 +165,9 @@ export function QuestHubScreen() {
   const beforeCount = paperCount + questionCount + emailCount;
   const selectedProfessorMatch = professorMatches.find(
     (match) => match.professor.id === selectedProfessorId,
-  ) ?? professorMatches.find(
-    (match) => favoriteProfessorIds.includes(match.professor.id),
   ) ?? null;
   const selectedProfessor = selectedProfessorMatch?.professor ?? null;
-  const hasConnectedProfessor = Boolean(selectedProfessor)
-    || favoriteProfessorIds.length > 0;
+  const hasConnectedProfessor = Boolean(selectedProfessorId);
 
   const primary = !hasConnectedProfessor
       ? {
@@ -273,28 +269,87 @@ export function QuestHubScreen() {
   ] as const;
   const completedMeetingSteps = meetingSteps.filter((step) => step.done).length;
   const currentMeetingStep = meetingSteps.findIndex((step) => !step.done);
+  const mobileCurrentMeetingStep = currentMeetingStep >= 0
+    ? currentMeetingStep
+    : meetingSteps.length - 1;
+  const mobileJourneyStart = mobileCurrentMeetingStep < meetingSteps.length - 1
+    ? mobileCurrentMeetingStep
+    : Math.max(0, mobileCurrentMeetingStep - 1);
   const progressPercent = Math.round((completedMeetingSteps / meetingSteps.length) * 100);
 
   return (
     <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
-      <ServiceMobileHeader />
-      <div className={styles.hub}>
+      <div className={`${styles.hub} ${questStyles.questHub}`}>
         <ServiceHubIntro
           title={selectedProfessor
             ? `${selectedProfessor.name} 교수님과 첫 만남을 준비해요`
             : "교수님과 첫 만남을 준비해요"}
           description="교수 선택부터 연락, 대화 중 질문, 면담 후 행동까지 현재 단계와 다음 할 일을 한 화면에서 이어가요."
         />
-        <HubPrimaryTask
-          icon={primary.icon}
-          title={primary.taskTitle}
-          description={primary.description}
-          cta={primary.cta}
-          href={primary.href}
-          secondary={{ label: "전체 준비 도구 보기", href: "/quest/all" }}
-        />
+        <HubAdaptiveLayout
+          layout="stacked"
+          contextLabel="현재 교수 연결과 저장한 준비 현황"
+          primary={(
+            <HubPrimaryTask
+              icon={primary.icon}
+              title={primary.taskTitle}
+              description={primary.description}
+              cta={primary.cta}
+              href={primary.href}
+              secondary={{ label: "전체 준비 도구 보기", href: "/quest/all" }}
+            />
+          )}
+          context={(
+            <div className={questStyles.contextRail}>
+              <section className={`${questStyles.contextCard} ${questStyles.professorContextCard}`} aria-labelledby="meeting-professor-summary">
+                <span className={questStyles.contextEyebrow}>현재 연결</span>
+                <h2 id="meeting-professor-summary">
+                  {selectedProfessor ? `${selectedProfessor.name} 교수님` : "첫 교수를 선택해 주세요"}
+                </h2>
+                <p>
+                  {selectedProfessor
+                    ? `${selectedProfessor.university} · ${selectedProfessor.department}`
+                    : "공식 프로필의 연구 분야를 확인한 뒤 첫 대화를 준비할 교수를 골라요."}
+                </p>
+                {selectedProfessorMatch?.reason ? (
+                  <blockquote>{selectedProfessorMatch.reason}</blockquote>
+                ) : null}
+                <Link
+                  href={selectedProfessor ? `/professors/${selectedProfessor.id}` : "/professors"}
+                  className={questStyles.contextLink}
+                >
+                  {selectedProfessor ? "연결 근거 다시 보기" : "교수 찾기"}
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+                <Link href="/quest/all#saved-cards" className={questStyles.mobileSavedLink}>
+                  저장한 준비물 {beforeCount + silenceCount + afterCount}개 보기
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+              </section>
 
-        <section className={questStyles.journey} aria-labelledby="meeting-journey-title">
+              <section className={`${questStyles.contextCard} ${questStyles.savedContextCard}`} aria-labelledby="meeting-saved-summary">
+                <span className={questStyles.contextEyebrow}>준비 현황</span>
+                <div className={questStyles.contextHeadingRow}>
+                  <h2 id="meeting-saved-summary">저장한 준비물</h2>
+                  <strong>{beforeCount + silenceCount + afterCount}개</strong>
+                </div>
+                <dl className={questStyles.contextStats}>
+                  <div><dt>만나기 전</dt><dd>{beforeCount}</dd></div>
+                  <div><dt>대화 중</dt><dd>{silenceCount}</dd></div>
+                  <div><dt>만난 후</dt><dd>{afterCount}</dd></div>
+                </dl>
+                <div className={questStyles.contextProgressCopy}>
+                  <span>첫 만남 여정</span>
+                  <strong>{progressPercent}%</strong>
+                </div>
+                <div className={questStyles.contextProgressTrack} aria-hidden="true">
+                  <span style={{ width: `${progressPercent}%` }} />
+                </div>
+              </section>
+            </div>
+          )}
+        >
+          <section className={questStyles.journey} aria-labelledby="meeting-journey-title">
           <header className={questStyles.journeyHeader}>
             <div>
               <span>첫 만남 여정</span>
@@ -316,11 +371,13 @@ export function QuestHubScreen() {
             {meetingSteps.map((step, index) => {
               const Icon = step.icon;
               const isCurrent = currentMeetingStep === index;
+              const isMobileVisible = index >= mobileJourneyStart
+                && index <= Math.min(mobileJourneyStart + 1, meetingSteps.length - 1);
               return (
                 <Link
                   key={step.id}
                   href={step.href}
-                  className={`${questStyles.journeyStep}${step.done ? ` ${questStyles.isDone}` : ""}${isCurrent ? ` ${questStyles.isCurrent}` : ""}`}
+                  className={`${questStyles.journeyStep}${step.done ? ` ${questStyles.isDone}` : ""}${isCurrent ? ` ${questStyles.isCurrent}` : ""}${isMobileVisible ? ` ${questStyles.mobileVisibleStep}` : ""}`}
                   aria-current={isCurrent ? "step" : undefined}
                 >
                   <span className={questStyles.stepIcon}>
@@ -336,50 +393,64 @@ export function QuestHubScreen() {
               );
             })}
           </div>
-        </section>
+          </section>
+        </HubAdaptiveLayout>
 
-        <HubList title="단계별 준비 도구">
-          <HubRow
-            icon={BookOpenCheck}
-            title="만나기 전"
-            description="논문 이해 · 첫 질문 · 이메일 준비"
-            status={beforeCount ? `${beforeCount}개 저장` : "준비 중"}
-            href={paperCount === 0 ? "/paper/reader?mode=bite&source=favorites" : questionCount === 0 ? "/quest/first-line" : "/quest/email-guard"}
-            tone="violet"
-          />
-          <HubRow
-            icon={MessageSquareText}
-            title="대화 중"
-            description="말이 막힐 때 볼 질문을 미리 준비해요."
-            status={silenceCount ? `${silenceCount}개 저장` : "시작 전"}
-            href="/quest/silence-rescue"
-            tone={silenceCount ? "mint" : "neutral"}
-          />
-          <HubRow
-            icon={CalendarCheck}
-            title="만난 후"
-            description="피드백을 수정 전후와 7일 행동으로 남겨요."
-            status={afterCount ? `${afterCount}개 저장` : "시작 전"}
-            href="/mentor-loop"
-            tone={afterCount ? "mint" : "neutral"}
-          />
-        </HubList>
+        <div className={questStyles.expandedToolLists}>
+          <HubList title="단계별 준비 도구">
+            <HubRow
+              icon={BookOpenCheck}
+              title="만나기 전"
+              description="논문 이해 · 첫 질문 · 이메일 준비"
+              status={beforeCount ? `${beforeCount}개 저장` : "준비 중"}
+              href={paperCount === 0 ? "/paper/reader?mode=bite&source=favorites" : questionCount === 0 ? "/quest/first-line" : "/quest/email-guard"}
+              tone="violet"
+            />
+            <HubRow
+              icon={MessageSquareText}
+              title="대화 중"
+              description="말이 막힐 때 볼 질문을 미리 준비해요."
+              status={silenceCount ? `${silenceCount}개 저장` : "시작 전"}
+              href="/quest/silence-rescue"
+              tone={silenceCount ? "mint" : "neutral"}
+            />
+            <HubRow
+              icon={CalendarCheck}
+              title="만난 후"
+              description="피드백을 수정 전후와 7일 행동으로 남겨요."
+              status={afterCount ? `${afterCount}개 저장` : "시작 전"}
+              href="/mentor-loop"
+              tone={afterCount ? "mint" : "neutral"}
+            />
+          </HubList>
 
-        <HubList title="저장한 준비물">
-          <HubRow
-            icon={FileText}
-            title="저장한 준비물"
-            description={cards.length ? "작성한 질문과 논문 카드가 여기에 모여 있어요." : "아직 저장한 준비물이 없어요."}
-            status={cards.length ? `${cards.length}개` : "비어 있음"}
-            href="/quest/all#saved-cards"
-            tone={cards.length ? "mint" : "neutral"}
-          />
-        </HubList>
+          <HubList title="저장한 준비물">
+            <HubRow
+              icon={FileText}
+              title="저장한 준비물"
+              description={cards.length ? "작성한 질문과 논문 카드가 여기에 모여 있어요." : "아직 저장한 준비물이 없어요."}
+              status={cards.length ? `${cards.length}개` : "비어 있음"}
+              href="/quest/all#saved-cards"
+              tone={cards.length ? "mint" : "neutral"}
+            />
+          </HubList>
 
-        <HubUtilityLinks>
-          <HubUtilityLink icon={Sparkles} href="/quest/mini-tools">가볍게 써보는 미니도구</HubUtilityLink>
-        </HubUtilityLinks>
-        <p className={styles.trustNote}>
+          <HubUtilityLinks>
+            <HubUtilityLink icon={Sparkles} href="/quest/mini-tools">가볍게 써보는 미니도구</HubUtilityLink>
+          </HubUtilityLinks>
+        </div>
+        <nav className={questStyles.mobileQuickLinks} aria-label="만남 준비 바로가기">
+          <Link href="/quest/all">
+            전체 도구 <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+          <Link href="/quest/all#saved-cards">
+            저장 보기 <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+          <Link href="/quest/mini-tools">
+            미니 도구 <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+        </nav>
+        <p className={`${styles.trustNote} ${questStyles.mobileTrust}`}>
           <ShieldCheck size={17} aria-hidden="true" /> 연락과 면담은 학생이 직접 진행해요.
         </p>
       </div>

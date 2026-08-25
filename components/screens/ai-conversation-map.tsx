@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -8,6 +9,7 @@ import {
   BookOpenCheck,
   Bookmark,
   Check,
+  ChevronDown,
   CircleHelp,
   Compass,
   Eye,
@@ -15,6 +17,7 @@ import {
   GitBranch,
   Lightbulb,
   ListChecks,
+  LocateFixed,
   Map as MapIcon,
   MessageCircleMore,
   RotateCcw,
@@ -60,6 +63,40 @@ const JOURNEY_LABELS = {
   action: "다음 발걸음",
 } satisfies Record<ConversationMapNodeType, string>;
 
+const BRANCH_AXES = ["비교·결정", "근거·역량", "프로젝트·실행", "교수 대화"] as const;
+
+const FALLBACK_BRANCH_PROMPTS = {
+  "진로 방향": [
+    "비슷한 진로를 기준별로 비교해 볼래요",
+    "이 방향에 필요한 역량을 확인할래요",
+    "일주일 안에 해볼 작은 경험을 정할래요",
+    "교수님께 물어볼 첫 질문을 만들래요",
+  ],
+  프로젝트: [
+    "두 아이디어의 장단점을 비교해 볼래요",
+    "이 주제에 필요한 근거와 역량을 볼래요",
+    "가장 작은 실험부터 설계해 볼래요",
+    "교수님께 검토받을 질문을 만들래요",
+  ],
+  "교수 만남": [
+    "어떤 교수님부터 만날지 비교해 볼래요",
+    "대화 전 확인할 근거를 정리할래요",
+    "면담 뒤 실행할 한 걸음을 정할래요",
+    "교수님께 드릴 핵심 질문을 다듬을래요",
+  ],
+  "생각 정리": [
+    "선택 기준을 세워 비교해 볼래요",
+    "내 생각의 근거와 빈틈을 확인할래요",
+    "작게 시험해 볼 행동을 정할래요",
+    "교수님께 물어볼 말로 바꿔 볼래요",
+  ],
+} satisfies Record<ConversationMapNode["topic"], [string, string, string, string]>;
+
+function getBranchPrompts(node: ConversationMapNode) {
+  const prompts = node.assistantMessage.suggestedPrompts.filter(Boolean);
+  return prompts.length >= 4 ? prompts.slice(0, 4) : FALLBACK_BRANCH_PROMPTS[node.topic];
+}
+
 function excerpt(value: string, max = 260) {
   const normalized = value.replace(/\s+/g, " ").trim();
   return normalized.length > max ? `${normalized.slice(0, max).trim()}…` : normalized;
@@ -78,6 +115,11 @@ export function AiConversationMap({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showExcluded, setShowExcluded] = useState(false);
   const [status, setStatus] = useState("");
+  const [isPanning, setIsPanning] = useState(false);
+  const nodeDetailRef = useRef<HTMLElement>(null);
+  const mapCanvasRef = useRef<HTMLDivElement>(null);
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0, left: 0, top: 0 });
 
   const nodes = useMemo(
     () => buildConversationMap(messages, growthNotes),
@@ -91,6 +133,77 @@ export function AiConversationMap({
   const roots = useMemo(() => getConversationMapRoots(visibleNodes), [visibleNodes]);
   const excludedCount = nodes.filter((node) => mapDecisions[node.id] === "exclude").length;
   const selectedNode = nodes.find((node) => node.id === selectedId) ?? visibleNodes[0] ?? null;
+  const branchPrompts = selectedNode ? getBranchPrompts(selectedNode) : [];
+
+  const focusMap = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const canvas = mapCanvasRef.current;
+    if (!canvas) return;
+
+    canvas.scrollTo({
+      left: Math.max(0, (canvas.scrollWidth - canvas.clientWidth) / 2),
+      top: 0,
+      behavior,
+    });
+  }, []);
+
+  const beginMapPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, select, [role='button']")) return;
+
+    const canvas = event.currentTarget;
+    panStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      left: canvas.scrollLeft,
+      top: canvas.scrollTop,
+    };
+    canvas.setPointerCapture(event.pointerId);
+    isPanningRef.current = true;
+    setIsPanning(true);
+  };
+
+  const moveMapPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!isPanningRef.current || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const canvas = event.currentTarget;
+    canvas.scrollLeft = panStartRef.current.left - (event.clientX - panStartRef.current.x);
+    canvas.scrollTop = panStartRef.current.top - (event.clientY - panStartRef.current.y);
+    event.preventDefault();
+  };
+
+  const endMapPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    isPanningRef.current = false;
+    setIsPanning(false);
+  };
+
+  const moveMapWithKeyboard = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const distances: Partial<Record<string, [number, number]>> = {
+      ArrowLeft: [-80, 0],
+      ArrowRight: [80, 0],
+      ArrowUp: [0, -80],
+      ArrowDown: [0, 80],
+    };
+    if (event.key === "Home") {
+      event.preventDefault();
+      focusMap();
+      return;
+    }
+    const distance = distances[event.key];
+    if (!distance) return;
+    event.preventDefault();
+    event.currentTarget.scrollBy({ left: distance[0], top: distance[1], behavior: "smooth" });
+  };
+
+  const selectNode = (id: string) => {
+    setSelectedId(id);
+    setStatus("");
+    window.requestAnimationFrame(() => {
+      nodeDetailRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  };
 
   useEffect(() => {
     if (!selectedId && visibleNodes[0]) setSelectedId(visibleNodes[0].id);
@@ -99,6 +212,11 @@ export function AiConversationMap({
       setStatus("");
     }
   }, [nodes, selectedId, visibleNodes]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => focusMap("auto"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [focusMap, showExcluded, visibleNodes.length]);
 
   if (!nodes.length) {
     return (
@@ -149,52 +267,70 @@ export function AiConversationMap({
             ) : null}
           </div>
 
-          <div className={styles.mapCanvas} aria-label="나의 생각 진화 갈래 지도">
-            <p className={styles.mapSignatureNote}>
-              <GitBranch size={14} aria-hidden="true" /> 대화가 깊어지면 새 질문은 옆 가지로 자라요
-            </p>
-            <div className={styles.mapStartNode}>
-              <span><MessageCircleMore size={17} aria-hidden="true" /></span>
-              <div><strong>대화 시작</strong><small>내 고민을 말했어요</small></div>
-            </div>
-            <ArrowDown className={styles.mapDownArrow} size={18} aria-hidden="true" />
-
-            <ol className={styles.mapTree}>
-              {roots.map((node) => (
-                <ConversationTreeNode
-                  key={node.id}
-                  node={node}
-                  nodes={visibleNodes}
-                  selectedId={selectedNode?.id ?? null}
-                  decisions={mapDecisions}
-                  onSelect={(id) => {
-                    setSelectedId(id);
-                    setStatus("");
-                  }}
-                />
-              ))}
-            </ol>
-
-            {!visibleNodes.length ? (
-              <div className={styles.allExcluded}>
-                <EyeOff size={21} aria-hidden="true" />
-                <p>현재 보이는 흐름이 없어요.</p>
-                <button type="button" onClick={() => setShowExcluded(true)}>제외한 흐름 확인하기</button>
+          <div
+            ref={mapCanvasRef}
+            className={styles.mapCanvas}
+            data-panning={isPanning ? "true" : "false"}
+            aria-label="나의 생각 진화 갈래 지도. 빈 공간을 드래그하거나 방향키로 이동할 수 있습니다."
+            tabIndex={0}
+            onKeyDown={moveMapWithKeyboard}
+            onPointerDown={beginMapPan}
+            onPointerMove={moveMapPan}
+            onPointerUp={endMapPan}
+            onPointerCancel={endMapPan}
+          >
+            <div className={styles.mapGraph}>
+              <p className={styles.mapSignatureNote}>
+                <GitBranch size={14} aria-hidden="true" /> 대화가 깊어지면 새 질문은 옆 가지로 자라요 · 빈 공간을 드래그해 살펴보세요
+              </p>
+              <div className={styles.mapStartNode}>
+                <span><MessageCircleMore size={17} aria-hidden="true" /></span>
+                <div><strong>대화 시작</strong><small>내 고민을 말했어요</small></div>
               </div>
-            ) : (
-              <>
-                <ArrowDown className={styles.mapOutcomeArrow} size={18} aria-hidden="true" />
-                <div className={styles.mapOutcomeNode}>
-                  <Compass size={18} aria-hidden="true" />
-                  <div><strong>지금의 나침반</strong><small>남긴 핵심을 교수 만남과 프로젝트로 이어가요</small></div>
+              <ArrowDown className={styles.mapDownArrow} size={18} aria-hidden="true" />
+
+              <ol className={styles.mapTree}>
+                {roots.map((node) => (
+                  <ConversationTreeNode
+                    key={node.id}
+                    node={node}
+                    nodes={visibleNodes}
+                    selectedId={selectedNode?.id ?? null}
+                    decisions={mapDecisions}
+                    onSelect={selectNode}
+                  />
+                ))}
+              </ol>
+
+              {!visibleNodes.length ? (
+                <div className={styles.allExcluded}>
+                  <EyeOff size={21} aria-hidden="true" />
+                  <p>현재 보이는 흐름이 없어요.</p>
+                  <button type="button" onClick={() => setShowExcluded(true)}>제외한 흐름 확인하기</button>
                 </div>
-              </>
-            )}
+              ) : (
+                <>
+                  <ArrowDown className={styles.mapOutcomeArrow} size={18} aria-hidden="true" />
+                  <div className={styles.mapOutcomeNode}>
+                    <Compass size={18} aria-hidden="true" />
+                    <div><strong>지금의 나침반</strong><small>남긴 핵심을 교수 만남과 프로젝트로 이어가요</small></div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
+          <button
+            type="button"
+            className={styles.mapFocusButton}
+            onClick={() => focusMap()}
+            aria-label="생각 지도의 시작점으로 초점 맞추기"
+          >
+            <LocateFixed size={16} aria-hidden="true" /> 초점
+          </button>
         </div>
 
         {selectedNode ? (
-          <aside className={styles.nodeDetail} aria-label="선택한 대화 주제 세부 카드">
+          <aside ref={nodeDetailRef} className={styles.nodeDetail} aria-label="선택한 대화 주제 세부 카드">
             <header className={styles.nodeDetailHeader}>
               <div className={styles.nodeTags}>
                 <span data-type={selectedNode.type}>{selectedNode.typeLabel}</span>
@@ -202,12 +338,25 @@ export function AiConversationMap({
                 <span>AI 정리</span>
               </div>
               <h3>{selectedNode.title}</h3>
-              <p>{selectedNode.summary}</p>
+              <p>{selectedNode.mapSummary}</p>
+              <button
+                type="button"
+                className={styles.nodeResumeButton}
+                aria-label={`‘${selectedNode.title}’ 대화에서 새 갈래 이어가기`}
+                onClick={() => onStartBranch(selectedNode.id, "", selectedNode.title)}
+              >
+                <span className={styles.nodeResumeIcon}><GitBranch size={17} aria-hidden="true" /></span>
+                <span className={styles.nodeResumeCopy}>
+                  <strong>이 대화에서 이어가기</strong>
+                  <small>선택한 대화까지 이어받아 새 질문을 시작해요</small>
+                </span>
+                <ArrowRight size={17} aria-hidden="true" />
+              </button>
             </header>
 
             <div className={styles.nodeDecisionBox}>
-              <strong>이 생각을 내 지도에 남길까요?</strong>
-              <p>핵심으로 남기면 강조되고, 제외해도 원문 대화는 삭제되지 않아요.</p>
+              <strong>지도 표시</strong>
+              <p>원문 대화는 삭제되지 않아요.</p>
               <div>
                 <button
                   type="button"
@@ -246,17 +395,25 @@ export function AiConversationMap({
               ) : null}
             </div>
 
-            <section className={styles.nodeSources}>
-              <h4>이 카드가 나온 대화</h4>
-              <article>
-                <span>내 질문</span>
-                <p>{selectedNode.userMessage ? excerpt(selectedNode.userMessage.content) : "연결된 질문이 없어요."}</p>
-              </article>
-              <article>
-                <span>AI 교수님 답변</span>
-                <p className={styles.nodeSourceFullText}>{selectedNode.assistantMessage.content}</p>
-              </article>
-            </section>
+            <details key={`source-${selectedNode.id}`} className={styles.nodeSources}>
+              <summary>
+                <span>
+                  <strong>원문 대화</strong>
+                  <small>내 질문과 AI 답변 전체 보기</small>
+                </span>
+                <ChevronDown size={16} aria-hidden="true" />
+              </summary>
+              <div className={styles.nodeSourcesBody}>
+                <article>
+                  <span>내 질문</span>
+                  <p>{selectedNode.userMessage ? excerpt(selectedNode.userMessage.content) : "연결된 질문이 없어요."}</p>
+                </article>
+                <article>
+                  <span>AI 교수님 답변</span>
+                  <p className={styles.nodeSourceFullText}>{selectedNode.assistantMessage.content}</p>
+                </article>
+              </div>
+            </details>
 
             <section className={styles.nodeConnections}>
               <h4><GitBranch size={15} aria-hidden="true" /> 연결된 흐름</h4>
@@ -264,17 +421,17 @@ export function AiConversationMap({
                 <ConnectionButton
                   direction="previous"
                   node={nodes.find((node) => node.id === selectedNode.previousId) ?? null}
-                  onSelect={setSelectedId}
+                  onSelect={selectNode}
                 />
                 {selectedNode.childIds.length ? selectedNode.childIds.map((childId) => (
                   <ConnectionButton
                     key={childId}
                     direction="next"
                     node={nodes.find((node) => node.id === childId) ?? null}
-                    onSelect={setSelectedId}
+                    onSelect={selectNode}
                   />
                 )) : (
-                  <ConnectionButton direction="next" node={null} onSelect={setSelectedId} />
+                  <ConnectionButton direction="next" node={null} onSelect={selectNode} />
                 )}
               </div>
             </section>
@@ -283,33 +440,28 @@ export function AiConversationMap({
               <div className={styles.nodeBranchesHeading}>
                 <div>
                   <h4><GitBranch size={15} aria-hidden="true" /> 이 생각에서 새 갈래 만들기</h4>
-                  <p>원래 대화는 그대로 두고, 다른 질문이나 실행안을 별도 흐름으로 이어가요.</p>
+                  <p>비교·근거·실행·교수 대화 중 다른 관점을 골라 별도 흐름으로 이어가요.</p>
                 </div>
-                <span>{selectedNode.assistantMessage.suggestedPrompts.length}개 제안</span>
+                <span>{branchPrompts.length}개 관점</span>
               </div>
-              {selectedNode.assistantMessage.suggestedPrompts.length ? (
+              {branchPrompts.length ? (
                 <div className={styles.branchSuggestions}>
-                  {selectedNode.assistantMessage.suggestedPrompts.slice(0, 3).map((prompt, index) => (
+                  {branchPrompts.map((prompt, index) => (
                     <button
                       key={prompt}
                       type="button"
                       onClick={() => onStartBranch(selectedNode.id, prompt, selectedNode.title)}
                     >
                       <span>{index + 1}</span>
-                      <strong>{prompt}</strong>
+                      <span className={styles.branchSuggestionCopy}>
+                        <small>{BRANCH_AXES[index]}</small>
+                        <strong>{prompt}</strong>
+                      </span>
                       <ArrowRight size={15} aria-hidden="true" />
                     </button>
                   ))}
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.manualBranchButton}
-                  onClick={() => onStartBranch(selectedNode.id, "", selectedNode.title)}
-                >
-                  <GitBranch size={16} aria-hidden="true" /> 내가 질문을 적어 새 갈래 만들기
-                </button>
-              )}
+              ) : null}
             </section>
 
             <button
@@ -353,7 +505,11 @@ function ConversationTreeNode({
     .filter((candidate): candidate is ConversationMapNode => Boolean(candidate));
 
   return (
-    <li className={styles.mapTreeItem}>
+    <li
+      className={styles.mapTreeItem}
+      data-depth={node.depth}
+      data-child-count={children.length}
+    >
       <button
         type="button"
         className={styles.mapNode}

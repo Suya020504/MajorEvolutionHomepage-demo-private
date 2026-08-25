@@ -29,7 +29,6 @@ import {
   HubUtilityLink,
   HubUtilityLinks,
   ServiceHubIntro,
-  ServiceMobileHeader,
   serviceHubStyles as styles,
 } from "@/components/app/service-hub";
 import { cardsForTool, useQuestStore } from "@/store/quest-store";
@@ -170,17 +169,31 @@ export function PortfolioHubScreen() {
   const visibleProfessors = [...growthProfessorHistory].reverse().slice(0, 6);
   const conversationCount = aiMessages.filter((message) => message.role === "user").length;
   const conversationBranchCount = aiMessages.filter((message) => message.branchParentMessageId).length;
+  const latestConversationReflection = [...aiMessages]
+    .reverse()
+    .find((message) => message.reflection)?.reflection;
+  const latestMapSummary = aiGrowthNotes.at(-1)?.title
+    ?? latestConversationReflection?.title
+    ?? [...aiMessages].reverse().find((message) => message.role === "user")?.content
+    ?? "첫 고민을 말하면 생각 지도가 시작돼요";
 
   return (
-    <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
-      <ServiceMobileHeader />
-      <div className={styles.hub}>
+    <AppShell
+      showHeader={false}
+      className={`${styles.shell} ${growthStyles.portfolioShell}`}
+      bottomNav={<ServiceBottomNav />}
+    >
+      <div className={`${styles.hub} ${growthStyles.portfolioHub}`}>
         <ServiceHubIntro
           title="나의 성장과정"
           description="처음 남긴 고민부터 프로젝트 설계, 교수 연결, 다음 행동까지 내가 이 서비스에서 쌓은 경험을 한곳에서 확인해요."
         />
 
-        <section className={growthStyles.aiProfessorSection} aria-labelledby="my-ai-professor-title">
+        <section
+          className={growthStyles.aiProfessorSection}
+          aria-labelledby="my-ai-professor-title"
+          data-service-help="growth-ai-professor"
+        >
           <div className={growthStyles.aiProfessorCopy}>
             <span className={growthStyles.aiProfessorEyebrow}>
               <Bot size={16} aria-hidden="true" />
@@ -192,6 +205,25 @@ export function PortfolioHubScreen() {
               {aiGrowthNotes.at(-1)?.body
                 ?? "진로 고민과 프로젝트 생각을 이어서 이야기하면, 중요한 변화와 다음 행동을 대화 지도로 정리해 드려요."}
             </p>
+            <Link
+              href="/portfolio/ai-professor?view=map"
+              className={growthStyles.aiProfessorMapPreview}
+              aria-label="최근 생각 지도 미리보기, 전체 대화 지도 보기"
+            >
+              <span className={growthStyles.aiProfessorMapLabel}>
+                <Bot size={15} aria-hidden="true" /> 최근 생각 지도
+              </span>
+              <span className={growthStyles.aiProfessorMapFlow} aria-hidden="true">
+                <i />
+                <b>대화 시작</b>
+                <em />
+                <i />
+                <strong>{latestMapSummary}</strong>
+              </span>
+              <span className={growthStyles.aiProfessorMapLink}>
+                전체 지도 보기 <ArrowRight size={15} aria-hidden="true" />
+              </span>
+            </Link>
             <dl className={growthStyles.aiProfessorStats} aria-label="나의 AI 교수님 기록 요약">
               <div>
                 <dt>나눈 대화</dt>
@@ -222,6 +254,7 @@ export function PortfolioHubScreen() {
               width={240}
               height={240}
               className={growthStyles.aiProfessorImage}
+              priority
             />
             <i className={growthStyles.aiProfessorNodeOne} />
             <i className={growthStyles.aiProfessorNodeTwo} />
@@ -229,7 +262,11 @@ export function PortfolioHubScreen() {
           </div>
         </section>
 
-        <section className={growthStyles.nextRecordCard} aria-labelledby="next-growth-record-title">
+        <section
+          className={growthStyles.nextRecordCard}
+          aria-labelledby="next-growth-record-title"
+          data-service-help="growth-next-record"
+        >
           <span className={growthStyles.nextRecordIcon}><NextRecordIcon size={20} aria-hidden="true" /></span>
           <div className={growthStyles.nextRecordCopy}>
             <small>다음 기록 제안</small>
@@ -242,7 +279,11 @@ export function PortfolioHubScreen() {
           </Link>
         </section>
 
-        <section className={growthStyles.storySection} aria-labelledby="growth-story-title">
+        <section
+          className={growthStyles.storySection}
+          aria-labelledby="growth-story-title"
+          data-service-help="growth-story"
+        >
           <header className={growthStyles.storyHeading}>
             <div>
               <h2 id="growth-story-title">내 방향이 구체화된 흐름</h2>
@@ -266,59 +307,109 @@ export function PortfolioHubScreen() {
               <div><small>지금 이어가는 행동</small><strong>{currentAction}</strong></div>
             </li>
           </ol>
+          <div className={growthStyles.mobileStorySummary}>
+            <div>
+              <small>처음 고민</small>
+              <strong>{startingPoint}</strong>
+            </div>
+            <ArrowRight size={18} aria-hidden="true" />
+            <div>
+              <small>지금의 방향</small>
+              <strong>{currentDirection}</strong>
+            </div>
+          </div>
+          <Link href="/portfolio/builder" className={growthStyles.mobileStoryAction}>
+            전체 성장 흐름 보기 <ArrowRight size={16} aria-hidden="true" />
+          </Link>
           <p className={growthStyles.storyNote}>입력하지 않은 변화는 추정하지 않고, 직접 선택하거나 저장한 내용만 보여줘요.</p>
         </section>
 
-        <HubList title="이 서비스를 통해 쌓은 경험" trailing={<span>{recordedCount} / 6 단계 기록</span>}>
-          {visibleSteps.map((step, index) => {
-            const Icon = step.done ? CheckCircle2 : step.icon;
-            const isCurrent = !step.done && steps.findIndex((item) => !item.done) === steps.indexOf(step);
-            return (
-              <HubRow
-                key={step.id}
-                icon={Icon}
-                title={step.done ? step.label : isCurrent ? "아직 비어 있는 기록" : step.label}
-                description={step.description}
-                status={step.done ? "기록 있음" : isCurrent ? "다음 단계" : "시작 전"}
-                href={step.done ? "/portfolio/builder" : step.href}
-                tone={step.done ? "mint" : isCurrent ? "violet" : "neutral"}
-              />
-            );
-          })}
-        </HubList>
+        <div className={growthStyles.mobileCompactList}>
+          <HubList
+            title="이 서비스를 통해 쌓은 경험"
+            trailing={(
+              <>
+                <span className={growthStyles.desktopListCount}>{recordedCount} / 6 단계 기록</span>
+                <Link href="/portfolio/builder" className={growthStyles.mobileListAction}>
+                  전체 보기 <ArrowRight size={14} aria-hidden="true" />
+                </Link>
+              </>
+            )}
+          >
+            {visibleSteps.map((step) => {
+              const Icon = step.done ? CheckCircle2 : step.icon;
+              const isCurrent = !step.done && steps.findIndex((item) => !item.done) === steps.indexOf(step);
+              return (
+                <HubRow
+                  key={step.id}
+                  icon={Icon}
+                  title={step.done ? step.label : isCurrent ? "아직 비어 있는 기록" : step.label}
+                  description={step.description}
+                  status={step.done ? "기록 있음" : isCurrent ? "다음 단계" : "시작 전"}
+                  href={step.done ? "/portfolio/builder" : step.href}
+                  tone={step.done ? "mint" : isCurrent ? "violet" : "neutral"}
+                />
+              );
+            })}
+          </HubList>
+        </div>
 
         {visibleProjects.length > 0 ? (
-          <HubList title="프로젝트 설계 기록" trailing={<span>{growthProjectHistory.length}개 프로젝트</span>}>
-            {visibleProjects.map((project) => (
-              <HubRow
-                key={project.topicId}
-                icon={FlaskConical}
-                title={project.title}
-                description={project.question}
-                status={project.topicId === selectedTopicId ? "현재 프로젝트" : "이전 선택"}
-                href="/result"
-                tone={project.topicId === selectedTopicId ? "violet" : "neutral"}
-              />
-            ))}
-          </HubList>
+          <div className={growthStyles.mobileCompactList}>
+            <HubList
+              title="프로젝트 설계 기록"
+              trailing={(
+                <>
+                  <span className={growthStyles.desktopListCount}>{growthProjectHistory.length}개 프로젝트</span>
+                  <Link href="/result" className={growthStyles.mobileListAction}>
+                    현재 결과 <ArrowRight size={14} aria-hidden="true" />
+                  </Link>
+                </>
+              )}
+            >
+              {visibleProjects.map((project) => (
+                <HubRow
+                  key={project.topicId}
+                  icon={FlaskConical}
+                  title={project.title}
+                  description={project.question}
+                  status={project.topicId === selectedTopicId ? "현재 프로젝트" : "이전 선택"}
+                  href="/result"
+                  tone={project.topicId === selectedTopicId ? "violet" : "neutral"}
+                />
+              ))}
+            </HubList>
+          </div>
         ) : null}
 
         {visibleProfessors.length > 0 ? (
-          <HubList title="지금까지 연결한 교수님" trailing={<span>{growthProfessorHistory.length}명 기록</span>}>
-            {visibleProfessors.map((record) => (
-              <HubRow
-                key={`${record.source}-${record.professorId}`}
-                icon={GraduationCap}
-                title={`${record.name} ${record.title}`}
-                description={`${record.department || record.college} · ${record.reason}`}
-                status={record.selectedAt
-                  ? "선택한 교수"
-                  : `${PROFESSOR_SOURCE_LABEL[record.source]} · ${PROFESSOR_ROLE_LABEL[record.role]}`}
-                href={`/professors/${record.professorId}`}
-                tone={record.selectedAt ? "mint" : record.source === "project" ? "violet" : "neutral"}
-              />
-            ))}
-          </HubList>
+          <div className={growthStyles.mobileCompactList}>
+            <HubList
+              title="지금까지 연결한 교수님"
+              trailing={(
+                <>
+                  <span className={growthStyles.desktopListCount}>{growthProfessorHistory.length}명 기록</span>
+                  <Link href="/portfolio/builder" className={growthStyles.mobileListAction}>
+                    연결 기록 <ArrowRight size={14} aria-hidden="true" />
+                  </Link>
+                </>
+              )}
+            >
+              {visibleProfessors.map((record) => (
+                <HubRow
+                  key={`${record.source}-${record.professorId}`}
+                  icon={GraduationCap}
+                  title={`${record.name} ${record.title}`}
+                  description={`${record.department || record.college} · ${record.reason}`}
+                  status={record.selectedAt
+                    ? "선택한 교수"
+                    : `${PROFESSOR_SOURCE_LABEL[record.source]} · ${PROFESSOR_ROLE_LABEL[record.role]}`}
+                  href={`/professors/${record.professorId}`}
+                  tone={record.selectedAt ? "mint" : record.source === "project" ? "violet" : "neutral"}
+                />
+              ))}
+            </HubList>
+          </div>
         ) : null}
 
         <HubUtilityLinks>

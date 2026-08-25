@@ -29,7 +29,7 @@ export type GrowthProfessorResponse = {
     title: string;
     body: string;
   };
-  suggestedPrompts: [string, string, string];
+  suggestedPrompts: [string, string, string, string];
   generatedAt: string;
   model: string;
 };

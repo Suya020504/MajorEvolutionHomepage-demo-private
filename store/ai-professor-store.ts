@@ -59,6 +59,17 @@ function trimText(value: string, max: number) {
   return value.trim().replace(/\s+/g, " ").slice(0, max);
 }
 
+function trimMultilineText(value: string, max: number) {
+  return value
+    .trim()
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/[\t ]+/g, " "))
+    .filter(Boolean)
+    .join("\n")
+    .slice(0, max);
+}
+
 function conversationBranchMessageIds(
   messages: AiProfessorMessage[],
   messageId: string,
@@ -135,14 +146,14 @@ export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get)
     const message: AiProfessorMessage = {
       id: createId("assistant"),
       role: "assistant",
-      content: trimText(response.reply, 900),
+      content: trimMultilineText(response.reply, 220),
       createdAt: response.generatedAt,
       branchParentMessageId: null,
       reflection: {
         title: trimText(response.reflection.title, 80),
-        body: trimText(response.reflection.body, 320),
+        body: trimMultilineText(response.reflection.body, 180),
       },
-      suggestedPrompts: response.suggestedPrompts.map((item) => trimText(item, 100)),
+      suggestedPrompts: response.suggestedPrompts.map((item) => trimText(item, 40)),
     };
     set((state) => ({ messages: [...state.messages, message].slice(-MAX_MESSAGES) }));
     return message;

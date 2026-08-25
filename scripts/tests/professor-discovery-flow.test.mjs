@@ -151,6 +151,61 @@ test("기본 질문과 부전공 무결성을 검증한다", () => {
   );
 });
 
+test("빠른 교수 매칭은 전공과 관심 분야만으로 기본 설정을 완료한다", () => {
+  const minimalSetup = {
+    ...discoveryModule.EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
+    university: "단국대학교",
+    college: "SW융합대학",
+    major: "소프트웨어학과",
+    interests: ["AI·데이터"],
+  };
+
+  assert.equal(discoveryModule.validateProfessorDiscoverySetup(minimalSetup), null);
+  assert.equal(
+    discoveryModule.validateProfessorDiscoveryBasics(minimalSetup)?.field,
+    "studentStage",
+    "상세 교수 찾기 폼의 기존 엄격한 검증은 유지해야 한다",
+  );
+
+  const withoutInterest = { ...minimalSetup, interests: [] };
+  assert.equal(
+    discoveryModule.validateProfessorDiscoverySetup(withoutInterest)?.field,
+    "interests",
+  );
+
+  const topic = discoveryModule.discoveryContextToMatchTopic(minimalSetup, null);
+  assert.equal(topic.title, "AI·데이터");
+  assert.equal(topic.major, "소프트웨어학과");
+  assert.ok(topic.id);
+  assert.ok(topic.question);
+});
+
+test("교수 매칭 튜토리얼은 최소 설정 뒤 확인 화면으로 이어진다", () => {
+  const source = fs.readFileSync(
+    path.join(repositoryRoot, "components/tutorial/professor-tutorial-screen.tsx"),
+    "utf8",
+  );
+
+  assert.match(source, /const SETUP_STEPS = \["academic", "interests"\] as const;/);
+  assert.match(source, /title: "이제 교수님을 찾으러 가볼까요\?"/);
+  assert.match(source, />교수님 찾기 <ArrowRight/);
+  assert.match(source, /const profileState = useProfileStore\.getState\(\);/);
+  assert.match(source, /school: context\.university/);
+  assert.match(source, /major: context\.major/);
+  assert.match(source, /interests: context\.interests/);
+  assert.match(source, /name: profileState\.profile\.name/);
+  assert.match(source, /careerConcern: profileState\.profile\.careerConcern/);
+  assert.match(source, /profileState\.completeProfessorTutorial\(\);/);
+  assert.ok(
+    source.indexOf("profileState.completeProfessorTutorial();")
+      < source.indexOf('router.push("/professors/pitch")'),
+    "교수 피칭으로 이동하기 전에 튜토리얼 완료 상태를 저장해야 한다",
+  );
+  assert.doesNotMatch(source, /기본 질문 다섯 개/);
+  assert.doesNotMatch(source, /2분 더 알려주기/);
+  assert.doesNotMatch(source, /교수 찾기 빠른 시작/);
+});
+
 test("진로 고민과 만남 맥락은 공식 연구근거 검색문에 섞지 않는다", () => {
   const context = {
     ...discoveryModule.EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
@@ -498,6 +553,11 @@ test("교수님 3인 피칭은 찾기 폼 아래가 아니라 전용 주소에�
     "찾기 화면은 결과 카드를 직접 렌더링하지 않는다",
   );
   assert.match(formScreen, /href="\/professors\/pitch"/, "저장된 결과로 되돌아갈 링크가 있어야 한다");
+  assert.match(
+    formScreen,
+    /const profileState = useProfileStore\.getState\(\);[\s\S]*profileState\.completeProfessorTutorial\(\);/,
+    "상세 조건 입력으로 바로 매칭한 경우에도 다음 탭 진입은 교수 홈이어야 한다",
+  );
 
   const pitchScreen = screen.slice(screen.indexOf("export function ProfessorPitchScreen()"));
   assert.match(pitchScreen, /<MatchCard/);
@@ -578,7 +638,7 @@ test("첫 교수 매칭은 주전공·부전공·복수전공 중 한 명 뒤에
     path.join(repositoryRoot, "components/screens/professor-discovery-form.tsx"),
     "utf8",
   );
-  assert.match(store, /version:\s*7/);
+  assert.match(store, /version:\s*8/);
   assert.match(store, /persistedVersion < 7[\s\S]*secondaryMajor/);
   assert.match(store, /selectionPolicy:\s*response\.selectionPolicy/);
   assert.match(discoveryForm, /부·복수전공도 가까운 학과 연결 범위에 포함/);
@@ -649,4 +709,58 @@ test("프로젝트 설계는 단계형과 한 화면 입력을 오가며 건너�
   assert.match(fullForm, /renderCurrentStep\(\)/);
   assert.match(fullForm, /현재 입력은 이 브라우저에 자동 저장돼요/);
   assert.match(store, /saveIdeaDraft: \(\{ ideaMode, conditions \}\) =>/);
+});
+
+test("교수 상세와 논문 열람은 선택을 저장하지 않고 첫 대화 준비만 저장한다", () => {
+  const screen = fs.readFileSync(
+    path.join(repositoryRoot, "components/screens/official-professor-screens.tsx"),
+    "utf8",
+  );
+  const openProfessorBlock = screen.slice(
+    screen.indexOf("  const openProfessor ="),
+    screen.indexOf("  const chooseProfessor ="),
+  );
+  const chooseProfessorBlock = screen.slice(
+    screen.indexOf("  const chooseProfessor ="),
+    screen.indexOf("  const hasHomeDepartmentMatch ="),
+  );
+
+  assert.doesNotMatch(openProfessorBlock, /selectProfessor\(/);
+  assert.match(openProfessorBlock, /router\.push\(`\/professors\/\$\{match\.professor\.id\}`\)/);
+  assert.match(openProfessorBlock, /router\.push\("\/paper\/reader\?mode=bite&source=favorites"\)/);
+  assert.match(chooseProfessorBlock, /selectProfessor\(match\.professor\.id\)/);
+  assert.match(screen, /이 교수님과 첫 대화 준비하기/);
+});
+
+test("직접 교수 찾기도 프로필을 저장하고 기존 프로필은 빈 입력만 채운다", () => {
+  const screen = fs.readFileSync(
+    path.join(repositoryRoot, "components/screens/official-professor-screens.tsx"),
+    "utf8",
+  );
+
+  assert.match(screen, /const profileHasHydrated = useProfileStore/);
+  assert.match(screen, /if \(!hasHydrated \|\| !profileHasHydrated \|\| prefilled\) return/);
+  assert.match(screen, /const sourceMajor = current\.major[\s\S]*\|\| profile\.major/);
+  assert.match(screen, /interests: current\.interests\.length > 0[\s\S]*profile\.interests\.slice\(0, 5\)/);
+  assert.match(screen, /studentStage: current\.studentStage[\s\S]*profileGradeToStudentStage\(profile\.grade\)/);
+  assert.match(screen, /const profileState = useProfileStore\.getState\(\);[\s\S]*profileState\.saveProfile\(\{/);
+  assert.match(screen, /school: requestContext\.university/);
+  assert.match(screen, /major: requestContext\.major/);
+  assert.match(screen, /interests: requestContext\.interests/);
+  assert.match(screen, /profileState\.completeProfessorTutorial\(\)/);
+});
+
+test("교수 기본 설정은 저장 초안을 우선하고 프로필은 사용자 입력 전에만 채운다", () => {
+  const screen = fs.readFileSync(
+    path.join(repositoryRoot, "components/tutorial/professor-tutorial-screen.tsx"),
+    "utf8",
+  );
+
+  assert.match(screen, /if \(!profileHasHydrated \|\| restored\) return/);
+  assert.match(screen, /if \(saved\) \{[\s\S]*setContext\(\{ \.\.\.saved\.context/);
+  assert.match(screen, /else if \(!userEditedRef\.current\)/);
+  assert.match(screen, /findAcademicSelection\(taxonomy, profile\.major\)/);
+  assert.match(screen, /major: current\.major \|\| academicSelection\?\.department \|\| profile\.major/);
+  assert.match(screen, /interests: current\.interests\.length > 0[\s\S]*profile\.interests\.slice/);
+  assert.match(screen, /const update = [\s\S]*userEditedRef\.current = true/);
 });

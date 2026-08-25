@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+
+const require = createRequire(import.meta.url);
+const ts = require("typescript");
 
 function source(path) {
   return readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
@@ -17,6 +21,18 @@ const portfolio = source("components/screens/portfolio-hub-screen.tsx");
 const home = source("components/screens/unified-home-screen.tsx");
 const homeMapPreview = source("components/screens/home-ai-map-preview.tsx");
 const homeStyles = source("components/screens/home-dashboard.module.css");
+
+function loadConversationMapModule() {
+  const compiled = ts.transpileModule(conversationMapModel, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const loaded = { exports: {} };
+  new Function("exports", "module", compiled)(loaded.exports, loaded);
+  return loaded.exports;
+}
 
 test("성장과정에서 나의 AI 교수님 대화로 바로 이어진다", () => {
   assert.match(portfolio, /나의 AI 교수님/);
@@ -42,18 +58,61 @@ test("OpenAI 키는 서버 경로에서만 사용하고 오류에도 학생 메�
   assert.doesNotMatch(screen, /OPENAI_API_KEY/);
   assert.match(screen, /addUserMessage\(content, branchOrigin\?\.parentId \?\? null\)/);
   assert.match(screen, /다시 보내기/);
+  assert.match(route, /작성한 내용은 그대로 남아 있어요/);
+  assert.match(route, /FRIENDLY_ERROR_MESSAGES\[serviceError\.code\]/);
+});
+
+test("AI 교수님은 사용자가 실제로 선택한 교수만 연결 맥락으로 사용한다", () => {
+  const contextBlock = screen.slice(
+    screen.indexOf("const context = useMemo"),
+    screen.indexOf("const lastMessage ="),
+  );
+  assert.match(contextBlock, /find\(\(item\) => item\.selectedAt\)/);
+  assert.doesNotMatch(contextBlock, /professors\.at\(-1\)/);
+  assert.match(screen, /아직 선택한 교수 없음/);
+});
+
+test("AI 교수님은 대학생에게 핵심, 두 선택지, 질문 순서로 짧게 답한다", () => {
+  assert.match(server, /친한 선배가 옆에서 함께 정리해 주는 듯한/);
+  assert.match(server, /따뜻하고 자연스러운 존댓말/);
+  assert.match(server, /'당신', '학생은', '정답은'/);
+  assert.match(server, /중학생도 한 번에 이해할 수 있는 쉬운 말/);
+  assert.match(server, /'구체적 경로', '탐색', '역량', '시도할 방향'/);
+  assert.match(server, /1\. 지금 고민:[\s\S]*2\. 먼저 해볼 일:[\s\S]*3\. 다른 방법:[\s\S]*4\. 이어갈 질문:/);
+  assert.match(server, /한 번에 여러 질문을 묻지 마세요/);
+  assert.match(server, /reply: \{ type: "string", minLength: 1, maxLength: 220 \}/);
+  assert.match(server, /reply는 220자 이내, 2~4개의 짧은 문장/);
+  assert.match(server, /\.slice\(-8\)/);
+  assert.match(server, /message\?\.role === "assistant" \? 220 : 600/);
+});
+
+test("성장 메모와 이어갈 말도 짧고 학생이 직접 말하는 형식을 유지한다", () => {
+  assert.match(server, /'현재 고민:', '시도할 방향:', '다음 행동:'/);
+  assert.match(server, /title은 24자 이내의 명사형/);
+  assert.match(server, /학생이 직접 말하는 10~24자의 자연스러운 존댓말/);
+  assert.match(server, /body: \{ type: "string", minLength: 1, maxLength: 180 \}/);
+  assert.match(server, /items: \{ type: "string", minLength: 1, maxLength: 40 \}/);
+  assert.match(store, /function trimMultilineText/);
+  assert.match(store, /content: trimMultilineText\(response\.reply, 220\)/);
+  assert.match(store, /body: trimMultilineText\(response\.reflection\.body, 180\)/);
+  assert.match(store, /response\.suggestedPrompts\.map\(\(item\) => trimText\(item, 40\)\)/);
 });
 
 test("긴 대화와 실제 원문에 근거한 대화 지도를 오갈 수 있다", () => {
   assert.match(screen, /대화하기/);
   assert.match(screen, /대화 지도/);
+  assert.match(screen, /내 맥락/);
+  assert.match(screen, /viewMode === "context"/);
   assert.match(screen, /AiConversationMap/);
   assert.match(conversationMap, /생각 진화 지도/);
-  assert.match(conversationMap, /이 카드가 나온 대화/);
+  assert.match(conversationMap, /<details key=\{`source-\$\{selectedNode\.id\}`\} className=\{styles\.nodeSources\}>/);
+  assert.match(conversationMap, /내 질문과 AI 답변 전체 보기/);
   assert.match(conversationMap, /내 질문/);
   assert.match(conversationMap, /AI 교수님 답변/);
   assert.match(conversationMap, /nodeSourceFullText/);
   assert.match(conversationMap, /\{selectedNode\.assistantMessage\.content\}/);
+  assert.match(conversationMap, /\{selectedNode\.mapSummary\}/);
+  assert.match(conversationMap, /원문 대화는 삭제되지 않아요/);
   assert.doesNotMatch(conversationMap, /excerpt\(selectedNode\.assistantMessage\.content/);
   assert.match(conversationMapModel, /buildConversationMap/);
   assert.match(conversationMapModel, /userMessage/);
@@ -68,6 +127,29 @@ test("긴 대화와 실제 원문에 근거한 대화 지도를 오갈 수 있�
   assert.match(conversationMap, /대화가 깊어지면 새 질문은 옆 가지로 자라요/);
   assert.match(conversationMap, /data-branching=\{children\.length > 1/);
   assert.match(screenStyles, /\.mapNode\[data-branching="true"\]/);
+});
+
+test("대화와 성장 맥락을 분리해 대화창은 전체 너비를 안정적으로 사용한다", () => {
+  assert.match(screen, /useState<"chat" \| "map" \| "context">/);
+  assert.match(screen, /viewMode === "chat" \? \(/);
+  assert.match(screen, /viewMode === "context" \? \(/);
+  assert.match(screenStyles, /\.conversation \{[\s\S]*?height: clamp\([\s\S]*?100dvh[\s\S]*?min-height: 0/);
+  assert.match(screenStyles, /\.messageList \{[\s\S]*?overflow-y: auto/);
+  assert.match(screenStyles, /\.workspace \{[\s\S]*?min-width: 0/);
+  assert.match(screenStyles, /\.promptSuggestions \{[\s\S]*?grid-template-columns: repeat\(3/);
+  assert.match(screenStyles, /\.viewTabs \{[\s\S]*?grid-template-columns: repeat\(3/);
+  assert.match(screenStyles, /@media \(min-width: 720px\) and \(max-width: 1279px\)[\s\S]*?100dvh\) - 450px/);
+  assert.match(screenStyles, /@media \(min-width: 1280px\)[\s\S]*?100dvh\) - 330px/);
+  assert.match(screen, /messageList\.scrollTop = messageList\.scrollHeight/);
+  assert.doesNotMatch(screen, /messageEndRef/);
+});
+
+test("예전 장문 답변은 지우지 않고 핵심을 먼저 보여준 뒤 펼쳐 읽는다", () => {
+  assert.match(screen, /CURRENT_REPLY_LIMIT = 220/);
+  assert.match(screen, /legacyReplyPreview/);
+  assert.match(screen, /예전 답변 전체 보기/);
+  assert.match(screen, /message\.content\.length > CURRENT_REPLY_LIMIT/);
+  assert.match(screenStyles, /\.legacyReply/);
 });
 
 test("홈에서 실제 AI 대화 지도 요약을 확인하고 전체 지도 탭으로 이어진다", () => {
@@ -106,19 +188,114 @@ test("과거 노드에서 새 갈래를 시작하고 트리에서 여러 자식 
   assert.match(conversationMapModel, /branchParentMessageId/);
   assert.match(conversationMapModel, /childrenByParent/);
   assert.match(conversationMapModel, /getConversationMapRoots/);
-  assert.match(screen, /새 갈래로 이어가기/);
+  assert.match(screen, /선택한 대화에서 이어가는 중/);
   assert.match(screen, /branchOrigin/);
-  assert.match(screen, /messages\.slice\(0, parentIndex \+ 1\)/);
+  assert.match(screen, /hasBranchChoices/);
+  assert.match(screen, /새 대화 갈래 후보/);
+  assert.match(screen, /lastMessage\?\.role === "assistant"/);
+  assert.match(screen, /Array\.from\(new Set/);
+  assert.match(screen, /messages\.length === 0[\s\S]*?QUICK_PROMPTS/);
+  assert.match(screen, /parentId: suggestionSourceMessage\.id/);
+  assert.match(screen, /suggestionSourceMessage\.reflection\?\.title \?\? "현재 대화"/);
+  assert.match(screenStyles, /\.branchPromptMark/);
+  assert.match(screen, /conversationLineageToAssistant\(messages, parentAssistantId\)/);
+  assert.match(screen, /conversationLineageToAssistant\(messages, retryParentId\)/);
+  assert.match(conversationMapModel, /export function conversationLineageToAssistant/);
+  assert.match(screen, /clearConversation\(\);[\s\S]*setBranchOrigin\(null\);[\s\S]*setDraft\(""\);/);
   assert.match(store, /branchParentMessageId/);
+  assert.match(server, /1\. 비교하기:[\s\S]*2\. 필요한 준비:[\s\S]*3\. 직접 해보기:[\s\S]*4\. 교수님께 묻기:/);
+  assert.match(server, /minItems: 4/);
+  assert.match(server, /maxItems: 4/);
+  assert.match(conversationMap, /prompts\.length >= 4 \? prompts\.slice\(0, 4\) : FALLBACK_BRANCH_PROMPTS\[node\.topic\]/);
+  assert.match(conversationMap, /BRANCH_AXES = \["비교·결정", "근거·역량", "프로젝트·실행", "교수 대화"\]/);
+  assert.match(conversationMap, /branchPrompts\.map/);
+  assert.match(conversationMap, /이 대화에서 이어가기/);
+  assert.match(conversationMap, /className=\{styles\.nodeResumeButton\}/);
+  assert.match(screenStyles, /\.nodeResumeButton/);
+  assert.match(conversationMap, /onClick=\{\(\) => onStartBranch\(selectedNode\.id, "", selectedNode\.title\)\}/);
+  assert.match(conversationMap, /nodeDetailRef\.current\?\.scrollIntoView\(\{ block: "start", behavior: "smooth" \}\)/);
+  assert.doesNotMatch(conversationMap, /manualBranchButton/);
+  assert.match(screen, /setBranchOrigin\(\{ parentId, title \}\)/);
+  assert.match(screen, /setViewMode\("chat"\)/);
+  assert.match(screen, /inputRef\.current\?\.focus\(\)/);
 });
 
-test("태블릿과 모바일에서는 분기 지도를 잘림 없는 세로 트리로 재배치한다", () => {
+test("선택한 카드에서 이어가면 관계없는 형제 갈래를 빼고 조상 대화만 복원한다", () => {
+  const { buildConversationMap, conversationLineageToAssistant } = loadConversationMapModule();
+  const createdAt = "2026-08-25T00:00:00.000Z";
+  const user = (id, content, branchParentMessageId = null) => ({
+    id,
+    role: "user",
+    content,
+    createdAt,
+    branchParentMessageId,
+    reflection: null,
+    suggestedPrompts: [],
+  });
+  const assistant = (id, title) => ({
+    id,
+    role: "assistant",
+    content: `${title} 답변`,
+    createdAt,
+    branchParentMessageId: null,
+    reflection: { title, body: `현재 고민: ${title}` },
+    suggestedPrompts: ["비교해 줘", "준비를 알려줘", "직접 해볼래", "교수님께 물어볼래"],
+  });
+  const messages = [
+    user("u1", "처음 고민"), assistant("a1", "처음 고민"),
+    user("u2", "첫 번째 갈래"), assistant("a2", "첫 번째 갈래"),
+    user("u3", "두 번째 갈래", "a1"), assistant("a3", "두 번째 갈래"),
+    user("u4", "첫 갈래의 다음 질문", "a2"), assistant("a4", "첫 갈래의 다음 질문"),
+  ];
+
+  const nodes = buildConversationMap(messages, []);
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  assert.deepEqual(nodeById.get("a1").childIds, ["a2", "a3"]);
+  assert.deepEqual(nodeById.get("a2").childIds, ["a4"]);
+  assert.equal(nodeById.get("a1").childIds.length > 1, true);
+  assert.equal(nodeById.get("a2").childIds.length > 1, false);
+  assert.deepEqual(
+    conversationLineageToAssistant(messages, "a3").map((message) => message.id),
+    ["u1", "a1", "u3", "a3"],
+  );
+  assert.deepEqual(
+    conversationLineageToAssistant(messages, "a4").map((message) => message.id),
+    ["u1", "a1", "u2", "a2", "u4", "a4"],
+  );
+
+  const orphanNodes = buildConversationMap([
+    user("orphan-user", "오래된 대화에서 이어가기", "missing-parent"),
+    assistant("orphan-assistant", "부모가 잘린 대화"),
+  ], []);
+  assert.equal(orphanNodes[0].parentId, null);
+});
+
+test("태블릿과 모바일에서도 가지 구조를 유지하고 드래그와 초점 복귀를 지원한다", () => {
+  const compactDetailStart = screenStyles.indexOf("@container (max-width: 920px)");
+  const compactDetailEnd = screenStyles.indexOf("@container (min-width: 1000px)", compactDetailStart);
+  const compactDetailBlock = screenStyles.slice(compactDetailStart, compactDetailEnd);
+  const mobileStart = screenStyles.indexOf("@container (max-width: 760px)");
+  const mobileEnd = screenStyles.indexOf("@media (min-width: 720px)", mobileStart);
+  const mobileBlock = screenStyles.slice(mobileStart, mobileEnd);
+
   assert.match(screenStyles, /container-type: inline-size/);
   assert.match(screenStyles, /@container \(max-width: 760px\)/);
+  assert.ok(compactDetailStart >= 0 && compactDetailEnd > compactDetailStart);
+  assert.match(compactDetailBlock, /\.branchSuggestions \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(screenStyles, /@container \(min-width: 1000px\)/);
-  assert.match(screenStyles, /\.mapTreeItem > ol > \.mapTreeItem::before/);
-  assert.match(screenStyles, /\.mapTree \.mapNode \{[\s\S]*?width: 100%/);
-  assert.match(screenStyles, /\.mapCanvas \{[\s\S]*?overflow-x: hidden/);
-  assert.match(screenStyles, /\.mapOutcomeNode \{[\s\S]*?max-width: none/);
+  assert.ok(mobileStart >= 0 && mobileEnd > mobileStart);
+  assert.match(conversationMap, /onPointerDown=\{beginMapPan\}/);
+  assert.match(conversationMap, /className=\{styles\.mapFocusButton\}/);
+  assert.match(conversationMap, /aria-label="생각 지도의 시작점으로 초점 맞추기"/);
+  assert.match(conversationMap, /data-depth=\{node\.depth\}/);
+  assert.match(mobileBlock, /\.mapGraph \{[\s\S]*?min-width: 680px/);
+  assert.match(mobileBlock, /\.mapTree > \.mapTreeItem > \.mapNode \{[\s\S]*?width: 252px/);
+  assert.match(mobileBlock, /\.mapTree ol \.mapNode \{[\s\S]*?width: 200px/);
+  assert.match(mobileBlock, /\.mapCanvas \{[\s\S]*?overflow: auto/);
+  assert.doesNotMatch(mobileBlock, /overflow-x: hidden/);
+  assert.match(screenStyles, /\.mapFocusButton \{/);
+  assert.match(mobileBlock, /\.nodeDecisionBox \{[\s\S]*?grid-template-columns: 1fr/);
+  assert.match(mobileBlock, /\.nodeDecisionBox > div button \{[\s\S]*?min-height: 40px/);
+  assert.match(mobileBlock, /\.nodeConnections > div \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(conversationMap, /mapOutcomeArrow/);
 });

@@ -215,3 +215,44 @@ test("저장 공간 오류가 나도 3분 카드 묶음은 부분 저장되지 �
   assert.equal(useQuestStore.getState().cards.length, 5);
   useQuestStore.setState({ cards: [] });
 });
+
+test("논문 읽기는 선택, 3분 카드, PDF 해설의 세 단계로 분리된다", () => {
+  const route = fs.readFileSync(
+    path.join(repositoryRoot, "app/paper/reader/page.tsx"),
+    "utf8",
+  );
+  const shell = fs.readFileSync(
+    path.join(repositoryRoot, "components/paper-reader/paper-reader-shell.tsx"),
+    "utf8",
+  );
+  const reader = fs.readFileSync(
+    path.join(repositoryRoot, "components/paper-reader/paper-reader.tsx"),
+    "utf8",
+  );
+  const steps = fs.readFileSync(
+    path.join(repositoryRoot, "components/paper-reader/paper-reading-steps.tsx"),
+    "utf8",
+  );
+  const styles = fs.readFileSync(
+    path.join(repositoryRoot, "app/globals.css"),
+    "utf8",
+  );
+
+  assert.match(route, /mode === "pdf"/);
+  assert.match(route, /initialStep=\{step === "card" \? "card"/);
+  assert.match(shell, /type PaperBiteWorkflowStep = "select" \| "card"/);
+  assert.match(shell, /읽을 논문 한 편을 고르세요/);
+  assert.match(shell, /논문 1개 선택하기/);
+  assert.match(shell, /초록이나 본문을 3분 카드로 정리해요/);
+  assert.match(shell, /3분 카드 만들기/);
+  assert.match(shell, /PDF 넣고 페이지별 해설·요약하기/);
+  assert.match(shell, /ready=\{isSaved\}/);
+  assert.doesNotMatch(shell, /PDF 6탭 리더로 더 깊게 읽기/);
+  assert.doesNotMatch(shell, /paper-reader-capabilities/);
+  assert.match(reader, /PDF 넣고 페이지별 해설·요약 시작/);
+  assert.match(reader, /paperId: selectedProfessorPaper\?\.paperId \?\? null/);
+  assert.match(steps, /label: "논문 선택"[\s\S]*label: "3분 카드"[\s\S]*label: "PDF 해설"/);
+  assert.match(styles, /\.paper-reading-steps ol[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(styles, /@media \(max-width: 420px\)[\s\S]*\.paper-reading-steps li/);
+  assert.match(styles, /\.paper-bite-pdf-next[\s\S]*grid-template-columns/);
+});

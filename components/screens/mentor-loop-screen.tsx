@@ -4,10 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
+  CalendarCheck2,
   CheckCircle2,
+  ChevronLeft,
   Copy,
   Download,
   LoaderCircle,
+  MessageSquareText,
+  PencilRuler,
   RefreshCcw,
   ShieldCheck,
   Trash2,
@@ -19,21 +23,62 @@ import {
   PrimaryButton,
   SecondaryButton,
   SectionHeading,
-  StatusBanner,
 } from "@/components/app/primitives";
 import type { ResearchTopic } from "@/data/research-mvp";
 import type {
   ProfessorMatch,
   ProfessorMentorLoopEntry,
 } from "@/lib/professor-domain";
-import { SceneBanner } from "@/components/app/scene-banner";
-import { brandScene } from "@/lib/brand-assets";
 import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
 
 function getSelectedTopic(): ResearchTopic | null {
   const { result, selectedTopicId, professorDiscoveryTopic } = useResearchStore.getState();
   return resolveJourneyTopic({ result, selectedTopicId, professorDiscoveryTopic });
+}
+
+type MentorLoopStage = 1 | 2 | 3;
+
+const MENTOR_LOOP_STEPS = [
+  { stage: 1 as const, label: "받은 조언", description: "교수님이 강조한 핵심", icon: MessageSquareText },
+  { stage: 2 as const, label: "연구 수정", description: "질문·방법·범위 비교", icon: PencilRuler },
+  { stage: 3 as const, label: "7일 행동", description: "실행과 다음 약속", icon: CalendarCheck2 },
+] as const;
+
+function MentorLoopProgress({
+  current,
+  onSelect,
+}: {
+  current: MentorLoopStage;
+  onSelect: (stage: MentorLoopStage) => void;
+}) {
+  return (
+    <nav
+      className="mentor-loop-progress"
+      aria-label="면담 피드백을 행동으로 옮기는 3단계"
+      data-service-help="mentor-loop-progress"
+    >
+      {MENTOR_LOOP_STEPS.map((step) => {
+        const Icon = step.icon;
+        return (
+          <button
+            key={step.stage}
+            type="button"
+            className={current === step.stage ? "is-current" : current > step.stage ? "is-complete" : undefined}
+            aria-current={current === step.stage ? "step" : undefined}
+            onClick={() => onSelect(step.stage)}
+          >
+            <span><Icon size={17} aria-hidden="true" /></span>
+            <span>
+              <small>{step.stage}단계</small>
+              <strong>{step.label}</strong>
+              <em>{step.description}</em>
+            </span>
+          </button>
+        );
+      })}
+    </nav>
+  );
 }
 
 function createEntry(topic: ResearchTopic, match: ProfessorMatch): ProfessorMentorLoopEntry {
@@ -144,8 +189,27 @@ function MentorLoopEditor({
   const [entry, setEntry] = useState<ProfessorMentorLoopEntry>(
     () => storedEntry ?? createEntry(topic, match),
   );
+  const [stage, setStage] = useState<MentorLoopStage>(() => {
+    if (!storedEntry?.feedbackSummary.trim()) return 1;
+    if (!storedEntry.commitment.trim()) return 2;
+    return 3;
+  });
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+
+  const moveToStage = (nextStage: MentorLoopStage) => {
+    if (nextStage > 1 && !entry.feedbackSummary.trim()) {
+      setError("교수님이 강조한 핵심 피드백을 먼저 적어 주세요.");
+      setStage(1);
+      return;
+    }
+    setError("");
+    setStage(nextStage);
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>("[data-service-help='mentor-loop-stage']")
+        ?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  };
 
   const updateEntry = (patch: Partial<ProfessorMentorLoopEntry>) => {
     setEntry((current) => ({ ...current, ...patch }));
@@ -201,6 +265,7 @@ function MentorLoopEditor({
     };
     setEntry(next);
     saveEntry(key, next);
+    setStage(3);
     setError("");
     setStatus("피드백 반영안과 7일 행동을 이 브라우저에 저장했습니다.");
   };
@@ -229,91 +294,128 @@ function MentorLoopEditor({
     if (!window.confirm("이 교수와 주제의 다음 만남 씨앗 기록을 이 브라우저에서 삭제할까요?")) return;
     deleteEntry(key);
     setEntry(createEntry(topic, match));
+    setStage(1);
     setError("");
     setStatus("저장된 다음 만남 씨앗 기록을 삭제했습니다.");
   };
 
   return (
     <AppShell title="다음 만남 씨앗" backHref="/quest" className="mentor-loop-screen">
-      <SceneBanner
-        scene={brandScene.nextSeed}
-        alt="면담에서 받은 조언을 다음 행동으로 옮기는 장면"
-        eyebrow="교수님, 말 걸어도 돼요?"
-        title="조언을 받은 뒤, 행동으로 답하세요"
-        description={`${match.professor.name} ${match.professor.title}님과의 면담 피드백을 연구 수정과 다음 약속으로 연결합니다.`}
-        priority
+      <PageHeader
+        eyebrow="교수님 만남 후"
+        title="받은 조언을 다음 행동으로 바꿔요"
+        description={`${match.professor.name} ${match.professor.title}님과의 면담 내용을 연구 수정과 다음 약속으로 이어갑니다.`}
       />
-      <StatusBanner icon={ShieldCheck} title="면담 메모는 이 브라우저에만 저장" tone="lavender">
-        미공개 연구 아이디어나 개인정보는 필요한 만큼만 적으세요. 자동 전송하지 않으며, 직접 내보내거나 삭제할 수 있습니다.
-      </StatusBanner>
-
-      <SectionHeading title="1. 면담에서 받은 피드백" description="해석을 보태기보다 교수님이 강조한 내용을 짧고 구체적으로 적어보세요." />
-      <Card className="mentor-loop-form">
-        <label>
-          <span>면담일</span>
-          <input type="date" className="input" value={entry.meetingDate} onChange={(event) => updateEntry({ meetingDate: event.target.value })} />
-        </label>
-        <label>
-          <span>핵심 피드백 <small>필수</small></span>
-          <textarea className="textarea" value={entry.feedbackSummary} onChange={(event) => updateEntry({ feedbackSummary: event.target.value })} placeholder="예: 질문이 넓으니 비교 대상을 한 학과와 한 학기로 줄이기" />
-        </label>
-        <label>
-          <span>추천받은 자료·논문</span>
-          <textarea className="textarea" value={entry.recommendedResources} onChange={(event) => updateEntry({ recommendedResources: event.target.value })} placeholder="제목이나 찾을 경로만 기록해도 됩니다." />
-        </label>
-        <label>
-          <span>주의할 점</span>
-          <textarea className="textarea" value={entry.cautionPoint} onChange={(event) => updateEntry({ cautionPoint: event.target.value })} placeholder="데이터 한계, 개념 구분, 연구윤리 등" />
-        </label>
-        <label>
-          <span>내가 약속한 일 <small>필수</small></span>
-          <textarea className="textarea" value={entry.commitment} onChange={(event) => updateEntry({ commitment: event.target.value })} placeholder="예: 금요일까지 변수 정의표와 샘플 20건을 정리하기" />
-        </label>
+      <Card className="mentor-loop-context">
+        <div>
+          <span>현재 연결</span>
+          <strong>{match.professor.name} {match.professor.title}</strong>
+          <small>{match.professor.department} · {topic.title}</small>
+        </div>
+        <p><ShieldCheck size={17} aria-hidden="true" /> 마지막 단계에서 이 브라우저에만 저장돼요.</p>
       </Card>
 
-      <SectionHeading title="2. 연구안 수정 전후" description="수정 전 내용은 선택한 연구주제에서 가져왔습니다. 수정 후 문장은 직접 확인해 주세요." />
-      <div className="mentor-loop-compare" role="group" aria-label="연구안 수정 전후 비교">
-        {([
-          ["question", "연구질문"],
-          ["methodDetail", "방법"],
-          ["scope", "범위"],
-        ] as const).map(([field, label]) => (
-          <Card className="mentor-loop-compare__row" key={field}>
-            <div>
-              <span>{label} · 수정 전</span>
-              <p>{entry.before[field]}</p>
+      <MentorLoopProgress current={stage} onSelect={moveToStage} />
+
+      <section className="mentor-loop-stage" data-service-help="mentor-loop-stage">
+        {stage === 1 ? (
+          <>
+            <SectionHeading title="교수님이 강조한 핵심부터 적어보세요" description="해석을 보태기보다 실제로 들은 표현과 결정 기준을 짧게 남겨요." />
+            <Card className="mentor-loop-form">
+              <label>
+                <span>면담일</span>
+                <input type="date" className="input" value={entry.meetingDate} onChange={(event) => updateEntry({ meetingDate: event.target.value })} />
+              </label>
+              <label>
+                <span>핵심 피드백 <small>필수</small></span>
+                <textarea className="textarea" value={entry.feedbackSummary} onChange={(event) => updateEntry({ feedbackSummary: event.target.value })} placeholder="예: 질문이 넓으니 비교 대상을 한 학과와 한 학기로 줄이기" />
+              </label>
+              <details className="mentor-loop-optional">
+                <summary>추천 자료와 주의점도 남기기</summary>
+                <div>
+                  <label>
+                    <span>추천받은 자료·논문</span>
+                    <textarea className="textarea" value={entry.recommendedResources} onChange={(event) => updateEntry({ recommendedResources: event.target.value })} placeholder="제목이나 찾을 경로만 기록해도 됩니다." />
+                  </label>
+                  <label>
+                    <span>주의할 점</span>
+                    <textarea className="textarea" value={entry.cautionPoint} onChange={(event) => updateEntry({ cautionPoint: event.target.value })} placeholder="데이터 한계, 개념 구분, 연구윤리 등" />
+                  </label>
+                </div>
+              </details>
+            </Card>
+          </>
+        ) : null}
+
+        {stage === 2 ? (
+          <>
+            <SectionHeading title="조언을 반영해 바뀐 문장만 확인해요" description="수정 전 내용은 선택한 주제에서 가져왔어요. 수정 후 문장을 직접 다듬어 주세요." />
+            <div className="mentor-loop-compare" role="group" aria-label="연구안 수정 전후 비교">
+              {([
+                ["question", "연구질문"],
+                ["methodDetail", "방법"],
+                ["scope", "범위"],
+              ] as const).map(([field, label]) => (
+                <Card className="mentor-loop-compare__row" key={field}>
+                  <div>
+                    <span>{label} · 수정 전</span>
+                    <p>{entry.before[field]}</p>
+                  </div>
+                  <label>
+                    <span>{label} · 수정 후</span>
+                    <textarea className="textarea" value={entry.after[field]} onChange={(event) => updateAfter(field, event.target.value)} />
+                  </label>
+                </Card>
+              ))}
             </div>
-            <label>
-              <span>{label} · 수정 후</span>
-              <textarea className="textarea" value={entry.after[field]} onChange={(event) => updateAfter(field, event.target.value)} />
-            </label>
-          </Card>
-        ))}
+          </>
+        ) : null}
+
+        {stage === 3 ? (
+          <>
+            <SectionHeading title="이번 주에 행동으로 답할 일을 정해요" description="약속 한 가지와 7일 행동을 저장하면 감사 이메일 초안도 함께 만들어요." />
+            <Card className="mentor-loop-actions">
+              <label className="mentor-loop-commitment">
+                <span>교수님께 약속한 일 <small>필수</small></span>
+                <textarea className="textarea" value={entry.commitment} onChange={(event) => updateEntry({ commitment: event.target.value })} placeholder="예: 금요일까지 변수 정의표와 샘플 20건을 정리하기" />
+              </label>
+              {entry.sevenDayActions.map((action, index) => (
+                <label key={index}>
+                  <span>{index + 1}</span>
+                  <textarea className="textarea" value={action} onChange={(event) => updateAction(index, event.target.value)} placeholder={`${index + 1}번째 행동`} />
+                </label>
+              ))}
+              <label className="mentor-loop-next-date">
+                <span>다시 진행 상황을 확인할 날짜</span>
+                <input type="date" className="input" value={entry.nextCheckAt} onChange={(event) => updateEntry({ nextCheckAt: event.target.value })} />
+              </label>
+            </Card>
+          </>
+        ) : null}
+      </section>
+
+      <div className="mentor-loop-stage-nav" data-service-help="mentor-loop-actions">
+        {stage > 1 ? (
+          <SecondaryButton onClick={() => moveToStage((stage - 1) as MentorLoopStage)}>
+            <ChevronLeft size={17} aria-hidden="true" /> 이전 단계
+          </SecondaryButton>
+        ) : <span />}
+        {stage < 3 ? (
+          <PrimaryButton onClick={() => moveToStage((stage + 1) as MentorLoopStage)}>
+            다음 단계 <ArrowRight size={17} aria-hidden="true" />
+          </PrimaryButton>
+        ) : (
+          <PrimaryButton className="mentor-loop-save" onClick={saveAndPlan}>
+            <RefreshCcw size={18} aria-hidden="true" /> 저장하고 7일 계획 만들기
+          </PrimaryButton>
+        )}
       </div>
-
-      <SectionHeading title="3. 7일 행동과 다음 확인" description="비어 있는 행동은 저장할 때 입력 내용에 맞춰 초안을 만듭니다." />
-      <Card className="mentor-loop-actions">
-        {entry.sevenDayActions.map((action, index) => (
-          <label key={index}>
-            <span>{index + 1}</span>
-            <textarea className="textarea" value={action} onChange={(event) => updateAction(index, event.target.value)} placeholder={`${index + 1}번째 행동`} />
-          </label>
-        ))}
-        <label className="mentor-loop-next-date">
-          <span>다시 진행 상황을 확인할 날짜</span>
-          <input type="date" className="input" value={entry.nextCheckAt} onChange={(event) => updateEntry({ nextCheckAt: event.target.value })} />
-        </label>
-      </Card>
-
-      <PrimaryButton className="mentor-loop-save" onClick={saveAndPlan}>
-        <RefreshCcw size={18} /> 저장하고 7일 계획 만들기
-      </PrimaryButton>
       {error && <p className="mentor-loop-error" role="alert">{error}</p>}
       {status && <p className="mentor-loop-status" role="status"><CheckCircle2 size={16} /> {status}</p>}
 
-      {entry.followUpEmail && (
-        <>
-          <SectionHeading title="4. 감사·후속 이메일" description="자동 발송하지 않습니다. 이름과 약속을 확인한 뒤 복사해 사용하세요." />
+      {stage === 3 && entry.followUpEmail ? (
+        <details className="mentor-loop-email-disclosure">
+          <summary>감사·후속 이메일 초안 보기 <span>저장됨</span></summary>
           <Card className="mentor-loop-email">
             <textarea className="textarea" value={entry.followUpEmail} onChange={(event) => updateEntry({ followUpEmail: event.target.value })} aria-label="감사 및 후속 이메일 초안" />
             <div>
@@ -321,14 +423,12 @@ function MentorLoopEditor({
               <SecondaryButton onClick={exportMarkdown}><Download size={17} /> 기록 내보내기</SecondaryButton>
             </div>
           </Card>
-        </>
-      )}
+        </details>
+      ) : null}
 
-      <div className="mentor-loop-footer-actions">
+      <div className="mentor-loop-footer-actions" data-service-help="mentor-loop-record-tools">
         <button type="button" onClick={removeCurrentEntry}><Trash2 size={16} /> 이 기록 삭제</button>
-        <PrimaryButton onClick={() => router.push("/home")}>
-          3단계 진행률 보기 <ArrowRight size={17} />
-        </PrimaryButton>
+        <SecondaryButton onClick={() => router.push("/home")}>홈에서 진행률 보기</SecondaryButton>
       </div>
     </AppShell>
   );

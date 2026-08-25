@@ -44,7 +44,6 @@ import {
   createGrowthDirectionSnapshot,
   createGrowthProfessorRecords,
   markGrowthProfessorSelected,
-  mergeGrowthProfessorHistory,
   normalizeGrowthDirectionSnapshot,
   normalizeGrowthProfessorHistory,
   normalizeGrowthProjectHistory,
@@ -69,6 +68,39 @@ const MAX_INTERESTS = 3;
 const MAX_METHODS = 2;
 
 const RERECOMMEND_EMPTY_NOTE = "이 조건에서 비교할 수 있는 다른 연구주제가 아직 없어요. 조건을 바꿔 보세요.";
+
+/** 학생 고민 연결과 프로젝트 멘토 연결은 같은 응답 저장소를 쓰므로 주제 ID로 여정을 구분합니다. */
+export function isProjectProfessorTopicId(topicId: string | null | undefined): boolean {
+  return Boolean(
+    topicId
+    && !topicId.startsWith("discovery:")
+    && !topicId.startsWith("context:"),
+  );
+}
+
+export function isCurrentProjectProfessorMatch(input: {
+  selectedTopicId: string | null;
+  professorMatchTopicId: string | null;
+}): boolean {
+  return Boolean(
+    input.selectedTopicId
+    && input.professorMatchTopicId === input.selectedTopicId
+    && isProjectProfessorTopicId(input.professorMatchTopicId),
+  );
+}
+
+function mergeGrowthProfessorHistoryByTopic(
+  history: GrowthProfessorRecord[],
+  response: ProfessorMatchResponse,
+): GrowthProfessorRecord[] {
+  const source = isProjectProfessorTopicId(response.topicId) ? "project" : "student";
+  const incoming = createGrowthProfessorRecords(response.matches, source, response.generatedAt);
+  const incomingKeys = new Set(incoming.map((item) => `${item.source}:${item.professorId}`));
+  return normalizeGrowthProfessorHistory([
+    ...history.filter((item) => !incomingKeys.has(`${item.source}:${item.professorId}`)),
+    ...incoming,
+  ]);
+}
 
 function resultIds(r: RecommendResult): string[] {
   if (r.kind === "ok") return [r.candidates[0].topic.id, r.candidates[1].topic.id];
@@ -316,11 +348,25 @@ export function migrateResearchState(
     );
   }
   let growthProfessorHistory = normalizeGrowthProfessorHistory(state.growthProfessorHistory);
-  if (growthProfessorHistory.length === 0 && Array.isArray(state.professorMatches)) {
-    growthProfessorHistory = createGrowthProfessorRecords(
-      state.professorMatches,
-      state.professorCoverage?.rankingSource === "ai-reranked" ? "project" : "student",
+  const persistedProjectMatch = isCurrentProjectProfessorMatch({
+    selectedTopicId: state.selectedTopicId ?? null,
+    professorMatchTopicId: state.professorMatchTopicId ?? null,
+  });
+  if (persistedVersion < 8 && persistedProjectMatch && Array.isArray(state.professorMatches)) {
+    const currentProjectProfessorIds = new Set(
+      state.professorMatches.map((match) => match.professor.id),
     );
+    growthProfessorHistory = normalizeGrowthProfessorHistory(
+      growthProfessorHistory.map((item) => (
+        item.source === "student" && currentProjectProfessorIds.has(item.professorId)
+          ? { ...item, source: "project" as const }
+          : item
+      )),
+    );
+  }
+  if (growthProfessorHistory.length === 0 && Array.isArray(state.professorMatches)) {
+    const source = persistedProjectMatch ? "project" : "student";
+    growthProfessorHistory = createGrowthProfessorRecords(state.professorMatches, source);
   }
   if (
     selectedProfessorPaper
@@ -712,7 +758,10 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     set({ professorMatchStatus: "loading", professorMatchError: null, professorMatchTopicId }),
   // 늦게 도착한 이전 요청의 응답이 현재 결과를 덮지 않도록, 진행 중인 요청의 주제와만 대조합니다.
   setProfessorMatches: (response) =>
-    set((state) => response.topicId !== state.professorMatchTopicId ? state : ({
+    set((state) => (
+      response.topicId !== state.professorMatchTopicId
+      || (isProjectProfessorTopicId(response.topicId) && response.topicId !== state.selectedTopicId)
+    ) ? state : ({
       professorMatches: response.matches,
       professorCoverage: {
         officialRecordCount: response.officialRecordCount,
@@ -725,7 +774,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
       },
       professorMatchStatus: "success",
       professorMatchError: null,
-      growthProfessorHistory: mergeGrowthProfessorHistory(state.growthProfessorHistory, response),
+      growthProfessorHistory: mergeGrowthProfessorHistoryByTopic(state.growthProfessorHistory, response),
       selectedProfessorId: null,
     })),
   setProfessorMatchError: (topicId, professorMatchError) =>
@@ -903,7 +952,7 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     }),
 }), {
   name: "major-evolution-research-v1",
-  version: 7,
+  version: 8,
   migrate: migrateResearchState,
   storage: createJSONStorage(() => localStorage),
   skipHydration: true,
