@@ -21,14 +21,17 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/app/primitives";
 import { ServiceBottomNav } from "@/components/app/side-nav";
-import { ServiceMobileHeader } from "@/components/app/service-hub";
 import { AiConversationMap } from "@/components/screens/ai-conversation-map";
 import { requestGrowthProfessorReply } from "@/lib/ai-client";
+import { conversationLineageToAssistant } from "@/lib/ai-conversation-map";
 import type {
   GrowthProfessorContext,
   GrowthProfessorMessage,
 } from "@/lib/ai-growth-professor";
-import { useAiProfessorStore } from "@/store/ai-professor-store";
+import {
+  useAiProfessorStore,
+  type AiProfessorMessage,
+} from "@/store/ai-professor-store";
 import { useResearchStore } from "@/store/research-store";
 import styles from "./ai-professor-screen.module.css";
 
@@ -37,6 +40,40 @@ const QUICK_PROMPTS = [
   "지금 프로젝트의 다음 한 걸음을 같이 정해요",
   "교수님께 물어볼 첫 질문을 만들고 싶어요",
 ] as const;
+
+const CURRENT_REPLY_LIMIT = 220;
+
+function clipCopy(value: string, max: number) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  return normalized.length > max ? `${normalized.slice(0, max).trim()}…` : normalized;
+}
+
+function reflectionPart(body: string, label: string, nextLabels: string[]) {
+  const start = body.indexOf(label);
+  if (start < 0) return "";
+  const remaining = body.slice(start + label.length).trim();
+  const nextIndexes = nextLabels
+    .map((nextLabel) => remaining.indexOf(nextLabel))
+    .filter((index) => index >= 0);
+  const end = nextIndexes.length ? Math.min(...nextIndexes) : remaining.length;
+  return remaining.slice(0, end).trim();
+}
+
+function legacyReplyPreview(message: AiProfessorMessage) {
+  const reflection = message.reflection?.body ?? "";
+  const concern = reflectionPart(reflection, "현재 고민:", ["시도할 방향:", "다음 행동:"]);
+  const action = reflectionPart(reflection, "다음 행동:", []);
+  const preview = [
+    concern ? `지금 고민: ${clipCopy(concern, 92)}` : "",
+    action ? `먼저 해볼 일: ${clipCopy(action, 92)}` : "",
+  ].filter(Boolean);
+  if (preview.length) return preview;
+
+  return [clipCopy(
+    message.content.replace(/^당신의 진로 고민 핵심은\s*/u, "지금 고민은 "),
+    138,
+  )];
+}
 
 function formatTime(value: string) {
   const date = new Date(value);
@@ -67,19 +104,18 @@ export function AiProfessorScreen() {
   const clearMapDecision = useAiProfessorStore((state) => state.clearMapDecision);
   const clearConversation = useAiProfessorStore((state) => state.clearConversation);
 
-  const [viewMode, setViewMode] = useState<"chat" | "map">("chat");
+  const [viewMode, setViewMode] = useState<"chat" | "map" | "context">("chat");
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const [savedMessageId, setSavedMessageId] = useState<string | null>(null);
   const [branchOrigin, setBranchOrigin] = useState<{ parentId: string; title: string } | null>(null);
-  const messageEndRef = useRef<HTMLDivElement>(null);
+  const messageListRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const context = useMemo<GrowthProfessorContext>(() => {
     const latestProject = projects.at(-1) ?? null;
     const latestProfessor = [...professors].reverse().find((item) => item.selectedAt)
-      ?? professors.at(-1)
       ?? null;
     return {
       major: conditions.major || discovery?.major || directionBaseline?.major || "전공 미입력",
@@ -104,19 +140,32 @@ export function AiProfessorScreen() {
     };
   }, [conditions, directionBaseline, discovery, professors, projects]);
 
-  const lastSuggestions = [...messages]
-    .reverse()
-    .find((message) => message.role === "assistant")
-    ?.suggestedPrompts.slice(0, 3) ?? [];
+  const lastMessage = messages.at(-1) ?? null;
+  const lastAssistantMessage = lastMessage?.role === "assistant" ? lastMessage : null;
+  const branchSourceMessage = branchOrigin
+    ? messages.find((message) => message.id === branchOrigin.parentId && message.role === "assistant") ?? null
+    : null;
+  const suggestionSourceMessage = branchSourceMessage ?? lastAssistantMessage;
+  const lastSuggestions = Array.from(new Set(
+    (suggestionSourceMessage?.suggestedPrompts ?? [])
+      .map((prompt) => prompt.trim())
+      .filter(Boolean),
+  )).slice(0, 3);
+  const visiblePrompts = lastSuggestions.length
+    ? lastSuggestions
+    : messages.length === 0
+      ? [...QUICK_PROMPTS]
+      : [];
+  const hasBranchChoices = Boolean(suggestionSourceMessage && lastSuggestions.length >= 2);
 
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ block: "nearest" });
+    const messageList = messageListRef.current;
+    if (messageList) messageList.scrollTop = messageList.scrollHeight;
   }, [isSending, messages.length]);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("view") === "map") {
-      setViewMode("map");
-    }
+    const requestedView = new URLSearchParams(window.location.search).get("view");
+    if (requestedView === "map" || requestedView === "context") setViewMode(requestedView);
   }, []);
 
   const requestReply = async (conversation: GrowthProfessorMessage[]) => {
@@ -140,14 +189,14 @@ export function AiProfessorScreen() {
     if (!content || isSending) return;
     setDraft("");
     const userMessage = addUserMessage(content, branchOrigin?.parentId ?? null);
-    const parentIndex = branchOrigin
-      ? messages.findIndex((message) => message.id === branchOrigin.parentId)
-      : -1;
-    const conversationBase = parentIndex >= 0 ? messages.slice(0, parentIndex + 1) : messages;
+    const parentAssistantId = branchOrigin?.parentId ?? lastAssistantMessage?.id ?? null;
+    const conversationBase = parentAssistantId
+      ? conversationLineageToAssistant(messages, parentAssistantId)
+      : messages;
     setBranchOrigin(null);
     await requestReply(
       [...conversationBase, userMessage]
-        .slice(-12)
+        .slice(-8)
         .map(({ role, content: messageContent }) => ({ role, content: messageContent })),
     );
   };
@@ -155,14 +204,15 @@ export function AiProfessorScreen() {
   const retryLastMessage = async () => {
     if (isSending || messages.at(-1)?.role !== "user") return;
     const lastUserMessage = messages.at(-1);
-    const parentIndex = lastUserMessage?.branchParentMessageId
-      ? messages.findIndex((message) => message.id === lastUserMessage.branchParentMessageId)
-      : -1;
-    const retryMessages = parentIndex >= 0 && lastUserMessage
-      ? [...messages.slice(0, parentIndex + 1), lastUserMessage]
+    const previousAssistant = [...messages]
+      .reverse()
+      .find((message) => message.role === "assistant") ?? null;
+    const retryParentId = lastUserMessage?.branchParentMessageId ?? previousAssistant?.id ?? null;
+    const retryMessages = retryParentId && lastUserMessage
+      ? [...conversationLineageToAssistant(messages, retryParentId), lastUserMessage]
       : messages;
     await requestReply(
-      retryMessages.slice(-12).map(({ role, content }) => ({ role, content })),
+      retryMessages.slice(-8).map(({ role, content }) => ({ role, content })),
     );
   };
 
@@ -177,7 +227,6 @@ export function AiProfessorScreen() {
 
   return (
     <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
-      <ServiceMobileHeader />
       <div className={styles.page}>
         <header className={styles.pageHeader}>
           <Link href="/portfolio" className={styles.backLink}>
@@ -212,15 +261,23 @@ export function AiProfessorScreen() {
                 <span>{messages.filter((message) => message.role === "assistant").length}</span>
               ) : null}
             </button>
+            <button
+              type="button"
+              aria-current={viewMode === "context" ? "page" : undefined}
+              onClick={() => setViewMode("context")}
+            >
+              <BookOpenCheck size={17} aria-hidden="true" /> 내 맥락
+              {growthNotes.length ? <span>{growthNotes.length}</span> : null}
+            </button>
           </nav>
         </header>
 
-        {viewMode === "chat" ? <div className={styles.workspace}>
-          <section className={styles.conversation} aria-labelledby="ai-professor-conversation">
+        {viewMode !== "map" ? <div className={styles.workspace}>
+          {viewMode === "chat" ? (
+            <section className={styles.conversation} aria-labelledby="ai-professor-conversation">
             <header className={styles.conversationHeader}>
               <div>
                 <h2 id="ai-professor-conversation"><MessageCircleMore size={19} /> 가볍게 이야기하기</h2>
-                <p>정답을 받기보다, 지금 내 생각을 한 걸음 더 구체화해요.</p>
               </div>
               {messages.length > 0 ? (
                 <button
@@ -228,6 +285,8 @@ export function AiProfessorScreen() {
                   onClick={() => {
                     if (window.confirm("AI 교수님과 나눈 대화를 모두 삭제할까요? 성장 메모는 남아 있습니다.")) {
                       clearConversation();
+                      setBranchOrigin(null);
+                      setDraft("");
                     }
                   }}
                   className={styles.clearButton}
@@ -237,13 +296,12 @@ export function AiProfessorScreen() {
               ) : null}
             </header>
 
-            <div className={styles.messageList} aria-live="polite">
+            <div ref={messageListRef} className={styles.messageList} aria-live="polite">
               <article className={`${styles.message} ${styles.assistantMessage}`}>
                 <span className={styles.avatar}><Sparkles size={17} aria-hidden="true" /></span>
                 <div>
                   <div className={styles.bubble}>
-                    <p>반가워요. 아직 생각이 정리되지 않아도 괜찮아요.</p>
-                    <p>진로 고민, 해보고 싶은 프로젝트, 교수님을 만나기 전 준비 중 하나부터 편하게 들려주세요. 제가 질문을 하나씩 드리며 같이 정리해 볼게요.</p>
+                    <p>지금 가장 막막한 걸 한 가지만 편하게 말해 주세요. 바로 해볼 수 있는 다음 한 걸음을 같이 찾아볼게요.</p>
                   </div>
                   <time>대화 시작</time>
                 </div>
@@ -251,6 +309,9 @@ export function AiProfessorScreen() {
 
               {messages.map((message) => {
                 const isSaved = growthNotes.some((note) => note.sourceMessageId === message.id);
+                const isLegacyLongReply = message.role === "assistant"
+                  && message.content.length > CURRENT_REPLY_LIMIT;
+                const legacyPreview = isLegacyLongReply ? legacyReplyPreview(message) : [];
                 return (
                   <article
                     key={message.id}
@@ -264,7 +325,21 @@ export function AiProfessorScreen() {
                         {message.role === "user" && message.branchParentMessageId ? (
                           <span className={styles.branchMessageLabel}><GitBranch size={12} /> 새 갈래에서 이어짐</span>
                         ) : null}
-                        {message.content.split("\n").filter(Boolean).map((paragraph, index) => (
+                        {isLegacyLongReply ? (
+                          <>
+                            {legacyPreview.map((paragraph, index) => (
+                              <p key={`${message.id}-preview-${index}`}>{paragraph}</p>
+                            ))}
+                            <details className={styles.legacyReply}>
+                              <summary>예전 답변 전체 보기</summary>
+                              <div>
+                                {message.content.split("\n").filter(Boolean).map((paragraph, index) => (
+                                  <p key={`${message.id}-full-${index}`}>{paragraph}</p>
+                                ))}
+                              </div>
+                            </details>
+                          </>
+                        ) : message.content.split("\n").filter(Boolean).map((paragraph, index) => (
                           <p key={`${message.id}-${index}`}>{paragraph}</p>
                         ))}
                       </div>
@@ -301,7 +376,6 @@ export function AiProfessorScreen() {
                   </div>
                 </article>
               ) : null}
-              <div ref={messageEndRef} />
             </div>
 
             <div className={styles.composerArea}>
@@ -314,26 +388,46 @@ export function AiProfessorScreen() {
               {branchOrigin ? (
                 <div className={styles.branchComposerContext} role="status">
                   <GitBranch size={16} aria-hidden="true" />
-                  <span><strong>새 갈래로 이어가기</strong><small>{branchOrigin.title}</small></span>
+                  <span><strong>선택한 대화에서 이어가는 중</strong><small>{branchOrigin.title}</small></span>
                   <button
                     type="button"
-                    aria-label="대화 갈래 만들기 취소"
+                    aria-label="선택한 대화에서 이어가기 취소"
                     onClick={() => setBranchOrigin(null)}
                   >
                     <X size={15} aria-hidden="true" />
                   </button>
                 </div>
               ) : null}
-              <div className={styles.promptSuggestions} aria-label="이어갈 대화 예시">
-                {(lastSuggestions.length ? lastSuggestions : QUICK_PROMPTS).map((prompt) => (
-                  <button key={prompt} type="button" onClick={() => {
-                    setDraft(prompt);
-                    inputRef.current?.focus();
-                  }}>
-                    {prompt}
-                  </button>
-                ))}
-              </div>
+              {visiblePrompts.length ? (
+                <div className={styles.promptSuggestions} aria-label="이어갈 대화 예시">
+                  {visiblePrompts.map((prompt) => (
+                    <button
+                      key={prompt}
+                      type="button"
+                      aria-label={hasBranchChoices ? `새 대화 갈래 후보: ${prompt}` : prompt}
+                      onClick={() => {
+                        if (hasBranchChoices && suggestionSourceMessage) {
+                          setBranchOrigin({
+                            parentId: suggestionSourceMessage.id,
+                            title: suggestionSourceMessage.reflection?.title ?? "현재 대화",
+                          });
+                        } else {
+                          setBranchOrigin(null);
+                        }
+                        setDraft(prompt);
+                        inputRef.current?.focus();
+                      }}
+                    >
+                      {hasBranchChoices ? (
+                        <span className={styles.branchPromptMark} title="새 대화 갈래 후보" aria-hidden="true">
+                          <GitBranch size={12} />
+                        </span>
+                      ) : null}
+                      <span className={styles.promptLabel}>{prompt}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <div className={styles.composer}>
                 <textarea
                   ref={inputRef}
@@ -359,11 +453,12 @@ export function AiProfessorScreen() {
                   {isSending ? <LoaderCircle className="spin" size={19} /> : <Send size={19} />}
                 </button>
               </div>
-              <p className={styles.composerHint}>Enter로 보내기 · Shift+Enter로 줄바꿈 · 대화는 이 브라우저에 저장돼요.</p>
             </div>
-          </section>
+            </section>
+          ) : null}
 
-          <aside className={styles.growthRail} aria-label="나의 성장 맥락과 저장 메모">
+          {viewMode === "context" ? (
+            <aside className={styles.growthRail} aria-label="나의 성장 맥락과 저장 메모">
             <section className={styles.contextSection}>
               <header><Lightbulb size={18} aria-hidden="true" /><h2>함께 보고 있는 내 맥락</h2></header>
               <dl>
@@ -416,7 +511,8 @@ export function AiProfessorScreen() {
                 <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </nav>
-          </aside>
+            </aside>
+          ) : null}
         </div> : (
           <AiConversationMap
             messages={messages}

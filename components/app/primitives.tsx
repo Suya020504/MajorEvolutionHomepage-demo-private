@@ -8,6 +8,7 @@ import {
   Bookmark,
   Check,
   ChevronRight,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 import type {
@@ -17,7 +18,9 @@ import type {
   ReactNode,
 } from "react";
 import { forwardRef } from "react";
+import { ServiceHelpGuide } from "@/components/app/service-help-guide";
 import { SideNav } from "@/components/app/side-nav";
+import { BrandLogo } from "@/components/brand/brand-logo";
 import { brandLogo } from "@/lib/brand-assets";
 
 export function cx(...values: Array<string | false | null | undefined>) {
@@ -236,6 +239,23 @@ export function AppShell({
     <>
     {showSideNav && <SideNav />}
     <div className={cx("app-viewport", showSideNav && "has-side-nav", className)}>
+      {!showHeader ? (
+        <header className="service-tab-header" aria-label="서비스 공통 메뉴">
+          <BrandLogo href="/home" compact className="service-tab-header__brand" />
+          <div className="service-tab-header__actions">
+            <ServiceHelpGuide placement="header" />
+            <Link
+              href="/profile"
+              className="service-tab-header__profile"
+              aria-label="마이페이지"
+              title="마이페이지"
+              data-service-onboarding="mobile-profile"
+            >
+              <UserRound size={21} aria-hidden="true" />
+            </Link>
+          </div>
+        </header>
+      ) : null}
       {showHeader && (
         <header className="top-app-bar">
           <div className="top-app-bar__side">
@@ -248,6 +268,7 @@ export function AppShell({
           <strong>{title}</strong>
           <div className="top-app-bar__side top-app-bar__side--right">
             {step ? <span className="step-count">{step.current} / {step.total}</span> : topAction}
+            <ServiceHelpGuide placement="header" />
           </div>
         </header>
       )}

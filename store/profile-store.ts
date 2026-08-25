@@ -27,9 +27,11 @@ export type LocalUserProfile = {
 type ProfileState = {
   hasHydrated: boolean;
   hasEnteredService: boolean;
+  hasCompletedProfessorTutorial: boolean;
   profile: LocalUserProfile;
   setHasHydrated: (value: boolean) => void;
   markServiceEntered: () => void;
+  completeProfessorTutorial: () => void;
   saveProfile: (profile: Omit<LocalUserProfile, "updatedAt">) => void;
   clearProfile: () => void;
 };
@@ -82,6 +84,7 @@ export function migrateProfileState(persistedState: unknown): Partial<ProfileSta
     : {};
   return {
     hasEnteredService: Boolean(state.hasEnteredService),
+    hasCompletedProfessorTutorial: Boolean(state.hasCompletedProfessorTutorial),
     profile: normalizeProfile(state.profile),
   };
 }
@@ -89,9 +92,14 @@ export function migrateProfileState(persistedState: unknown): Partial<ProfileSta
 export const useProfileStore = create<ProfileState>()(persist((set) => ({
   hasHydrated: false,
   hasEnteredService: false,
+  hasCompletedProfessorTutorial: false,
   profile: { ...emptyLocalUserProfile },
   setHasHydrated: (hasHydrated) => set({ hasHydrated }),
   markServiceEntered: () => set({ hasEnteredService: true }),
+  completeProfessorTutorial: () => set({
+    hasCompletedProfessorTutorial: true,
+    hasEnteredService: true,
+  }),
   saveProfile: (profile) => set({
     profile: normalizeProfile({ ...profile, updatedAt: new Date().toISOString() }),
     hasEnteredService: true,
@@ -99,7 +107,7 @@ export const useProfileStore = create<ProfileState>()(persist((set) => ({
   clearProfile: () => set({ profile: { ...emptyLocalUserProfile } }),
 }), {
   name: "major-evolution-profile-v1",
-  version: 1,
+  version: 2,
   migrate: migrateProfileState,
   storage: createJSONStorage(() => localStorage),
   skipHydration: true,

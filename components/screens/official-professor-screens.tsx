@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -64,7 +64,16 @@ import { ProfessorMatchRequestAbortedError } from "@/lib/professor-match-http";
 import { resolveProfessorPortrait } from "@/lib/professor-photo";
 import { MAX_FAVORITE_PROFESSORS } from "@/lib/professor-paper-selection";
 import { buildProfessorPitch, professorMatchRoleLabel } from "@/lib/professor-pitch";
+import { useProfileStore, type ProfileGrade } from "@/store/profile-store";
 import { useResearchStore } from "@/store/research-store";
+
+function profileGradeToStudentStage(grade: ProfileGrade): string {
+  if (grade === "1학년" || grade === "2학년") return "전공 기초를 배우는 중";
+  if (grade === "3학년" || grade === "4학년 이상") return "전공을 심화하는 중";
+  if (grade === "대학원생") return "연구·대학원을 준비하는 중";
+  if (grade === "휴학 중") return "진로를 다시 탐색하는 중";
+  return "";
+}
 
 function matchRoleLabel(match: ProfessorMatch): string {
   return professorMatchRoleLabel(match);
@@ -439,6 +448,8 @@ export function OfficialProfessorsScreen({
   const setDiscoverySummary = useResearchStore((state) => state.setProfessorDiscoverySummary);
   const setError = useResearchStore((state) => state.setProfessorMatchError);
   const clearProfessorMatches = useResearchStore((state) => state.clearProfessorMatches);
+  const profileHasHydrated = useProfileStore((state) => state.hasHydrated);
+  const profile = useProfileStore((state) => state.profile);
   const savedTopic = useSelectedTopic();
 
   const [context, setContext] = useState<ProfessorDiscoveryContext>(() => ({
@@ -476,9 +487,9 @@ export function OfficialProfessorsScreen({
     activeRequestRef.current?.abort();
   }, []);
 
-  // 만들다에서 넘어왔다면 확인한 전공·관심·주제를 한 번만 채웁니다.
+  // 저장한 검색 맥락·내 프로필·프로젝트 조건을 우선순위대로 한 번만 채웁니다.
   useEffect(() => {
-    if (!hasHydrated || prefilled) return;
+    if (!hasHydrated || !profileHasHydrated || prefilled) return;
     /*
      * v4 개발 과정처럼 결과만 남고 검색 맥락이 없는 비정상 저장값은 재사용하지 않습니다.
      * 이 상태를 그대로 노출하면 입력은 비어 있는데 결과가 보이고, 재추천 요청은 검증에서 멈춥니다.
@@ -487,33 +498,69 @@ export function OfficialProfessorsScreen({
       clearProfessorMatches();
     }
     setContext((current) => {
-      if (storedDiscoveryTopic) {
-        return professorMatchTopicToDiscoveryContext(storedDiscoveryTopic);
-      }
-      const sourceMajor = current.major || conditions.major || "";
+      const storedContext = storedDiscoveryTopic
+        ? professorMatchTopicToDiscoveryContext(storedDiscoveryTopic)
+        : EMPTY_PROFESSOR_DISCOVERY_CONTEXT;
+      const sourceMajor = current.major
+        || storedContext.major
+        || profile.major
+        || conditions.major
+        || "";
       const academicSelection = findAcademicSelection(taxonomy, sourceMajor);
       return {
         ...current,
         university: current.university
+          || storedContext.university
+          || (isDankookUniversity(profile.school) ? taxonomy.university : "")
           || (isDankookUniversity(conditions.school) ? "단국대학교" : ""),
         college: current.college
+          || storedContext.college
           || academicSelection?.college
           || (sourceMajor ? DIRECT_ACADEMIC_ENTRY : ""),
-        major: current.major || academicSelection?.department || sourceMajor,
+        major: current.major
+          || storedContext.major
+          || academicSelection?.department
+          || sourceMajor,
+        studentStage: current.studentStage
+          || storedContext.studentStage
+          || profileGradeToStudentStage(profile.grade),
+        goal: current.goal || storedContext.goal,
         interests: current.interests.length > 0
           ? current.interests
-          : conditions.interests.slice(0, 5),
-        topic: current.topic || savedTopic?.title || "",
+          : storedContext.interests.length > 0
+            ? storedContext.interests
+            : profile.interests.length > 0
+              ? profile.interests.slice(0, 5)
+              : conditions.interests.slice(0, 5),
+        careerInterests: current.careerInterests.length > 0
+          ? current.careerInterests
+          : storedContext.careerInterests,
+        careerConcerns: current.careerConcerns.length > 0
+          ? current.careerConcerns
+          : storedContext.careerConcerns,
+        secondaryMajorType: current.secondaryMajorType !== "없음"
+          ? current.secondaryMajorType
+          : storedContext.secondaryMajorType,
+        secondaryCollege: current.secondaryCollege || storedContext.secondaryCollege,
+        secondaryMajor: current.secondaryMajor || storedContext.secondaryMajor,
+        topic: current.topic || storedContext.topic || savedTopic?.title || "",
+        careerGoal: current.careerGoal || storedContext.careerGoal,
+        meetingSituation: current.meetingSituation || storedContext.meetingSituation,
+        preferredSupport: current.preferredSupport || storedContext.preferredSupport,
+        experience: current.experience || storedContext.experience,
+        additionalContext: current.additionalContext || storedContext.additionalContext,
       };
     });
     setPrefilled(true);
   }, [
     hasHydrated,
+    profileHasHydrated,
     prefilled,
     storedDiscoveryTopic,
     matches.length,
     conditions,
     savedTopic,
+    profile,
     taxonomy,
     clearProfessorMatches,
   ]);
@@ -566,6 +613,17 @@ export function OfficialProfessorsScreen({
         interests: requestContext.interests,
         careerConcerns: requestContext.careerConcerns,
       });
+      const profileState = useProfileStore.getState();
+      profileState.saveProfile({
+        name: profileState.profile.name,
+        school: requestContext.university,
+        major: requestContext.major,
+        grade: profileState.profile.grade,
+        careerConcern: requestContext.careerConcerns.join(" · ")
+          || profileState.profile.careerConcern,
+        interests: requestContext.interests,
+      });
+      profileState.completeProfessorTutorial();
       /*
        * 피칭 결과는 폼 아래가 아니라 전용 주소에서 봅니다.
        * 결과가 폼 밑에 붙어 있으면 세 장을 비교하는 동안에도 입력이 화면을 차지했습니다.
@@ -782,12 +840,10 @@ export function ProfessorPitchScreen() {
   };
 
   const openProfessor = (match: ProfessorMatch) => {
-    selectProfessor(match.professor.id);
     router.push(`/professors/${match.professor.id}`);
   };
 
-  const openProfessorPaper = (match: ProfessorMatch) => {
-    selectProfessor(match.professor.id);
+  const openProfessorPaper = () => {
     router.push("/paper/reader?mode=bite&source=favorites");
   };
 
@@ -897,7 +953,7 @@ export function ProfessorPitchScreen() {
                     match={match}
                     context={context}
                     onOpen={() => openProfessor(match)}
-                    onOpenPaper={() => openProfessorPaper(match)}
+                    onOpenPaper={openProfessorPaper}
                     onChoose={() => chooseProfessor(match)}
                     onReject={() => rejectMatch(match.professor.id)}
                   />
@@ -914,6 +970,8 @@ export function ProfessorPitchScreen() {
 
 export function OfficialProfessorDetailScreen({ professor }: { professor: OfficialProfessor }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const backHref = searchParams.get("from") === "project" ? "/project-professors" : "/professors";
   const matches = useResearchStore((state) => state.professorMatches);
   const selectProfessor = useResearchStore((state) => state.selectProfessor);
   const match = useMemo(
@@ -925,7 +983,7 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
   return (
     <AppShell
       title="교수 공식 근거"
-      backHref="/professors"
+      backHref={backHref}
       stickyAction={(
         <>
           <ProfessorFavoriteButton
@@ -936,7 +994,7 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
             selectProfessor(professor.id);
             router.push("/quest");
           }}>
-            교수님 퀘스트 준비 <ArrowRight size={17} />
+            이 교수님과 첫 대화 준비하기 <ArrowRight size={17} />
           </PrimaryButton>
         </>
       )}

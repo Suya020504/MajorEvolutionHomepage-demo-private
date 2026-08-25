@@ -2,12 +2,26 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, CompassIcon, FlaskConical, GraduationCap, Home, MessagesSquare, TrendingUp, UserRound } from "lucide-react";
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { guideCharacter } from "@/lib/brand-assets";
+import {
+  navigationJourney,
+  resolveServiceSection,
+  shouldOpenServiceNavGuide,
+  SERVICE_DESKTOP_NAV_GUIDE_STORAGE_KEY,
+  SERVICE_GUIDE_STEPS,
+  SERVICE_HOME_ONBOARDING_EVENT,
+  SERVICE_MOBILE_NAV_GUIDE_STORAGE_KEY,
+  SERVICE_NAV_GUIDE_EVENT,
+  SERVICE_NAV_GUIDE_QUERY_PARAM,
+  SERVICE_NAV_GUIDE_QUERY_VALUE,
+  SERVICE_NAV_GUIDE_STORAGE_KEY,
+} from "@/lib/service-navigation";
 import { useProfileStore } from "@/store/profile-store";
+import { useResearchStore } from "@/store/research-store";
 
 /**
  * 넓은 화면 좌측 내비.
@@ -28,129 +42,194 @@ export const NAV_ITEMS = [
   { href: "/portfolio", section: "/portfolio", label: "나의 성장과정", shortLabel: "성장", icon: TrendingUp },
 ] as const;
 
-const BOTTOM_NAV_GUIDE_STORAGE_KEY = "major-evolution-bottom-nav-guide-v1";
+function useProfessorTabHref() {
+  const hasProfileHydrated = useProfileStore((state) => state.hasHydrated);
+  const hasCompletedProfessorTutorial = useProfileStore((state) => state.hasCompletedProfessorTutorial);
+  const completeProfessorTutorial = useProfileStore((state) => state.completeProfessorTutorial);
+  const profileHasProfessorSetup = useProfileStore((state) => (
+    Boolean(state.profile.major) && state.profile.interests.length > 0
+  ));
+  const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
+  const hasProfessorJourney = useResearchStore((state) => (
+    state.professorMatches.length > 0
+    || state.professorDiscoveryTopic !== null
+    || state.selectedProfessorId !== null
+  ));
+  const canOpenProfessorHome = hasCompletedProfessorTutorial
+    || profileHasProfessorSetup
+    || hasProfessorJourney;
 
-const NAV_GUIDE_STEPS = [
-  {
-    label: "홈",
-    title: "오늘의 다음 행동을 먼저 확인해요",
-    description: "진행 중인 교수 연결과 프로젝트, 최근 기록을 한눈에 이어볼 수 있어요.",
-    anchor: "8.333%",
-  },
-  {
-    label: "교수 매칭",
-    title: "내 고민에서 첫 교수님을 찾아요",
-    description: "고민을 정리한 뒤 학교 공식 정보를 근거로 대화할 교수님을 찾아요.",
-    anchor: "25%",
-  },
-  {
-    label: "교수 만남 준비",
-    title: "첫 대화를 차근차근 준비해요",
-    description: "첫 질문과 이메일부터 면담 후 기록까지 한 흐름으로 준비할 수 있어요.",
-    anchor: "41.667%",
-  },
-  {
-    label: "AI 프로젝트 설계",
-    title: "관심사를 실행할 프로젝트로 만들어요",
-    description: "AI와 질문을 주고받으며 수업·프로젝트·연구 아이디어를 구체화해요.",
-    anchor: "58.333%",
-  },
-  {
-    label: "맞춤 교수 추천",
-    title: "프로젝트에 필요한 교수님을 연결해요",
-    description: "설계한 주제와 방법을 기준으로 프로젝트 실행에 어울리는 교수님을 찾아요.",
-    anchor: "75%",
-  },
-  {
-    label: "나의 성장과정",
-    title: "지금까지의 변화를 기록으로 남겨요",
-    description: "교수 연결, 프로젝트, AI 교수님과 나눈 생각을 나만의 성장 흐름으로 모아요.",
-    anchor: "91.667%",
-  },
-] as const;
+  useEffect(() => {
+    if (
+      hasProfileHydrated
+      && hasResearchHydrated
+      && canOpenProfessorHome
+      && !hasCompletedProfessorTutorial
+    ) {
+      completeProfessorTutorial();
+    }
+  }, [
+    canOpenProfessorHome,
+    completeProfessorTutorial,
+    hasCompletedProfessorTutorial,
+    hasProfileHydrated,
+    hasResearchHydrated,
+  ]);
 
-/** /result와 /co-design은 만들다 흐름의 일부이므로 같은 항목을 활성으로 봅니다. */
-const SECTION_PREFIX: Record<string, string> = {
-  "/research": "/research",
-  "/co-design": "/research",
-  "/result": "/research",
-  "/quest": "/quest",
-  "/mentor-loop": "/quest",
-  "/paper": "/quest",
-  "/professors": "/professors",
-  "/project-professors": "/project-professors",
-  "/portfolio": "/portfolio",
-  "/profile": "/profile",
-  // 공개 랜딩은 루트, 로그인 후 통합 홈은 /home에 있습니다.
-  "/home": "/home",
-  "/mentoring": "/home",
-};
-
-function activeHref(pathname: string): string | null {
-  const segment = `/${pathname.split("/")[1] ?? ""}`;
-  return SECTION_PREFIX[segment] ?? null;
+  return canOpenProfessorHome ? "/professors" : "/home?professor=quick";
 }
 
-type NavigationJourney = {
-  key: "professor" | "project";
-  label: string;
-  step: 1 | 2;
-};
+function useProjectTabHref(): "/home?project=quick" | "/research" | "/co-design" | "/result" {
+  const hasHydrated = useResearchStore((state) => state.hasHydrated);
+  const result = useResearchStore((state) => state.result);
+  const ideaMode = useResearchStore((state) => state.ideaMode);
+  const conditions = useResearchStore((state) => state.conditions);
+  const hasSavedDraft = Boolean(
+    ideaMode
+    || conditions.majorArea
+    || conditions.major
+    || conditions.interests.length
+    || conditions.methods.length,
+  );
+  const hasCompleteSetup = Boolean(
+    ideaMode
+    && conditions.school.trim()
+    && conditions.majorArea
+    && conditions.major?.trim()
+    && conditions.interests.length
+    && conditions.experience
+    && conditions.methods.length
+    && conditions.period
+    && conditions.dataAccess,
+  );
 
-function navigationJourney(section: string): NavigationJourney | null {
-  if (section === "/professors") return { key: "professor", label: "교수 연결 여정", step: 1 };
-  if (section === "/quest") return { key: "professor", label: "교수 연결 여정", step: 2 };
-  if (section === "/research") return { key: "project", label: "프로젝트 여정", step: 1 };
-  if (section === "/project-professors") return { key: "project", label: "프로젝트 여정", step: 2 };
-  return null;
+  if (!hasHydrated) return "/home?project=quick";
+  if (result) return "/result";
+  if (hasCompleteSetup) return "/co-design";
+  return hasSavedDraft ? "/research" : "/home?project=quick";
 }
 
-export function ServiceBottomNav() {
+function navigationHref(
+  item: (typeof NAV_ITEMS)[number],
+  professorTabHref: "/professors" | "/home?professor=quick",
+  projectTabHref: "/home?project=quick" | "/research" | "/co-design" | "/result",
+) {
+  if (item.section === "/professors") return professorTabHref;
+  if (item.section === "/research") return projectTabHref;
+  return item.href;
+}
+
+let openNavigationGuideCount = 0;
+
+function markNavigationGuideOpen() {
+  openNavigationGuideCount += 1;
+  document.documentElement.setAttribute("data-service-nav-guide-open", "true");
+  let released = false;
+
+  return () => {
+    if (released) return;
+    released = true;
+    openNavigationGuideCount = Math.max(0, openNavigationGuideCount - 1);
+    if (openNavigationGuideCount === 0) {
+      document.documentElement.removeAttribute("data-service-nav-guide-open");
+    }
+  };
+}
+
+function hasRequestedNavigationGuide(pathname: string) {
+  if (pathname !== "/home") return false;
+  return new URLSearchParams(window.location.search).get(SERVICE_NAV_GUIDE_QUERY_PARAM)
+    === SERVICE_NAV_GUIDE_QUERY_VALUE;
+}
+
+function consumeNavigationGuideRequest() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete(SERVICE_NAV_GUIDE_QUERY_PARAM);
+  const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+  window.history.replaceState(window.history.state, "", nextUrl);
+}
+
+
+function ServiceBottomNavContent() {
   const pathname = usePathname() ?? "";
-  const active = activeHref(pathname);
+  const searchParams = useSearchParams();
+  const active = resolveServiceSection(pathname, searchParams);
   const professorJourneyActive = active === "/professors" || active === "/quest";
   const projectJourneyActive = active === "/research" || active === "/project-professors";
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
-  const guide = NAV_GUIDE_STEPS[guideStep];
+  const forcedGuideRef = useRef(false);
+  const guide = SERVICE_GUIDE_STEPS[guideStep];
+  const professorTabHref = useProfessorTabHref();
+  const projectTabHref = useProjectTabHref();
 
   const finishGuide = useCallback(() => {
+    forcedGuideRef.current = false;
     try {
-      window.localStorage.setItem(BOTTOM_NAV_GUIDE_STORAGE_KEY, "complete");
+      window.localStorage.setItem(SERVICE_MOBILE_NAV_GUIDE_STORAGE_KEY, "complete");
+      window.localStorage.setItem(SERVICE_NAV_GUIDE_STORAGE_KEY, "complete");
     } catch {
       // 저장이 제한된 환경에서도 현재 세션의 안내는 정상적으로 닫습니다.
     }
     setGuideOpen(false);
   }, []);
 
+  const finishMobileGuideAndContinue = useCallback(() => {
+    finishGuide();
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(SERVICE_HOME_ONBOARDING_EVENT));
+    }, 120);
+  }, [finishGuide]);
+
   useEffect(() => {
     if (pathname !== "/home") {
+      forcedGuideRef.current = false;
       setGuideOpen(false);
       return;
     }
 
-    const mobileViewport = window.matchMedia("(max-width: 1023px)");
+    const desktopViewport = window.matchMedia("(min-width: 1280px)");
     const syncGuideVisibility = () => {
       let hasCompletedGuide = false;
       try {
-        hasCompletedGuide = window.localStorage.getItem(BOTTOM_NAV_GUIDE_STORAGE_KEY) === "complete";
+        hasCompletedGuide =
+          window.localStorage.getItem(SERVICE_MOBILE_NAV_GUIDE_STORAGE_KEY) === "complete" ||
+          window.localStorage.getItem(SERVICE_NAV_GUIDE_STORAGE_KEY) === "complete";
       } catch {
         // 저장소를 읽을 수 없으면 이번 방문에는 안내를 제공합니다.
       }
 
       const isPlainHome = window.location.search.length === 0;
-      if (mobileViewport.matches && isPlainHome && !hasCompletedGuide) {
+      const requestedForMobile = !desktopViewport.matches && hasRequestedNavigationGuide(pathname);
+      if (requestedForMobile) forcedGuideRef.current = true;
+      if (shouldOpenServiceNavGuide({
+        matchingViewport: !desktopViewport.matches,
+        requested: forcedGuideRef.current,
+        hasCompletedGuide,
+        isPlainHome,
+      })) {
         setGuideStep(0);
         setGuideOpen(true);
+        if (requestedForMobile) consumeNavigationGuideRequest();
       } else {
         setGuideOpen(false);
       }
     };
 
     syncGuideVisibility();
-    mobileViewport.addEventListener("change", syncGuideVisibility);
-    return () => mobileViewport.removeEventListener("change", syncGuideVisibility);
+    desktopViewport.addEventListener("change", syncGuideVisibility);
+    return () => desktopViewport.removeEventListener("change", syncGuideVisibility);
   }, [pathname]);
+
+  useEffect(() => {
+    const openGuide = () => {
+      if (window.matchMedia("(min-width: 1280px)").matches) return;
+      setGuideStep(0);
+      setGuideOpen(true);
+    };
+    window.addEventListener(SERVICE_NAV_GUIDE_EVENT, openGuide);
+    return () => window.removeEventListener(SERVICE_NAV_GUIDE_EVENT, openGuide);
+  }, []);
 
   useEffect(() => {
     if (!guideOpen) return;
@@ -163,13 +242,12 @@ export function ServiceBottomNav() {
 
   useEffect(() => {
     if (!guideOpen) return;
-    document.documentElement.setAttribute("data-service-nav-guide-open", "true");
-    return () => document.documentElement.removeAttribute("data-service-nav-guide-open");
+    return markNavigationGuideOpen();
   }, [guideOpen]);
 
   const goToNextGuideStep = () => {
-    if (guideStep === NAV_GUIDE_STEPS.length - 1) {
-      finishGuide();
+    if (guideStep === SERVICE_GUIDE_STEPS.length - 1) {
+      finishMobileGuideAndContinue();
       return;
     }
     setGuideStep((current) => current + 1);
@@ -187,13 +265,14 @@ export function ServiceBottomNav() {
     >
       {NAV_ITEMS.map((item, index) => {
         const Icon = item.icon;
+        const href = navigationHref(item, professorTabHref, projectTabHref);
         const isActive = active === item.section;
         const journey = navigationJourney(item.section);
         const isGuideTarget = guideOpen && guideStep === index;
         return (
           <Link
-            key={item.href}
-            href={item.href}
+            key={item.section}
+            href={href}
             className={[
               isActive ? "is-active" : "",
               journey ? "is-journey" : "",
@@ -208,9 +287,12 @@ export function ServiceBottomNav() {
             aria-label={journey ? `${item.label}, ${journey.label} ${journey.step}단계` : item.label}
             aria-describedby={isGuideTarget ? "bottom-nav-guide-description" : undefined}
             onClick={() => {
-              if (guideOpen) setGuideOpen(false);
+              if (guideOpen) finishGuide();
             }}
           >
+            {journey?.step === 1 ? (
+              <span className="service-bottom-nav__journey-label" aria-hidden="true">{journey.label}</span>
+            ) : null}
             <Icon size={21} aria-hidden="true" />
             <span>{item.shortLabel}</span>
           </Link>
@@ -244,7 +326,7 @@ export function ServiceBottomNav() {
               />
             </span>
             <div className="service-bottom-nav__guide-copy">
-              <span>{guideStep + 1} / {NAV_GUIDE_STEPS.length} · {guide.label}</span>
+              <span>{guideStep + 1} / {SERVICE_GUIDE_STEPS.length} · {guide.label}</span>
               <strong>{guide.title}</strong>
               <p id="bottom-nav-guide-description">{guide.description}</p>
             </div>
@@ -252,9 +334,9 @@ export function ServiceBottomNav() {
           <div className="service-bottom-nav__guide-footer">
             <div
               className="service-bottom-nav__guide-progress"
-              aria-label={`${NAV_GUIDE_STEPS.length}단계 중 ${guideStep + 1}단계`}
+              aria-label={`${SERVICE_GUIDE_STEPS.length}단계 중 ${guideStep + 1}단계`}
             >
-              {NAV_GUIDE_STEPS.map((step, index) => (
+              {SERVICE_GUIDE_STEPS.map((step, index) => (
                 <span
                   key={step.label}
                   className={index === guideStep ? "is-current" : index < guideStep ? "is-complete" : undefined}
@@ -269,7 +351,7 @@ export function ServiceBottomNav() {
                 </button>
               ) : null}
               <button type="button" className="is-primary" onClick={goToNextGuideStep} autoFocus>
-                {guideStep === NAV_GUIDE_STEPS.length - 1 ? "시작하기" : "다음"}
+                {guideStep === SERVICE_GUIDE_STEPS.length - 1 ? "시작하기" : "다음"}
                 <ChevronRight size={16} aria-hidden="true" />
               </button>
             </div>
@@ -280,9 +362,24 @@ export function ServiceBottomNav() {
   );
 }
 
-export function SideNav() {
+export function ServiceBottomNav() {
+  return (
+    <Suspense fallback={null}>
+      <ServiceBottomNavContent />
+    </Suspense>
+  );
+}
+
+function SideNavContent() {
   const pathname = usePathname() ?? "";
-  const active = activeHref(pathname);
+  const searchParams = useSearchParams();
+  const active = resolveServiceSection(pathname, searchParams);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideStep, setGuideStep] = useState(0);
+  const forcedGuideRef = useRef(false);
+  const guide = SERVICE_GUIDE_STEPS[guideStep];
+  const professorTabHref = useProfessorTabHref();
+  const projectTabHref = useProjectTabHref();
   const hasProfileHydrated = useProfileStore((state) => state.hasHydrated);
   const hasEnteredService = useProfileStore((state) => state.hasEnteredService);
   const markServiceEntered = useProfileStore((state) => state.markServiceEntered);
@@ -292,8 +389,105 @@ export function SideNav() {
     if (hasProfileHydrated && !hasEnteredService) markServiceEntered();
   }, [hasEnteredService, hasProfileHydrated, markServiceEntered]);
 
+  const finishGuide = useCallback(() => {
+    forcedGuideRef.current = false;
+    try {
+      window.localStorage.setItem(SERVICE_DESKTOP_NAV_GUIDE_STORAGE_KEY, "complete");
+    } catch {
+      // 저장이 제한된 환경에서도 현재 안내는 닫을 수 있습니다.
+    }
+    setGuideOpen(false);
+  }, []);
+
+  const finishGuideAndContinue = useCallback(() => {
+    finishGuide();
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(SERVICE_HOME_ONBOARDING_EVENT));
+    }, 120);
+  }, [finishGuide]);
+
+  useEffect(() => {
+    if (pathname !== "/home") {
+      forcedGuideRef.current = false;
+      setGuideOpen(false);
+      return;
+    }
+
+    const desktopViewport = window.matchMedia("(min-width: 1280px)");
+    const syncGuideVisibility = () => {
+      let hasCompletedGuide = false;
+      try {
+        hasCompletedGuide =
+          window.localStorage.getItem(SERVICE_DESKTOP_NAV_GUIDE_STORAGE_KEY) === "complete";
+      } catch {
+        // 저장소를 읽을 수 없으면 이번 방문에는 안내를 제공합니다.
+      }
+
+      const requestedForDesktop = desktopViewport.matches && hasRequestedNavigationGuide(pathname);
+      if (requestedForDesktop) forcedGuideRef.current = true;
+      const isPlainHome = window.location.search.length === 0;
+      if (shouldOpenServiceNavGuide({
+        matchingViewport: desktopViewport.matches,
+        requested: forcedGuideRef.current,
+        hasCompletedGuide,
+        isPlainHome,
+      })) {
+        setGuideStep(0);
+        setGuideOpen(true);
+        if (requestedForDesktop) consumeNavigationGuideRequest();
+      } else {
+        setGuideOpen(false);
+      }
+    };
+
+    syncGuideVisibility();
+    desktopViewport.addEventListener("change", syncGuideVisibility);
+    return () => desktopViewport.removeEventListener("change", syncGuideVisibility);
+  }, [pathname]);
+
+  useEffect(() => {
+    const openGuide = () => {
+      if (!window.matchMedia("(min-width: 1280px)").matches) return;
+      setGuideStep(0);
+      setGuideOpen(true);
+    };
+    window.addEventListener(SERVICE_NAV_GUIDE_EVENT, openGuide);
+    return () => window.removeEventListener(SERVICE_NAV_GUIDE_EVENT, openGuide);
+  }, []);
+
+  useEffect(() => {
+    if (!guideOpen) return;
+    const releaseGuideOpen = markNavigationGuideOpen();
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") finishGuide();
+    };
+    window.addEventListener("keydown", closeWithEscape);
+    return () => {
+      releaseGuideOpen();
+      window.removeEventListener("keydown", closeWithEscape);
+    };
+  }, [finishGuide, guideOpen]);
+
+  useEffect(() => {
+    if (!guideOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(".side-nav > ul > li.is-guide-target")
+        ?.scrollIntoView({ block: "nearest" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [guideOpen, guideStep]);
+
+  const goToNextGuideStep = () => {
+    if (guideStep === SERVICE_GUIDE_STEPS.length - 1) {
+      finishGuideAndContinue();
+      return;
+    }
+    setGuideStep((current) => current + 1);
+  };
+
   return (
-    <nav className="side-nav" aria-label="주요 메뉴">
+    <nav className={`side-nav${guideOpen ? " is-guiding" : ""}`} aria-label="주요 메뉴">
       <BrandLogo
         href="/home"
         tagline="찾다 · 준비하다 · 이어가다"
@@ -301,25 +495,36 @@ export function SideNav() {
         className="side-nav__brand"
       />
       <ul>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.map((item, index) => {
           const Icon = item.icon;
+          const href = navigationHref(item, professorTabHref, projectTabHref);
           const isActive = active === item.section;
           const journey = navigationJourney(item.section);
+          const isGuideTarget = guideOpen && guideStep === index;
           return (
             <li
-              key={item.href}
-              className={journey
-                ? `side-nav__journey-item side-nav__journey-item--${journey.key} side-nav__journey-item--step-${journey.step}`
-                : undefined}
+              key={item.section}
+              className={[
+                journey
+                  ? `side-nav__journey-item side-nav__journey-item--${journey.key} side-nav__journey-item--step-${journey.step}`
+                  : "",
+                isGuideTarget ? "is-guide-target" : "",
+              ].filter(Boolean).join(" ") || undefined}
             >
               {journey?.step === 1 ? (
                 <span className="side-nav__journey-label" aria-hidden="true">{journey.label}</span>
               ) : null}
               <Link
-                href={item.href}
+                href={href}
                 className={isActive ? "is-active" : undefined}
                 aria-current={isActive ? "page" : undefined}
                 aria-label={journey ? `${item.label}, ${journey.label} ${journey.step}단계` : undefined}
+                aria-describedby={isGuideTarget ? "side-nav-guide-description" : undefined}
+                aria-disabled={guideOpen || undefined}
+                tabIndex={guideOpen ? -1 : undefined}
+                onClick={(event) => {
+                  if (guideOpen) event.preventDefault();
+                }}
               >
                 <Icon size={18} aria-hidden="true" />
                 <span>{item.label}</span>
@@ -327,6 +532,58 @@ export function SideNav() {
                   <span className="side-nav__journey-step" aria-hidden="true">{journey.step}/2</span>
                 ) : null}
               </Link>
+              {isGuideTarget ? (
+                <aside
+                  className="side-nav__guide"
+                  role="dialog"
+                  aria-modal="false"
+                  aria-label="주요 메뉴 사용 가이드"
+                  aria-live="polite"
+                >
+                  <button type="button" className="side-nav__guide-skip" onClick={finishGuide}>
+                    건너뛰기
+                  </button>
+                  <div className="side-nav__guide-message">
+                    <Image
+                      src={guideCharacter.connectOpener}
+                      alt=""
+                      width={72}
+                      height={72}
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <span>{guideStep + 1} / {SERVICE_GUIDE_STEPS.length} · {guide.label}</span>
+                      <strong>{guide.title}</strong>
+                      <p id="side-nav-guide-description">{guide.description}</p>
+                    </div>
+                  </div>
+                  <div className="side-nav__guide-footer">
+                    <div
+                      className="side-nav__guide-progress"
+                      aria-label={`${SERVICE_GUIDE_STEPS.length}단계 중 ${guideStep + 1}단계`}
+                    >
+                      {SERVICE_GUIDE_STEPS.map((step, index) => (
+                        <span
+                          key={step.label}
+                          className={index === guideStep ? "is-current" : index < guideStep ? "is-complete" : undefined}
+                          aria-hidden="true"
+                        />
+                      ))}
+                    </div>
+                    <div className="side-nav__guide-actions">
+                      {guideStep > 0 ? (
+                        <button type="button" onClick={() => setGuideStep((current) => current - 1)}>
+                          이전
+                        </button>
+                      ) : null}
+                      <button type="button" className="is-primary" onClick={goToNextGuideStep} autoFocus>
+                        {guideStep === SERVICE_GUIDE_STEPS.length - 1 ? "시작하기" : "다음"}
+                        <ChevronRight size={15} aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                </aside>
+              ) : null}
             </li>
           );
         })}
@@ -337,6 +594,7 @@ export function SideNav() {
           href="/profile"
           className={`side-nav__profile${active === "/profile" ? " is-active" : ""}`}
           aria-current={active === "/profile" ? "page" : undefined}
+          data-service-onboarding="desktop-profile"
         >
           <span className="side-nav__avatar" aria-hidden="true">
             {profile.name ? profile.name.slice(0, 1) : <UserRound size={18} />}
@@ -349,5 +607,13 @@ export function SideNav() {
         </Link>
       </div>
     </nav>
+  );
+}
+
+export function SideNav() {
+  return (
+    <Suspense fallback={null}>
+      <SideNavContent />
+    </Suspense>
   );
 }

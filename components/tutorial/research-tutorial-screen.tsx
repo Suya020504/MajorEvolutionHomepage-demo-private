@@ -26,7 +26,6 @@ import { BrandLogo } from "@/components/brand/brand-logo";
 import {
   MAJOR_AREAS,
   MAJOR_SUGGESTIONS,
-  UNIVERSITY_SUGGESTIONS,
   UNIVERSAL_INTEREST_TAGS,
   type MajorArea,
 } from "@/data/academic-options";
@@ -40,6 +39,7 @@ import {
   type ExperienceLevel,
   type PeriodLabel,
 } from "@/data/research-mvp";
+import { isDankookUniversity } from "@/lib/professor-discovery-client";
 import { emptyConditions, type Conditions } from "@/lib/recommend";
 import { useProfileStore } from "@/store/profile-store";
 import { useResearchStore } from "@/store/research-store";
@@ -71,7 +71,7 @@ type TutorialDraft = {
 };
 
 type ResearchTutorialScreenProps = {
-  presentation?: "page" | "overlay";
+  presentation?: "page" | "overlay" | "embedded";
   onRequestClose?: () => void;
 };
 
@@ -87,7 +87,7 @@ const STEP_COPY: Record<TutorialStep, StepCopy> = {
   },
   major: {
     title: "지금 공부하고 있는 전공은 무엇인가요?",
-    description: "학교는 선택 사항이에요. 목록에 없는 학과도 직접 입력할 수 있어요.",
+    description: "프로젝트 뒤의 맞춤 교수 추천까지 이어지도록, 현재 공식 데이터를 지원하는 학교를 먼저 확인해요.",
   },
   mode: {
     title: "어떤 전공 조합으로 아이디어를 만들까요?",
@@ -134,6 +134,7 @@ const MODE_PRESENTATION: Record<IdeaMode, {
 };
 
 const MISSING_LABEL: Record<string, string> = {
+  school: "현재 맞춤 교수 추천은 단국대학교 공식 데이터만 지원해요. 학교를 단국대학교로 확인해 주세요.",
   ideaMode: "탐색 방식을 선택해 주세요.",
   majorArea: "전공 계열을 선택해 주세요.",
   major: "학과·전공을 입력해 주세요.",
@@ -232,6 +233,7 @@ function toggleLimited(list: string[], value: string, limit: number): string[] {
 function issueForStep(step: TutorialStep, draft: TutorialDraft): string | null {
   const c = draft.conditions;
   if (step === "major") {
+    if (!c.school.trim() || !isDankookUniversity(c.school)) return MISSING_LABEL.school;
     if (!c.majorArea) return MISSING_LABEL.majorArea;
     if (!c.major?.trim()) return MISSING_LABEL.major;
   }
@@ -279,8 +281,12 @@ export function ResearchTutorialScreen({
   onRequestClose,
 }: ResearchTutorialScreenProps = {}) {
   const router = useRouter();
+  const isOverlay = presentation === "overlay";
+  const isEmbedded = presentation === "embedded";
+  const TutorialMain = presentation === "page" ? "main" : "div";
   const topRef = useRef<HTMLDivElement>(null);
   const markServiceEntered = useProfileStore((state) => state.markServiceEntered);
+  const profileSchool = useProfileStore((state) => state.profile.school);
   const hasHydrated = useResearchStore((state) => state.hasHydrated);
   const storedConditions = useResearchStore((state) => state.conditions);
   const storedIdeaMode = useResearchStore((state) => state.ideaMode);
@@ -305,10 +311,13 @@ export function ResearchTutorialScreen({
     const saved = fromFullForm
       ? null
       : restoreDraft(browserStorage()?.getItem(STORAGE_KEY) ?? "");
-    setDraft(saved ?? createDraft(storedConditions, storedIdeaMode));
+    const conditionsWithKnownSchool = storedConditions.school.trim()
+      ? storedConditions
+      : { ...storedConditions, school: profileSchool };
+    setDraft(saved ?? createDraft(conditionsWithKnownSchool, storedIdeaMode));
     if (fromFullForm) window.history.replaceState(null, "", window.location.pathname);
     setReady(true);
-  }, [hasHydrated, ready, storedConditions, storedIdeaMode]);
+  }, [hasHydrated, profileSchool, ready, storedConditions, storedIdeaMode]);
 
   useEffect(() => {
     if (!ready || submitting) return;
@@ -330,6 +339,7 @@ export function ResearchTutorialScreen({
     const c = draft.conditions;
     return [
       { label: "주전공", value: c.major ?? "" },
+      { label: "학교", value: c.school },
       { label: "탐색 방식", value: draft.ideaMode ? MODE_PRESENTATION[draft.ideaMode].label : "" },
       { label: "관심 분야", value: c.interests.join(" · ") },
       { label: "관련 경험", value: c.experience ?? "" },
@@ -351,7 +361,7 @@ export function ResearchTutorialScreen({
     setDraft((current) => ({ ...current, step: next }));
     window.requestAnimationFrame(() => {
       topRef.current?.focus({ preventScroll: true });
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      topRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
   };
 
@@ -407,6 +417,12 @@ export function ResearchTutorialScreen({
   };
 
   const startCoDesign = () => {
+    const schoolIssue = issueForStep("major", draft);
+    if (schoolIssue && (!draft.conditions.school.trim() || !isDankookUniversity(draft.conditions.school))) {
+      goTo("major");
+      window.setTimeout(() => setIssue(schoolIssue), 0);
+      return;
+    }
     setSubmitting(true);
     const missing = beginIdeaCoDesign({
       ideaMode: draft.ideaMode,
@@ -441,7 +457,7 @@ export function ResearchTutorialScreen({
 
   if (!ready) {
     return (
-      <div className={styles.loading}>
+      <div className={`${styles.loading} ${isEmbedded ? styles.embeddedLoading : ""}`}>
         <LoaderCircle className={styles.spin} size={24} />
         <p>저장된 프로젝트 조건을 불러오고 있어요.</p>
       </div>
@@ -456,7 +472,7 @@ export function ResearchTutorialScreen({
             <p><Sparkles size={19} /> 가능한 후보 2개와 비교 근거를 만들어요.</p>
             <p><ShieldCheck size={19} /> 두 방식 모두 자동 저장되며 언제든 바꿀 수 있어요.</p>
           </div>
-          <div className={styles.pathGrid}>
+          <div className={styles.pathGrid} data-service-help="research-actions">
             <button type="button" className={`${styles.pathCard} ${styles.pathCardPrimary}`} onClick={startGuided}>
               <span className={styles.pathIcon}><Route size={25} /></span>
               <span className={styles.pathCopy}>
@@ -489,17 +505,15 @@ export function ResearchTutorialScreen({
       return (
         <div className={styles.formStack}>
           <label className={styles.field}>
-            <span>학교 <small>선택</small></span>
-            <input
-              value={draft.conditions.school}
-              list="research-tutorial-universities"
-              maxLength={80}
-              placeholder="예: 단국대학교"
+            <span>학교 <small>필수 · 현재 단국대학교 지원</small></span>
+            <select
+              value={isDankookUniversity(draft.conditions.school) ? "단국대학교" : ""}
               onChange={(event) => patchConditions({ school: event.target.value })}
-            />
-            <datalist id="research-tutorial-universities">
-              {UNIVERSITY_SUGGESTIONS.map((school) => <option key={school} value={school} />)}
-            </datalist>
+            >
+              <option value="">지원 학교를 확인해 주세요</option>
+              <option value="단국대학교">단국대학교</option>
+            </select>
+            <small>프로젝트 아이디어 생성은 학교와 무관하지만, 다음 단계의 교수 추천은 현재 단국대학교 공식 교수 데이터로만 제공돼요.</small>
           </label>
           <label className={styles.field}>
             <span>전공 계열 <small>필수</small></span>
@@ -676,6 +690,7 @@ export function ResearchTutorialScreen({
     }
 
     const reviewRows = [
+      { label: "학교", value: draft.conditions.school ?? "", step: "major" },
       { label: "탐색 방식", value: draft.ideaMode ? MODE_PRESENTATION[draft.ideaMode].label : "", step: "mode" },
       { label: "주전공", value: draft.conditions.major ?? "", step: "major" },
       { label: "관심 분야", value: draft.conditions.interests.join(" · "), step: "interests" },
@@ -703,9 +718,9 @@ export function ResearchTutorialScreen({
   };
 
   return (
-    <div className={[styles.page, presentation === "overlay" ? styles.overlayPage : ""].filter(Boolean).join(" ")}>
+    <div className={[styles.page, isOverlay ? styles.overlayPage : "", isEmbedded ? `${styles.overlayPage} ${styles.embeddedPage}` : ""].filter(Boolean).join(" ")}>
       <header className={styles.header}>
-        {presentation === "overlay" ? (
+        {presentation !== "page" ? (
           <div className={styles.overlayTitle}>
             <span><FlaskConical size={18} aria-hidden="true" /></span>
             <div><strong>프로젝트 빠른 시작</strong><small>진행 내용은 자동 저장돼요</small></div>
@@ -717,9 +732,15 @@ export function ResearchTutorialScreen({
           {step !== "welcome" ? (
             <button type="button" onClick={() => goTo("welcome")}>방식 바꾸기</button>
           ) : null}
-          {presentation === "overlay" ? (
-            <button type="button" className={styles.exitLink} onClick={closeTutorial} aria-label="프로젝트 빠른 시작 닫기">
-              <X size={19} aria-hidden="true" /> 닫기
+          {presentation !== "page" ? (
+            <button
+              type="button"
+              className={styles.exitLink}
+              onClick={closeTutorial}
+              aria-label={isEmbedded ? "홈으로 돌아가기" : "프로젝트 빠른 시작 닫기"}
+            >
+              {isEmbedded ? <ArrowLeft size={19} aria-hidden="true" /> : <X size={19} aria-hidden="true" />}
+              {isEmbedded ? "홈으로" : "닫기"}
             </button>
           ) : (
             <Link href="/home" className={styles.exitLink}>{step === "welcome" ? "나가기" : "저장하고 나가기"}</Link>
@@ -730,6 +751,7 @@ export function ResearchTutorialScreen({
       <div
         ref={topRef}
         className={styles.progressWrap}
+        data-service-help="research-progress"
         tabIndex={-1}
         aria-label={step === "welcome" ? "튜토리얼 시작 전" : "프로젝트 조건 준비 진행률"}
       >
@@ -764,12 +786,12 @@ export function ResearchTutorialScreen({
         ) : null}
       </div>
 
-      <main className={[
+      <TutorialMain className={[
         styles.main,
         step === "welcome" ? styles.mainWelcome : "",
         step === "review" ? styles.mainReview : "",
       ].filter(Boolean).join(" ")}>
-        <section className={styles.questionPanel}>
+        <section className={styles.questionPanel} data-service-help="research-question">
           <div className={styles.heading}>
             <h1>{copy.title}</h1>
             <p>{copy.description}</p>
@@ -779,7 +801,11 @@ export function ResearchTutorialScreen({
         </section>
 
         {step !== "welcome" && step !== "review" ? (
-          <aside className={styles.contextRail} aria-label="지금까지 확인한 내용">
+          <aside
+            className={styles.contextRail}
+            aria-label="지금까지 확인한 내용"
+            data-service-help="research-context"
+          >
             <h2>지금까지 확인한 내용</h2>
             {contextRows.length ? (
               <dl>
@@ -798,10 +824,10 @@ export function ResearchTutorialScreen({
             )}
           </aside>
         ) : null}
-      </main>
+      </TutorialMain>
 
       {step !== "welcome" ? (
-        <footer className={styles.actions}>
+        <footer className={styles.actions} data-service-help="research-actions">
           <div className={styles.actionGroup}>
             <button type="button" className={styles.secondaryButton} onClick={goBack} disabled={submitting}>
               <ArrowLeft size={18} /> 이전

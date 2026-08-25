@@ -80,7 +80,7 @@ function buildMapSummary(value: string, type: ConversationMapNodeType, title: st
   const preferred = preferredLabels
     .map((pattern) => sections.find((section) => pattern.test(section.label)))
     .find(Boolean);
-  return shorten(preferred?.body || sections[0]?.body || value, 68);
+  return shorten(preferred?.body || sections[0]?.body || value, 48);
 }
 
 function classifyTopic(value: string): ConversationMapTopic {
@@ -111,8 +111,10 @@ export function buildConversationMap(
     const type = classifyType(userText, `${reflectionTitle} ${reflectionBody} ${message.content}`, reflectionTitle);
     const sourceForTopic = `${userText} ${reflectionTitle} ${reflectionBody}`;
     const requestedParentId = lastUserMessage?.branchParentMessageId ?? null;
-    const parentId = requestedParentId && baseNodes.some((node) => node.id === requestedParentId)
-      ? requestedParentId
+    const parentId = requestedParentId
+      ? baseNodes.some((node) => node.id === requestedParentId)
+        ? requestedParentId
+        : null
       : lastAssistantId;
     const title = shorten(reflectionTitle || userText || "대화에서 정리한 생각", 54);
     const summarySource = reflectionBody || message.content;
@@ -163,6 +165,33 @@ export function buildConversationMap(
       nextId: childIds[0] ?? null,
     };
   });
+}
+
+/**
+ * 선택한 AI 답변까지의 실제 부모 경로만 대화 순서로 복원합니다.
+ * 다른 갈래의 형제 메시지는 AI 요청 문맥에 섞지 않습니다.
+ */
+export function conversationLineageToAssistant(
+  messages: AiProfessorMessage[],
+  assistantId: string,
+): AiProfessorMessage[] {
+  const nodes = buildConversationMap(messages, []);
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const lineage: ConversationMapNode[] = [];
+  const seen = new Set<string>();
+  let current = nodeById.get(assistantId) ?? null;
+
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    lineage.unshift(current);
+    current = current.parentId ? nodeById.get(current.parentId) ?? null : null;
+  }
+
+  return lineage.flatMap((node) => (
+    node.userMessage
+      ? [node.userMessage, node.assistantMessage]
+      : [node.assistantMessage]
+  ));
 }
 
 export function getConversationMapRoots(nodes: ConversationMapNode[]) {

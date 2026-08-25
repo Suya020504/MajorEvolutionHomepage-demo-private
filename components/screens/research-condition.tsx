@@ -18,12 +18,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import {
-  AppLogo,
   AppShell,
   PrimaryButton,
   SecondaryButton,
   cx,
 } from "@/components/app/primitives";
+import { ServiceBottomNav } from "@/components/app/side-nav";
 import {
   MAJOR_AREAS,
   MAJOR_SUGGESTIONS,
@@ -391,10 +391,10 @@ export function ConditionSelectScreen() {
   return (
     <AppShell
       showHeader={false}
-      showSideNav={false}
       className="research-screen research-step-screen"
+      bottomNav={<ServiceBottomNav />}
       stickyAction={(
-        <div className="research-step-actions">
+        <div className="research-step-actions" data-service-help="research-actions">
           <SecondaryButton onClick={goBack}><ArrowLeft size={18} /> {activeIndex === 0 ? "설계 방식" : "이전"}</SecondaryButton>
           <span>{activeIndex + 1} / {RESEARCH_STEPS.length}</span>
           {activeStep === "review" ? (
@@ -407,11 +407,10 @@ export function ConditionSelectScreen() {
     >
       <header className="research-workspace-header">
         <Link href="/research/tutorial?source=full" className="research-back-link" aria-label="설계 방식 선택으로 돌아가기"><ArrowLeft size={19} /> 돌아가기</Link>
-        <Link href="/home" className="research-home-logo" aria-label="서비스 홈으로 이동"><AppLogo compact /></Link>
         <Image src={guideCharacter.questFlag} alt="" width={52} height={50} priority unoptimized />
       </header>
 
-      <div className="research-progress-head">
+      <div className="research-progress-head" data-service-help="research-progress">
         <div className="research-progress-copy">
           <span>{completedCount} / 5 조건 확인</span>
           <Link href="/research/tutorial?source=full"><Route size={15} /> 질문형으로 바꾸기</Link>
@@ -432,12 +431,14 @@ export function ConditionSelectScreen() {
         </nav>
       </div>
 
-      <div className="research-step-heading">
-        <h1 id="research-step-heading" ref={headingRef} tabIndex={-1}>{activeCopy.title}</h1>
-        <p>{activeCopy.description}</p>
-      </div>
+      <div data-service-help="research-question">
+        <div className="research-step-heading">
+          <h1 id="research-step-heading" ref={headingRef} tabIndex={-1}>{activeCopy.title}</h1>
+          <p>{activeCopy.description}</p>
+        </div>
 
-      {renderCurrentStep()}
+        {renderCurrentStep()}
+      </div>
 
       <p className="research-foot"><Compass size={14} /> 현재 입력은 이 브라우저에 자동 저장돼요.</p>
     </AppShell>

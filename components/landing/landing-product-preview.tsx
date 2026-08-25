@@ -23,17 +23,6 @@ type PreviewId = "ai-professor" | "professor-match" | "project-design";
 
 const PREVIEWS = [
   {
-    id: "ai-professor" as const,
-    tab: "AI 교수님",
-    eyebrow: "대화가 생각 지도로",
-    title: "말로 풀어낸 고민이, 다시 볼 수 있는 생각의 길이 됩니다.",
-    description:
-      "AI 교수님과 나눈 긴 대화는 한 줄 핵심으로 정리되고, 질문이 달라지는 순간 실제 가지처럼 갈라집니다. 카드를 누르면 그 생각이 나온 원문 대화까지 다시 확인할 수 있어요.",
-    features: ["한 줄 핵심 카드", "새 질문은 별도 갈래로", "원문 대화와 성장 메모 연결"],
-    href: "/portfolio/ai-professor",
-    cta: "AI 교수님과 이야기하기",
-  },
-  {
     id: "professor-match" as const,
     tab: "교수 3인 피칭",
     eyebrow: "가까운 연결부터 역할별 비교",
@@ -55,10 +44,72 @@ const PREVIEWS = [
     href: "/research/tutorial",
     cta: "프로젝트 설계 시작하기",
   },
+  {
+    id: "ai-professor" as const,
+    tab: "AI 교수님",
+    eyebrow: "대화가 생각 지도로",
+    title: "말로 풀어낸 고민이, 다시 볼 수 있는 생각의 길이 됩니다.",
+    description:
+      "AI 교수님과 나눈 긴 대화는 한 줄 핵심으로 정리되고, 질문이 달라지는 순간 실제 가지처럼 갈라집니다. 카드를 누르면 원문을 확인하고 그 대화를 기점으로 새 갈래를 이어갈 수 있어요.",
+    features: ["한 줄 핵심 카드", "새 질문은 별도 갈래로", "원문에서 새 갈래 이어가기"],
+    href: "/portfolio/ai-professor",
+    cta: "AI 교수님과 이야기하기",
+  },
+] as const;
+
+const AI_MAP_BRANCHES = [
+  {
+    id: "data",
+    tone: "mint",
+    clue: {
+      icon: Lightbulb,
+      label: "발견한 단서",
+      title: "데이터 분석 경험",
+      copy: "공공데이터로 흥미를 확인해요",
+    },
+    next: {
+      icon: ListChecks,
+      label: "다음 발걸음",
+      title: "2주 분석 노트",
+      copy: "결과를 한 페이지로 남겨요",
+    },
+  },
+  {
+    id: "ml",
+    tone: "violet",
+    clue: {
+      icon: CircleHelp,
+      label: "새로 생긴 질문",
+      title: "모델 만들기도 궁금해요",
+      copy: "분석과 개발의 차이를 비교해요",
+    },
+    next: {
+      icon: FlaskConical,
+      label: "비교 실험",
+      title: "작은 분류 모델",
+      copy: "직접 만들며 필요한 역량을 봐요",
+    },
+  },
+  {
+    id: "mentor",
+    tone: "navy",
+    clue: {
+      icon: SearchCheck,
+      label: "확인할 관점",
+      title: "혼자 결정하지 않기",
+      copy: "교수님께 물어볼 기준을 정리해요",
+    },
+    next: {
+      icon: Target,
+      label: "대화 준비",
+      title: "첫 질문 세 가지",
+      copy: "진로와 프로젝트 조언을 연결해요",
+    },
+  },
 ] as const;
 
 export function LandingProductPreview() {
-  const [activeId, setActiveId] = useState<PreviewId>("ai-professor");
+  const [activeId, setActiveId] = useState<PreviewId>("professor-match");
   const active = PREVIEWS.find((preview) => preview.id === activeId) ?? PREVIEWS[0];
 
   const moveTab = (event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) => {
@@ -83,7 +134,7 @@ export function LandingProductPreview() {
             설명만 듣지 말고,
             <br />실제 흐름을 먼저 살펴보세요.
           </h2>
-          <p>교수 연결, 프로젝트 설계, 성장 대화가 어떤 화면으로 이어지는지 확인해보세요. 실제 MVP 예시이며 입력 내용과 저장 상태에 따라 달라져요.</p>
+          <p>입력에 따라 달라지는 교수 연결·프로젝트·성장 화면을 미리 보세요. 처음 여는 탭에서는 화면 안내 AI가 핵심 카드와 버튼을 한 번만 짚어줘요.</p>
         </header>
 
         <div className={styles.tabs} role="tablist" aria-label="서비스 화면 선택">
@@ -157,7 +208,11 @@ function AiProfessorPreview() {
       </section>
 
       <section className={styles.mapPane} aria-label="대화에서 만들어진 생각 진화 지도 예시">
-        <header><GitBranch size={16} aria-hidden="true" /><strong>생각 진화 지도</strong><span>대화와 함께 자라요</span></header>
+        <header>
+          <GitBranch size={16} aria-hidden="true" />
+          <strong>생각 진화 지도</strong>
+          <span>대화 4개 · 생각 7개 · 갈래 3개</span>
+        </header>
         <div className={styles.thoughtMap}>
           <span className={styles.mapStart}><MessageCircleMore size={13} /> 대화 시작</span>
           <span className={styles.mapStem} aria-hidden="true" />
@@ -167,18 +222,33 @@ function AiProfessorPreview() {
             <small>전공을 살릴 두 방향을 비교해요</small>
           </article>
           <span className={styles.mapFork} aria-hidden="true" />
-          <div className={styles.mapChildren}>
-            <article>
-              <span><Lightbulb size={12} /> 발견한 단서</span>
-              <strong>데이터 분석 경험</strong>
-              <small>관심을 확인할 작은 실험</small>
-            </article>
-            <article>
-              <span><ListChecks size={12} /> 다음 발걸음</span>
-              <strong>2주 미니 프로젝트</strong>
-              <small>결과물로 방향 비교하기</small>
-            </article>
+          <div className={styles.mapBranches} role="list" aria-label="대화에서 갈라진 세 가지 생각 흐름">
+            {AI_MAP_BRANCHES.map((branch) => {
+              const ClueIcon = branch.clue.icon;
+              const NextIcon = branch.next.icon;
+              return (
+                <div key={branch.id} className={styles.mapBranch} data-tone={branch.tone} role="listitem">
+                  <span className={styles.mapBranchStem} aria-hidden="true" />
+                  <article className={styles.mapNode}>
+                    <span><ClueIcon size={11} aria-hidden="true" /> {branch.clue.label}</span>
+                    <strong>{branch.clue.title}</strong>
+                    <small>{branch.clue.copy}</small>
+                  </article>
+                  <span className={styles.mapBranchStem} aria-hidden="true" />
+                  <article className={`${styles.mapNode} ${styles.mapNodeNext}`}>
+                    <span><NextIcon size={11} aria-hidden="true" /> {branch.next.label}</span>
+                    <strong>{branch.next.title}</strong>
+                    <small>{branch.next.copy}</small>
+                  </article>
+                </div>
+              );
+            })}
           </div>
+          <span className={styles.mapMerge} aria-hidden="true" />
+          <article className={styles.mapDirection}>
+            <span><Target size={12} aria-hidden="true" /> 지금의 방향</span>
+            <strong>작게 실험하고, 교수님과 다음 선택 확인하기</strong>
+          </article>
         </div>
       </section>
     </div>

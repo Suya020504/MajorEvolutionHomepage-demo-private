@@ -60,6 +60,51 @@ export function HubPrimaryTask({
   );
 }
 
+/**
+ * 같은 데이터와 행동을 모바일·PC에서 서로 다른 우선순위로 보여주는 허브 틀입니다.
+ *
+ * 모바일 DOM 순서는 `핵심 행동 → 현재 맥락 → 나머지 도구`이고, 넓은 화면에서는
+ * 현재 맥락만 우측 레일로 옮깁니다. 기능을 복제하지 않으므로 두 환경의 상태가
+ * 어긋나지 않습니다.
+ */
+export function HubAdaptiveLayout({
+  primary,
+  context,
+  contextLabel = "현재 서비스 맥락",
+  layout = "rail",
+  children,
+}: {
+  primary: ReactNode;
+  context: ReactNode;
+  contextLabel?: string;
+  layout?: "rail" | "stacked";
+  children: ReactNode;
+}) {
+  const rail = (
+    <aside className={styles.adaptiveRail} aria-label={contextLabel}>
+      {context}
+    </aside>
+  );
+  const body = <div className={styles.adaptiveBody}>{children}</div>;
+
+  return (
+    <div className={`${styles.adaptiveLayout}${layout === "stacked" ? ` ${styles.adaptiveLayoutStacked}` : ""}`}>
+      <div className={styles.adaptivePrimary}>{primary}</div>
+      {layout === "stacked" ? (
+        <>
+          {body}
+          {rail}
+        </>
+      ) : (
+        <>
+          {rail}
+          {body}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function HubList({
   title,
   trailing,
