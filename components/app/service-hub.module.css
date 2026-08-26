@@ -51,6 +51,7 @@
 }
 
 .primaryTask {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
@@ -59,10 +60,21 @@
   column-gap: 14px;
   row-gap: 16px;
   padding: 22px;
-  border: 1px solid var(--divider);
+  overflow: hidden;
+  border: 1px solid #dcd6f7;
   border-radius: 20px;
-  background: #fff;
-  box-shadow: var(--shadow-card);
+  background: linear-gradient(135deg, #fff 46%, #faf9ff 100%);
+  box-shadow: 0 14px 34px rgba(41, 50, 92, 0.09);
+}
+
+.primaryTask::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--brand-purple), var(--brand-mint-dark));
+  content: "";
 }
 
 .primaryIcon {
@@ -85,6 +97,16 @@
   overflow-wrap: anywhere;
   text-wrap: balance;
   word-break: keep-all;
+}
+
+.primaryEyebrow {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 5px;
+  color: #6043d9;
+  font-size: 11px;
+  font-weight: 840;
+  letter-spacing: -0.01em;
 }
 
 .primaryCopy p {
@@ -152,14 +174,14 @@
   justify-content: center;
   gap: 3px;
   padding: 0 12px;
-  color: var(--brand-purple);
+  color: var(--text-secondary);
   font-size: 13px;
   font-weight: 760;
   border-radius: 10px;
   transition: background-color 160ms ease;
 }
 
-.secondaryLink:hover { background: var(--brand-violet-soft); }
+.secondaryLink:hover { color: var(--brand-purple); background: var(--brand-violet-soft); }
 
 .adaptiveLayout,
 .adaptivePrimary,
