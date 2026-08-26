@@ -290,8 +290,8 @@ test("오른쪽 위 도움말 AI는 현재 화면의 목적과 사용 순서를 
   assert.doesNotMatch(primitivesSource, /placement="floating"/);
   assert.match(serviceHelpSource, /화면 안내 AI/);
   assert.match(serviceHelpSource, /이 화면의 목적/);
-  assert.match(serviceHelpSource, /지금 해볼 일/);
-  assert.match(serviceHelpSource, /다음으로 이어져요/);
+  assert.match(serviceHelpSource, /지금 먼저 할 일/);
+  assert.match(serviceHelpSource, /그다음 이어질 일/);
   assert.match(serviceHelpSource, /탭 사용 순서/);
   assert.match(serviceHelpSource, /help\.steps\.map/);
   assert.match(serviceHelpSource, /service-help-dialog__body/);
@@ -306,6 +306,13 @@ test("오른쪽 위 도움말 AI는 현재 화면의 목적과 사용 순서를 
   assert.match(globalStyleSource, /\.service-help-dialog/);
   assert.match(globalStyleSource, /grid-template-rows: auto minmax\(0, 1fr\) auto/);
   assert.match(globalStyleSource, /\.service-help-dialog__steps/);
+  assert.match(globalStyleSource, /\.service-help-backdrop \{[\s\S]*rgba\(17, 27, 52, 0\.44\)/);
+  assert.match(globalStyleSource, /data-service-nav-guide-open="true"[\s\S]*rgba\(16, 26, 52, 0\.56\)/);
+  assert.match(globalStyleSource, /\.service-help-tour-backdrop\.is-measuring/);
+  assert.match(navigationSource, /useNavigationGuideModal/);
+  assert.match(navigationSource, /aria-modal="true"/);
+  assert.match(navigationSource, /element\.inert = true/);
+  assert.match(navigationSource, /useNavigationGuideStepFocus/);
 });
 
 test("주요 서비스 탭은 모바일과 PC 공통 바에서 로고·도움말·마이페이지를 제공한다", () => {
@@ -626,6 +633,10 @@ test("모바일 만남 화면은 현재와 다음 단계만 남기고 중복 상
 
 test("서비스 허브는 모바일과 PC에서 같은 기능을 다른 정보 위계로 배치한다", () => {
   assert.match(serviceHubSource, /export function HubAdaptiveLayout/);
+  assert.match(serviceHubSource, /eyebrow = "지금 먼저 할 일"/);
+  assert.match(serviceHubSource, /className=\{styles\.primaryEyebrow\}/);
+  assert.match(serviceHubStyleSource, /\.primaryTask::before/);
+  assert.match(questHubSource, /eyebrow=\{primary\.heading\}/);
   assert.match(serviceHubSource, /adaptivePrimary/);
   assert.match(serviceHubSource, /adaptiveRail/);
   assert.match(serviceHubSource, /adaptiveBody/);

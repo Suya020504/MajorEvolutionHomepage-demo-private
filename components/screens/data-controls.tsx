@@ -144,7 +144,10 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
   const aiMessages = useAiProfessorStore((state) => state.messages);
   const aiGrowthNotes = useAiProfessorStore((state) => state.growthNotes);
   const aiMapDecisions = useAiProfessorStore((state) => state.mapDecisions);
+  const aiSavedConversations = useAiProfessorStore((state) => state.savedConversations);
+  const aiActiveConversationId = useAiProfessorStore((state) => state.activeConversationId);
   const removeConversationBranch = useAiProfessorStore((state) => state.removeConversationBranch);
+  const removeSavedConversation = useAiProfessorStore((state) => state.removeSavedConversation);
   const removeGrowthNote = useAiProfessorStore((state) => state.removeGrowthNote);
 
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -288,6 +291,19 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
     remove: () => removeGrowthNote(note.id),
   }));
 
+  const savedConversationItems: RecordItem[] = aiSavedConversations.map((conversation) => ({
+    id: conversation.id,
+    title: conversation.title,
+    description: excerpt(`${conversation.preview} · 생각 카드 ${
+      conversation.messages.filter((message) => message.role === "assistant").length
+    }개`),
+    latestAt: conversation.updatedAt,
+    remove: () => removeSavedConversation(conversation.id),
+    warning: conversation.id === aiActiveConversationId
+      ? "저장본만 삭제하며, 현재 열려 있는 대화와 성장 메모는 남아요."
+      : "이 저장본의 대화·생각 카드·지도 분기가 함께 삭제돼요.",
+  }));
+
   const categories: Category[] = [
     {
       id: "profile",
@@ -378,6 +394,17 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
       tone: "mint",
     },
     {
+      id: "ai-saved-conversations",
+      group: "ai",
+      label: "저장한 AI 대화",
+      description: "대화·생각 카드·지도 분기를 한 묶음으로 저장한 기록",
+      details: ["대화 원문과 생각 카드", "가지 연결과 지도 남김·제외 상태"],
+      items: savedConversationItems,
+      unit: "개 대화",
+      icon: MessageCircleMore,
+      tone: "violet",
+    },
+    {
       id: "ai-conversation",
       group: "ai",
       label: "AI 교수님 대화",
@@ -426,6 +453,8 @@ export function DataControls({ showHeading = true }: { showHeading?: boolean }) 
         messages: aiMessages,
         growthNotes: aiGrowthNotes,
         mapDecisions: aiMapDecisions,
+        savedConversations: aiSavedConversations,
+        activeConversationId: aiActiveConversationId,
       },
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
