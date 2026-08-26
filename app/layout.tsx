@@ -24,8 +24,10 @@ const ogImage = brandScene.home.og ?? brandScene.home.w1440;
 const siteUrl = getSiteUrl();
 
 export const metadata: Metadata = {
+  // canonical과 openGraph.url은 루트에 두지 않는다. Next.js 메타데이터는
+  // 하위 페이지로 상속되므로, 루트에 고정값을 두면 모든 하위 URL이
+  // 홈페이지의 중복으로 선언되어 색인에서 빠진다. 페이지별로 지정한다.
   metadataBase: new URL(siteUrl),
-  alternates: { canonical: "/" },
   title,
   description,
   applicationName: "너의 교수님은?",
@@ -38,7 +40,6 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    url: siteUrl,
     siteName: "너의 교수님은?",
     locale: "ko_KR",
     type: "website",
