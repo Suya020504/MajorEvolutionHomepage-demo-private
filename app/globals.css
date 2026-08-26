@@ -356,6 +356,24 @@ strong {
   .service-bottom-nav { display: none; }
 }
 
+/* 메뉴 설명서도 화면 도움말과 같은 명암 규칙을 사용합니다. */
+html[data-service-nav-guide-open="true"] body::before {
+  position: fixed;
+  z-index: 64;
+  inset: 0;
+  background: rgba(16, 26, 52, 0.56);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  content: "";
+  pointer-events: auto;
+  animation: serviceHelpFadeIn 150ms ease-out both;
+}
+
+html[data-service-nav-guide-open="true"] .service-bottom-nav.is-guiding,
+html[data-service-nav-guide-open="true"] .side-nav.is-guiding {
+  z-index: 70;
+}
+
 /*
  * 768~1279px는 사이드바가 콘텐츠 폭을 빼앗지 않는 중간 화면입니다.
  * 모바일 셸의 560px 상한을 풀고, 하단 탐색도 같은 폭으로 유연하게 넓힙니다.
@@ -7998,7 +8016,7 @@ html[data-service-help-open="true"][data-service-help-trigger-target="true"] .se
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(17, 27, 52, 0.34);
+  background: rgba(17, 27, 52, 0.44);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: serviceHelpFadeIn 160ms ease-out both;
@@ -8009,6 +8027,12 @@ html[data-service-help-open="true"][data-service-help-trigger-target="true"] .se
   z-index: 112;
   inset: 0;
   animation: serviceHelpFadeIn 150ms ease-out both;
+}
+
+.service-help-tour-backdrop.is-measuring {
+  background: rgba(16, 26, 52, 0.56);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 .service-help-tour__spotlight {
@@ -8408,6 +8432,25 @@ html[data-service-help-open="true"][data-service-help-trigger-target="true"] .se
   border: 1px solid #dfe4ee;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.78);
+}
+
+.service-help-dialog__actions-now article:first-child {
+  border-color: rgba(103, 72, 221, 0.32);
+  background: linear-gradient(145deg, #f2efff, #fff);
+  box-shadow: inset 3px 0 0 #6748dd;
+}
+
+.service-help-dialog__actions-now article:first-child span {
+  color: #6043d9;
+}
+
+.service-help-dialog__actions-now article:first-child p {
+  color: var(--brand-navy-900);
+  font-weight: 720;
+}
+
+.service-help-dialog__actions-now article:last-child {
+  background: #f7f8fb;
 }
 
 .service-help-dialog__journey {

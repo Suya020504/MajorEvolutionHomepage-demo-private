@@ -31,6 +31,7 @@ export function HubPrimaryTask({
   cta,
   href,
   secondary,
+  eyebrow = "지금 먼저 할 일",
 }: {
   icon: LucideIcon;
   title: string;
@@ -38,11 +39,13 @@ export function HubPrimaryTask({
   cta: string;
   href: string;
   secondary?: { label: string; href: string };
+  eyebrow?: string;
 }) {
   return (
     <section className={styles.primaryTask} aria-labelledby="hub-primary-task">
       <span className={styles.primaryIcon}><Icon size={27} aria-hidden="true" /></span>
       <div className={styles.primaryCopy}>
+        <span className={styles.primaryEyebrow}>{eyebrow}</span>
         <h2 id="hub-primary-task">{title}</h2>
         <p>{description}</p>
       </div>

@@ -452,9 +452,13 @@ export function UnifiedHomeScreen({
                   <h3>아직 선택한 교수가 없어요</h3>
                   <p>공식 근거를 비교한 뒤 첫 대화를 준비할 교수를 선택해요.</p>
                 </div>
-                <Link href={matches.length ? "/professors/pitch" : "/home?professor=quick"}>
-                  {matches.length ? "교수 피칭 보기" : "교수 찾기"} <ChevronRight size={16} />
-                </Link>
+                {matches.length ? (
+                  <Link href="/professors/pitch">
+                    교수 피칭 보기 <ChevronRight size={16} />
+                  </Link>
+                ) : (
+                  <p className={styles.professorEmptyHint}>위의 ‘기본 설정하기’부터 시작해 주세요.</p>
+                )}
               </div>
             )}
           </section>

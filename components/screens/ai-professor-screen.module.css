@@ -579,6 +579,231 @@
   line-height: 1.55;
 }
 
+.savedConversationSection {
+  min-width: 0;
+  grid-column: 1 / -1;
+  padding: 20px;
+  border: 1px solid #ddd7fb;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fff 42%, #f6f3ff);
+}
+
+.savedConversationSection > header,
+.savedConversationSection > header > div,
+.savedConversationCopy > div,
+.savedConversationCopy > small,
+.savedConversationActions {
+  display: flex;
+  align-items: center;
+}
+
+.savedConversationSection > header {
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.savedConversationSection > header > div {
+  min-width: 0;
+  gap: 10px;
+}
+
+.savedConversationSection > header > div > svg {
+  flex: 0 0 auto;
+  color: var(--brand-purple);
+}
+
+.savedConversationSection > header h2 {
+  color: var(--brand-navy-950);
+  font-size: 17px;
+  font-weight: 840;
+}
+
+.savedConversationSection > header p {
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.savedConversationSection > header > span {
+  flex: 0 0 auto;
+  color: var(--brand-purple);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.savedConversationToolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.savedConversationToolbar button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #fff;
+  background: var(--brand-purple);
+  box-shadow: 0 7px 16px rgba(91, 70, 199, 0.16);
+  font-size: 11px;
+  font-weight: 790;
+  cursor: pointer;
+}
+
+.savedConversationToolbar button:disabled {
+  opacity: 0.48;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.savedConversationSection ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.savedConversationSection li {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e0e4ee;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 6px 18px rgba(33, 45, 79, 0.05);
+}
+
+.savedConversationSection li[data-active="true"] {
+  border-color: transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    linear-gradient(120deg, #7659f2, #35bea7) border-box;
+}
+
+.savedConversationCopy {
+  min-width: 0;
+}
+
+.savedConversationCopy > div {
+  min-width: 0;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.savedConversationCopy strong {
+  overflow: hidden;
+  color: var(--brand-navy-950);
+  font-size: 13px;
+  font-weight: 820;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.savedConversationCopy > div > span {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: #087b68;
+  background: #e8faf6;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.savedConversationCopy > p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.savedConversationCopy > small {
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+  color: var(--text-tertiary);
+  font-size: 9px;
+  font-weight: 680;
+}
+
+.savedConversationActions {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.savedConversationActions button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px;
+  border: 1px solid #ded9f5;
+  border-radius: 9px;
+  color: #5c47c7;
+  background: #f8f6ff;
+  font-size: 10px;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.savedConversationActions button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.savedConversationActions .savedConversationDelete {
+  width: 36px;
+  padding: 0;
+  border-color: transparent;
+  color: var(--text-tertiary);
+  background: transparent;
+}
+
+.savedConversationActions .savedConversationDelete:hover {
+  color: var(--error);
+  background: var(--error-soft);
+}
+
+.savedConversationEmpty {
+  display: flex;
+  min-height: 92px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+  border: 1px dashed #d9d3f5;
+  border-radius: 12px;
+  color: var(--text-tertiary);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.savedConversationEmpty > svg {
+  color: var(--brand-purple);
+}
+
+.savedConversationEmpty strong {
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.savedConversationEmpty p {
+  margin-top: 3px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
 .nextLinks {
   display: grid;
   grid-column: 1 / -1;
@@ -618,6 +843,10 @@
   font-size: 10px;
 }
 
+.viewControlRow {
+  display: block;
+}
+
 .viewTabs {
   display: inline-flex;
   gap: 4px;
@@ -626,6 +855,49 @@
   border: 1px solid #e1e5ee;
   border-radius: 12px;
   background: #f5f7fb;
+}
+
+.conversationHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.saveConversationButton,
+.clearButton {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #e0e4ed;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  background: #f7f8fb;
+  font-size: 11px;
+  font-weight: 790;
+  cursor: pointer;
+}
+
+.saveConversationButton:hover {
+  border-color: #d5cff5;
+  color: var(--brand-purple);
+  background: #faf9ff;
+}
+
+.saveConversationButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sessionStatus {
+  min-height: 18px;
+  margin-top: 7px;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .viewTabs button {
@@ -2089,6 +2361,10 @@
     margin-top: 12px;
   }
 
+  .sessionStatus {
+    margin-top: 5px;
+  }
+
   .workspace {
     padding-top: 10px;
   }
@@ -2113,6 +2389,13 @@
   .conversation {
     height: clamp(320px, calc(var(--app-visual-viewport-height, 100dvh) - 410px), 520px);
     min-height: 0;
+  }
+
+  .saveConversationButton {
+    width: 44px;
+    min-height: 44px;
+    padding: 0;
+    font-size: 0;
   }
 
   .message > div {
@@ -2170,6 +2453,34 @@
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 12px;
+  }
+
+  .savedConversationSection {
+    padding: 15px;
+  }
+
+  .savedConversationSection > header {
+    align-items: flex-start;
+  }
+
+  .savedConversationSection ul {
+    grid-template-columns: 1fr;
+  }
+
+  .savedConversationToolbar button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .savedConversationActions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) 44px;
+  }
+
+  .savedConversationActions button,
+  .savedConversationActions .savedConversationDelete {
+    width: 100%;
+    min-height: 44px;
   }
 
   .contextSection,

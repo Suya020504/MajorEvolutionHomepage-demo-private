@@ -292,6 +292,7 @@ export function QuestHubScreen() {
           primary={(
             <HubPrimaryTask
               icon={primary.icon}
+              eyebrow={primary.heading}
               title={primary.taskTitle}
               description={primary.description}
               cta={primary.cta}
@@ -314,13 +315,17 @@ export function QuestHubScreen() {
                 {selectedProfessorMatch?.reason ? (
                   <blockquote>{selectedProfessorMatch.reason}</blockquote>
                 ) : null}
-                <Link
-                  href={selectedProfessor ? `/professors/${selectedProfessor.id}` : "/professors"}
-                  className={questStyles.contextLink}
-                >
-                  {selectedProfessor ? "연결 근거 다시 보기" : "교수 찾기"}
-                  <ArrowRight size={16} aria-hidden="true" />
-                </Link>
+                {selectedProfessor ? (
+                  <Link
+                    href={`/professors/${selectedProfessor.id}`}
+                    className={questStyles.contextLink}
+                  >
+                    연결 근거 다시 보기
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                ) : (
+                  <p className={questStyles.contextNextHint}>위의 ‘교수 찾기’부터 시작하면 연결 상태가 여기에 표시돼요.</p>
+                )}
                 <Link href="/quest/all#saved-cards" className={questStyles.mobileSavedLink}>
                   저장한 준비물 {beforeCount + silenceCount + afterCount}개 보기
                   <ArrowRight size={16} aria-hidden="true" />

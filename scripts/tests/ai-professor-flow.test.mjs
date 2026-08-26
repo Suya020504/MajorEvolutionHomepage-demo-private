@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
+const NodeModule = require("node:module");
+const testDirectory = path.dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = path.resolve(testDirectory, "../..");
 
 function source(path) {
   return readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
@@ -21,6 +26,42 @@ const portfolio = source("components/screens/portfolio-hub-screen.tsx");
 const home = source("components/screens/unified-home-screen.tsx");
 const homeMapPreview = source("components/screens/home-ai-map-preview.tsx");
 const homeStyles = source("components/screens/home-dashboard.module.css");
+const dataControls = source("components/screens/data-controls.tsx");
+
+function loadAiProfessorStoreModule() {
+  const filename = path.join(repositoryRoot, "store", "ai-professor-store.ts");
+  const compiled = ts.transpileModule(readFileSync(filename, "utf8"), {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+      esModuleInterop: true,
+    },
+    fileName: filename,
+    reportDiagnostics: true,
+  });
+  const errors = (compiled.diagnostics ?? []).filter(
+    (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
+  );
+  assert.equal(errors.length, 0, "AI 교수님 저장소 테스트용 변환 실패");
+
+  const memory = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => memory.get(key) ?? null,
+    setItem: (key, value) => memory.set(key, value),
+    removeItem: (key) => memory.delete(key),
+    clear: () => memory.clear(),
+    key: (index) => Array.from(memory.keys())[index] ?? null,
+    get length() {
+      return memory.size;
+    },
+  };
+
+  const runtimeModule = new NodeModule(filename);
+  runtimeModule.filename = filename;
+  runtimeModule.paths = NodeModule._nodeModulePaths(path.dirname(filename));
+  runtimeModule._compile(compiled.outputText, filename);
+  return { ...runtimeModule.exports, memory };
+}
 
 function loadConversationMapModule() {
   const compiled = ts.transpileModule(conversationMapModel, {
@@ -176,8 +217,185 @@ test("사용자가 핵심 흐름을 남기거나 제외해도 원문 대화는 �
   assert.match(store, /mapDecisions/);
   assert.match(store, /setMapDecision/);
   assert.match(store, /clearMapDecision/);
-  assert.match(store, /version: 3/);
+  assert.match(store, /version: 4/);
   assert.match(store, /migrate:/);
+});
+
+test("대화·생각 카드·지도 상태를 저장하고 내 맥락에서 다시 선택한다", () => {
+  assert.match(screen, /현재 대화 저장/);
+  assert.match(screen, /현재 대화를 저장하고 새 대화 시작/);
+  assert.match(screen, /저장한 대화/);
+  assert.match(screen, /handleOpenConversation/);
+  assert.match(screen, /viewMode === "context"/);
+  assert.match(store, /savedConversations/);
+  assert.match(store, /activeConversationId/);
+  assert.match(store, /saveCurrentConversation/);
+  assert.match(store, /startNewConversation/);
+  assert.match(store, /openConversation/);
+  assert.match(dataControls, /savedConversations: aiSavedConversations/);
+  assert.match(dataControls, /activeConversationId: aiActiveConversationId/);
+});
+
+test("저장본 전환은 분기·카드·지도 선택과 성장 메모를 잃지 않는다", () => {
+  const { useAiProfessorStore, migrateAiProfessorState, memory } = loadAiProfessorStoreModule();
+  const createdAt = "2026-08-25T00:00:00.000Z";
+  const user = (id, content, branchParentMessageId = null) => ({
+    id,
+    role: "user",
+    content,
+    createdAt,
+    branchParentMessageId,
+    reflection: null,
+    suggestedPrompts: [],
+  });
+  const assistant = (id, title) => ({
+    id,
+    role: "assistant",
+    content: `${title}에 대한 쉬운 답변`,
+    createdAt,
+    branchParentMessageId: null,
+    reflection: { title: `${title} 카드`, body: `현재 고민: ${title}\n다음 행동: 작게 비교하기` },
+    suggestedPrompts: ["비교해 줘", "준비를 알려줘", "직접 해볼래", "교수님께 물어볼래"],
+  });
+  const conversationA = [
+    user("user-a1", "데이터 진로를 비교하고 싶어요"),
+    assistant("assistant-a1", "데이터 진로 비교"),
+    user("user-a2", "직무 하루를 비교해 줘", "assistant-a1"),
+    assistant("assistant-a2", "직무 하루 비교"),
+  ];
+  const growthNote = {
+    id: "note-a1",
+    title: "진로 비교 메모",
+    body: "두 직무를 작은 경험으로 비교하기",
+    sourceMessageId: "assistant-a1",
+    createdAt,
+  };
+  const reset = (extra = {}) => {
+    useAiProfessorStore.setState({
+      hasHydrated: true,
+      messages: [],
+      growthNotes: [],
+      mapDecisions: {},
+      savedConversations: [],
+      activeConversationId: null,
+      ...extra,
+    });
+    memory.clear();
+  };
+
+  reset({
+    messages: conversationA,
+    growthNotes: [growthNote],
+    mapDecisions: { "assistant-a1": "keep", "assistant-a2": "exclude" },
+  });
+
+  const firstSave = useAiProfessorStore.getState().saveCurrentConversation();
+  assert.equal(firstSave.status, "saved");
+  const firstId = firstSave.conversation.id;
+  assert.equal(firstSave.conversation.messages[2].branchParentMessageId, "assistant-a1");
+  assert.equal(firstSave.conversation.messages[1].reflection.title, "데이터 진로 비교 카드");
+  assert.deepEqual(firstSave.conversation.messages[1].suggestedPrompts, [
+    "비교해 줘", "준비를 알려줘", "직접 해볼래", "교수님께 물어볼래",
+  ]);
+  assert.deepEqual(firstSave.conversation.mapDecisions, {
+    "assistant-a1": "keep",
+    "assistant-a2": "exclude",
+  });
+
+  const secondSave = useAiProfessorStore.getState().saveCurrentConversation();
+  assert.equal(secondSave.status, "updated");
+  assert.equal(secondSave.conversation.id, firstId);
+  assert.equal(useAiProfessorStore.getState().savedConversations.length, 1);
+
+  const newConversation = useAiProfessorStore.getState().startNewConversation();
+  assert.equal(newConversation.status, "updated");
+  assert.deepEqual(useAiProfessorStore.getState().messages, []);
+  assert.deepEqual(useAiProfessorStore.getState().mapDecisions, {});
+  assert.deepEqual(useAiProfessorStore.getState().growthNotes, [growthNote]);
+
+  useAiProfessorStore.setState({
+    messages: [user("user-b1", "프로젝트를 새로 시작할래요"), assistant("assistant-b1", "새 프로젝트")],
+    mapDecisions: { "assistant-b1": "keep" },
+  });
+  const beforeInvalid = useAiProfessorStore.getState().messages.map((message) => message.id);
+  assert.equal(useAiProfessorStore.getState().openConversation("missing"), false);
+  assert.deepEqual(
+    useAiProfessorStore.getState().messages.map((message) => message.id),
+    beforeInvalid,
+  );
+
+  assert.equal(useAiProfessorStore.getState().openConversation(firstId), true);
+  assert.deepEqual(
+    useAiProfessorStore.getState().messages.map((message) => message.id),
+    conversationA.map((message) => message.id),
+  );
+  assert.deepEqual(useAiProfessorStore.getState().mapDecisions, {
+    "assistant-a1": "keep",
+    "assistant-a2": "exclude",
+  });
+  assert.equal(useAiProfessorStore.getState().savedConversations.length, 2);
+
+  useAiProfessorStore.getState().removeSavedConversation(firstId);
+  assert.equal(useAiProfessorStore.getState().activeConversationId, null);
+  assert.deepEqual(
+    useAiProfessorStore.getState().messages.map((message) => message.id),
+    conversationA.map((message) => message.id),
+  );
+  assert.deepEqual(useAiProfessorStore.getState().growthNotes, [growthNote]);
+
+  const migrated = migrateAiProfessorState({
+    messages: conversationA,
+    growthNotes: [growthNote],
+    mapDecisions: { "assistant-a1": "keep" },
+  });
+  assert.deepEqual(migrated.savedConversations, []);
+  assert.equal(migrated.activeConversationId, null);
+  assert.equal(migrated.messages[2].branchParentMessageId, "assistant-a1");
+});
+
+test("저장본이 가득 차도 열려는 오래된 대화를 목록에서 밀어내지 않는다", () => {
+  const { useAiProfessorStore } = loadAiProfessorStoreModule();
+  const createdAt = "2026-08-25T00:00:00.000Z";
+  const makeMessage = (id, role, content) => ({
+    id,
+    role,
+    content,
+    createdAt,
+    branchParentMessageId: null,
+    reflection: role === "assistant" ? { title: `${content} 카드`, body: content } : null,
+    suggestedPrompts: role === "assistant" ? ["다음 질문"] : [],
+  });
+  const savedConversations = Array.from({ length: 12 }, (_, index) => ({
+    schemaVersion: 1,
+    id: `saved-${index}`,
+    title: `저장 대화 ${index}`,
+    preview: `저장 대화 ${index} 요약`,
+    createdAt,
+    updatedAt: createdAt,
+    messages: [
+      makeMessage(`user-${index}`, "user", `고민 ${index}`),
+      makeMessage(`assistant-${index}`, "assistant", `답변 ${index}`),
+    ],
+    mapDecisions: { [`assistant-${index}`]: "keep" },
+  }));
+  useAiProfessorStore.setState({
+    hasHydrated: true,
+    savedConversations,
+    activeConversationId: null,
+    messages: [
+      makeMessage("current-user", "user", "미저장 고민"),
+      makeMessage("current-assistant", "assistant", "미저장 답변"),
+    ],
+    mapDecisions: { "current-assistant": "keep" },
+    growthNotes: [],
+  });
+
+  assert.equal(useAiProfessorStore.getState().openConversation("saved-0"), true);
+  const state = useAiProfessorStore.getState();
+  assert.equal(state.savedConversations.length, 12);
+  assert.equal(state.savedConversations.some((conversation) => conversation.id === "saved-0"), true);
+  assert.equal(state.activeConversationId, "saved-0");
+  assert.deepEqual(state.messages.map((message) => message.id), ["user-0", "assistant-0"]);
 });
 
 test("과거 노드에서 새 갈래를 시작하고 트리에서 여러 자식 흐름을 확인한다", () => {
