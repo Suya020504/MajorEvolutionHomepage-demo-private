@@ -2371,6 +2371,21 @@ html[data-service-nav-guide-open="true"] .side-nav.is-guiding {
 .paper-bite-pdf-next__copy p { color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
 .paper-bite-pdf-next__note { grid-column: 1 / -1; color: var(--text-tertiary); font-size: 10px; line-height: 1.45; }
 
+/*
+  3줄 요약. 세 번째 줄(확인 범위)은 앞의 두 줄과 색을 달리해,
+  낙관적인 마무리가 아니라 한계라는 것이 눈에 들어오게 한다.
+*/
+.paper-bite-threeline { margin-top: 18px; padding: 18px; border: 1px solid rgba(112, 79, 219, 0.28); border-radius: 18px; background: linear-gradient(150deg, var(--surface), var(--brand-violet-soft)); }
+.paper-bite-threeline > h2 { display: flex; align-items: center; gap: 7px; color: var(--brand-purple); font-size: 12px; font-weight: 830; }
+.paper-bite-threeline > ol { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.paper-bite-threeline li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 10px; }
+.paper-bite-threeline li > span { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: var(--surface); color: var(--brand-purple); font-size: 11px; font-weight: 820; }
+.paper-bite-threeline li > div { display: grid; min-width: 0; gap: 2px; }
+.paper-bite-threeline small { color: var(--text-tertiary); font-size: 10px; font-weight: 760; }
+.paper-bite-threeline p { color: var(--text-primary); font-size: 13px; line-height: 1.6; }
+.paper-bite-threeline li[data-role="limit"] > span { color: var(--brand-blue); }
+.paper-bite-threeline li[data-role="limit"] p { color: var(--text-secondary); }
+
 .paper-bite-email-next { display: grid; gap: 14px; margin-top: 20px; padding: 20px; border: 1px solid rgba(112, 79, 219, 0.3); border-radius: 20px; background: linear-gradient(145deg, var(--surface), var(--brand-violet-soft)); }
 .paper-bite-email-next > button { justify-self: start; }
 .paper-bite-email-draft { display: grid; gap: 10px; }
@@ -2795,6 +2810,7 @@ html[data-service-nav-guide-open="true"] .side-nav.is-guiding {
   .paper-bite-pdf-next { grid-template-columns: 1fr; padding: 16px; }
   .paper-bite-pdf-next__copy { grid-template-columns: 38px minmax(0, 1fr); }
   .paper-bite-pdf-next__copy > span { width: 38px; height: 38px; }
+  .paper-bite-threeline { padding: 15px; }
   .paper-bite-email-next { padding: 16px; }
   .paper-bite-email-next > button { justify-self: stretch; }
   .paper-bite-email-draft__actions > * { width: 100%; }

@@ -95,6 +95,9 @@ const BITE_CARD_META: ReadonlyArray<{
   },
 ] as const;
 
+const THREE_LINE_LABELS = ["무엇을 왜 했나", "무엇을 발견했나", "어디까지 믿을 수 있나"] as const;
+const THREE_LINE_ROLES = ["what", "found", "limit"] as const;
+
 const TEXT_SCOPE_EVIDENCE = {
   label: "사용자가 붙여 넣은 텍스트 범위 · 페이지 정보 없음",
   page: null,
@@ -558,6 +561,27 @@ ${contactEmailBody}`;
             onClear={clearPaperSelection}
           />
         )}
+
+        {/*
+          3줄 요약. 한 줄은 논문 성격만 알려주고 카드 5장은 다 읽어야 하므로 그 사이를 메운다.
+          세 번째 줄은 확인 범위를 밝히는 자리라 다른 두 줄과 구분해 표시한다.
+        */}
+        <section className="paper-bite-threeline" aria-labelledby="paper-threeline-title">
+          <h2 id="paper-threeline-title">
+            <FileSearch size={17} aria-hidden="true" /> 3줄 요약
+          </h2>
+          <ol>
+            {analysis.threeLine.map((line, index) => (
+              <li key={line} data-role={THREE_LINE_ROLES[index]}>
+                <span aria-hidden="true">{index + 1}</span>
+                <div>
+                  <small>{THREE_LINE_LABELS[index]}</small>
+                  <p>{line}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
 
         <StatusBanner icon={CheckCircle2} title="붙여 넣은 텍스트 분석 완료" tone="success">
           PDF 전체가 아니라 입력한 범위만 분석했습니다. 페이지 번호와 원문 위치는 확인할 수 없어요.

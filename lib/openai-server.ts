@@ -86,12 +86,18 @@ const paperCoreSchema = {
   properties: {
     title: { type: "string", minLength: 1, maxLength: 120 },
     oneLine: { type: "string", minLength: 1, maxLength: 160 },
+    threeLine: {
+      type: "array",
+      minItems: 3,
+      maxItems: 3,
+      items: { type: "string", minLength: 1, maxLength: 140 },
+    },
     background: { type: "string", minLength: 1, maxLength: 300 },
     question: { type: "string", minLength: 1, maxLength: 200 },
     methods: { type: "array", minItems: 2, maxItems: 3, items: { type: "string", minLength: 1, maxLength: 160 } },
     findings: { type: "array", minItems: 2, maxItems: 3, items: { type: "string", minLength: 1, maxLength: 180 } },
   },
-  required: ["title", "oneLine", "background", "question", "methods", "findings"],
+  required: ["title", "oneLine", "threeLine", "background", "question", "methods", "findings"],
 } as const;
 
 const paperCautionSchema = {
@@ -490,6 +496,7 @@ export async function analyzePaper(request: PaperAnalysisRequest): Promise<Paper
   return {
     title: readString(core.data.title, "paper.title"),
     oneLine: readString(core.data.oneLine, "paper.oneLine"),
+    threeLine: readStringArray(core.data.threeLine, "paper.threeLine", 3) as [string, string, string],
     background: readString(core.data.background, "paper.background"),
     question: readString(core.data.question, "paper.question"),
     methods: readStringArray(core.data.methods, "paper.methods"),
