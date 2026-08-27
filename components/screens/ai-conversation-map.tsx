@@ -15,6 +15,7 @@ import {
   Eye,
   EyeOff,
   GitBranch,
+  Scissors,
   Lightbulb,
   ListChecks,
   LocateFixed,
@@ -28,6 +29,8 @@ import {
   buildConversationMap,
   countConversationMapTypes,
   getConversationMapRoots,
+  getPrunedNodeIds,
+  summarizePrunedBranch,
   type ConversationMapNode,
   type ConversationMapNodeType,
 } from "@/lib/ai-conversation-map";
@@ -125,13 +128,29 @@ export function AiConversationMap({
     () => buildConversationMap(messages, growthNotes),
     [growthNotes, messages],
   );
+  // 접은 노드와 그 아래 자란 생각까지 함께 감춘다.
+  // 후손을 남기면 부모 없는 자식이 최상위 루트로 승격돼 지도가 흩어진다.
+  const prunedIds = useMemo(
+    () => getPrunedNodeIds(nodes, mapDecisions),
+    [mapDecisions, nodes],
+  );
   const visibleNodes = useMemo(
-    () => nodes.filter((node) => showExcluded || mapDecisions[node.id] !== "exclude"),
-    [mapDecisions, nodes, showExcluded],
+    () => nodes.filter((node) => showExcluded || !prunedIds.has(node.id)),
+    [nodes, prunedIds, showExcluded],
   );
   const counts = useMemo(() => countConversationMapTypes(nodes), [nodes]);
   const roots = useMemo(() => getConversationMapRoots(visibleNodes), [visibleNodes]);
-  const excludedCount = nodes.filter((node) => mapDecisions[node.id] === "exclude").length;
+  const prunedCount = prunedIds.size;
+  // 부모까지 접혀 사라진 갈래는 자식 자리에 칩이 붙지만, 최상위에서 접힌 갈래는
+  // 붙을 부모가 없다. 지도 맨 앞에 따로 자리를 남긴다.
+  const prunedRoots = useMemo(
+    () => (showExcluded ? [] : nodes
+      .filter((node) => mapDecisions[node.id] === "exclude"
+        && (!node.parentId || !prunedIds.has(node.parentId)))
+      .filter((node) => !node.parentId || !nodes.some((candidate) => candidate.id === node.parentId))
+      .map((node) => ({ id: node.id, ...summarizePrunedBranch(nodes, node.id, mapDecisions) }))),
+    [mapDecisions, nodes, prunedIds, showExcluded],
+  );
   const selectedNode = nodes.find((node) => node.id === selectedId) ?? visibleNodes[0] ?? null;
   const branchPrompts = selectedNode ? getBranchPrompts(selectedNode) : [];
 
@@ -255,14 +274,14 @@ export function AiConversationMap({
               <strong>생각 진화 지도</strong>
               <span>씨앗부터 다음 발걸음까지</span>
             </div>
-            {excludedCount ? (
+            {prunedCount ? (
               <button
                 type="button"
                 aria-pressed={showExcluded}
                 onClick={() => setShowExcluded((value) => !value)}
               >
                 {showExcluded ? <EyeOff size={15} /> : <Eye size={15} />}
-                제외 {excludedCount}개 {showExcluded ? "숨기기" : "보기"}
+                접은 생각 {prunedCount}개 {showExcluded ? "숨기기" : "보기"}
               </button>
             ) : null}
           </div>
@@ -290,14 +309,39 @@ export function AiConversationMap({
               <ArrowDown className={styles.mapDownArrow} size={18} aria-hidden="true" />
 
               <ol className={styles.mapTree}>
+                {prunedRoots.map((branch) => (
+                  <li key={`pruned-root-${branch.id}`} className={styles.mapTreeItem} data-depth={0}>
+                    <button
+                      type="button"
+                      className={styles.prunedBranch}
+                      onClick={() => {
+                        onClearDecision(branch.id);
+                        setStatus(`접었던 갈래 ${branch.total}개를 다시 펼쳤어요.`);
+                      }}
+                    >
+                      <Scissors size={14} aria-hidden="true" />
+                      <span>
+                        <strong>생각 {branch.total}개 접힘</strong>
+                        <small>{branch.keptInside ? `핵심 ${branch.keptInside}개 포함 · 펼치기` : "펼치기"}</small>
+                      </span>
+                      <RotateCcw size={14} aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
                 {roots.map((node) => (
                   <ConversationTreeNode
                     key={node.id}
                     node={node}
                     nodes={visibleNodes}
+                    allNodes={nodes}
                     selectedId={selectedNode?.id ?? null}
                     decisions={mapDecisions}
                     onSelect={selectNode}
+                    onRestoreBranch={(id) => {
+                      const { total } = summarizePrunedBranch(nodes, id, mapDecisions);
+                      onClearDecision(id);
+                      setStatus(`접었던 갈래 ${total}개를 다시 펼쳤어요.`);
+                    }}
                   />
                 ))}
               </ol>
@@ -305,8 +349,8 @@ export function AiConversationMap({
               {!visibleNodes.length ? (
                 <div className={styles.allExcluded}>
                   <EyeOff size={21} aria-hidden="true" />
-                  <p>현재 보이는 흐름이 없어요.</p>
-                  <button type="button" onClick={() => setShowExcluded(true)}>제외한 흐름 확인하기</button>
+                  <p>지금 펼쳐진 흐름이 없어요.</p>
+                  <button type="button" onClick={() => setShowExcluded(true)}>접은 흐름 확인하기</button>
                 </div>
               ) : (
                 <>
@@ -374,11 +418,20 @@ export function AiConversationMap({
                   data-active={mapDecisions[selectedNode.id] === "exclude"}
                   aria-pressed={mapDecisions[selectedNode.id] === "exclude"}
                   onClick={() => {
+                    const { total } = summarizePrunedBranch(nodes, selectedNode.id, mapDecisions);
                     onSetDecision(selectedNode.id, "exclude");
-                    setStatus("지도에서 제외했어요. 원문 대화는 그대로 남아 있어요.");
+                    setStatus(
+                      total > 1
+                        ? `이 갈래에 달린 생각 ${total}개를 함께 접었어요. 접힌 자리에서 다시 펼칠 수 있어요.`
+                        : "이 생각을 접었어요. 접힌 자리에서 다시 펼칠 수 있어요.",
+                    );
                   }}
                 >
-                  <EyeOff size={16} aria-hidden="true" /> 지도에서 제외
+                  <Scissors size={16} aria-hidden="true" />
+                  {(() => {
+                    const { total } = summarizePrunedBranch(nodes, selectedNode.id, mapDecisions);
+                    return total > 1 ? `이 갈래 접기 (${total}개)` : "이 생각 접기";
+                  })()}
                 </button>
               </div>
               {mapDecisions[selectedNode.id] ? (
@@ -487,14 +540,18 @@ export function AiConversationMap({
 function ConversationTreeNode({
   node,
   nodes,
+  allNodes,
   selectedId,
   decisions,
   onSelect,
+  onRestoreBranch,
 }: {
   node: ConversationMapNode;
   nodes: ConversationMapNode[];
+  allNodes: ConversationMapNode[];
   selectedId: string | null;
   decisions: Record<string, AiConversationMapDecision>;
+  onRestoreBranch: (id: string) => void;
   onSelect: (id: string) => void;
 }) {
   const Icon = TYPE_ICONS[node.type];
@@ -503,6 +560,11 @@ function ConversationTreeNode({
   const children = node.childIds
     .map((id) => nodes.find((candidate) => candidate.id === id))
     .filter((candidate): candidate is ConversationMapNode => Boolean(candidate));
+  // 접혀서 지금 지도에 없는 자식. 자리를 비워 두지 않고 되돌릴 수 있는 표시를 남긴다.
+  const prunedChildren = node.childIds
+    .filter((id) => !children.some((child) => child.id === id))
+    .map((id) => ({ id, ...summarizePrunedBranch(allNodes, id, decisions) }))
+    .filter((entry) => entry.total > 0);
 
   return (
     <li
@@ -528,23 +590,45 @@ function ConversationTreeNode({
         <p>{node.mapSummary}</p>
         <span className={styles.mapNodeState}>
           {decision === "keep" ? <><Bookmark size={13} fill="currentColor" /> 핵심으로 남김</> : null}
-          {decision === "exclude" ? <><EyeOff size={13} /> 지도에서 제외됨</> : null}
+          {decision === "exclude" ? <><Scissors size={13} /> 접힌 갈래</> : null}
           {!decision && children.length > 1 ? <><GitBranch size={13} /> 생각 가지 {children.length}개가 열렸어요</> : null}
           {!decision && children.length <= 1 && node.isSaved ? <><Check size={13} /> 성장 메모에 반영</> : null}
           {!decision && children.length <= 1 && !node.isSaved ? <>원문 대화 열기 <ArrowRight size={13} /></> : null}
         </span>
       </button>
-      {children.length ? (
+      {children.length || prunedChildren.length ? (
         <ol>
           {children.map((child) => (
             <ConversationTreeNode
               key={child.id}
               node={child}
               nodes={nodes}
+              allNodes={allNodes}
               selectedId={selectedId}
               decisions={decisions}
+              onRestoreBranch={onRestoreBranch}
               onSelect={onSelect}
             />
+          ))}
+          {prunedChildren.map((branch) => (
+            <li key={`pruned-${branch.id}`} className={styles.mapTreeItem} data-depth={node.depth + 1}>
+              <button
+                type="button"
+                className={styles.prunedBranch}
+                onClick={() => onRestoreBranch(branch.id)}
+              >
+                <Scissors size={14} aria-hidden="true" />
+                <span>
+                  <strong>생각 {branch.total}개 접힘</strong>
+                  <small>
+                    {branch.keptInside
+                      ? `핵심 ${branch.keptInside}개 포함 · 펼치기`
+                      : "펼치기"}
+                  </small>
+                </span>
+                <RotateCcw size={14} aria-hidden="true" />
+              </button>
+            </li>
           ))}
         </ol>
       ) : null}

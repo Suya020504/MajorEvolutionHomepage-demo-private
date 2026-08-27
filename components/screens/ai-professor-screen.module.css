@@ -1253,6 +1253,53 @@
   font-weight: 850;
 }
 
+/*
+  접은 갈래 자리. 노드를 지우지 않고 자리를 남겨,
+  무엇이 몇 개 접혔는지 보이고 한 번에 되돌릴 수 있게 한다.
+*/
+.prunedBranch {
+  display: grid;
+  width: 100%;
+  min-height: 52px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.75);
+  border-radius: 14px;
+  background: rgba(248, 250, 253, 0.9);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.prunedBranch:hover {
+  border-color: var(--brand-purple);
+  background: #fff;
+  color: var(--brand-navy-900);
+}
+
+.prunedBranch:focus-visible {
+  outline: 2px solid var(--brand-purple);
+  outline-offset: 2px;
+}
+
+.prunedBranch > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.prunedBranch strong {
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.prunedBranch small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+}
+
 .mapNode {
   position: relative;
   display: grid;

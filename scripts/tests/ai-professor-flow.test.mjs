@@ -211,7 +211,7 @@ test("홈에서 실제 AI 대화 지도 요약을 확인하고 전체 지도 탭
 
 test("사용자가 핵심 흐름을 남기거나 제외해도 원문 대화는 보존한다", () => {
   assert.match(conversationMap, /핵심으로 남기기/);
-  assert.match(conversationMap, /지도에서 제외/);
+  assert.match(conversationMap, /이 갈래 접기/);
   assert.match(conversationMap, /원문 대화는 삭제되지 않아요/);
   assert.match(conversationMap, /나의 성장과정에 반영하기/);
   assert.match(store, /mapDecisions/);
@@ -219,6 +219,54 @@ test("사용자가 핵심 흐름을 남기거나 제외해도 원문 대화는 �
   assert.match(store, /clearMapDecision/);
   assert.match(store, /version: 4/);
   assert.match(store, /migrate:/);
+});
+
+test("갈래를 접으면 그 아래 자란 생각까지 함께 접히고 자리에서 되돌릴 수 있다", () => {
+  const { buildConversationMap, getPrunedNodeIds, summarizePrunedBranch, getConversationMapRoots } =
+    loadConversationMapModule();
+  const createdAt = "2026-08-27T00:00:00.000Z";
+  const user = (id, content, branchParentMessageId = null) => ({
+    id, role: "user", content, createdAt, branchParentMessageId,
+  });
+  const assistant = (id, content, title) => ({
+    id, role: "assistant", content, createdAt, branchParentMessageId: null,
+    reflection: { title, body: content }, suggestedPrompts: [],
+  });
+
+  // a → b → c 로 이어지고, a에서 갈라진 d가 하나 더 있다.
+  const messages = [
+    user("u1", "진로가 고민이에요"), assistant("a", "먼저 범위를 좁혀요", "생각 씨앗"),
+    user("u2", "더 좁혀볼래요"), assistant("b", "데이터 원천을 정해요", "데이터 원천"),
+    user("u3", "그럼 지표는요"), assistant("c", "핵심 변수부터", "핵심 변수"),
+    user("u4", "다른 관점도 볼래요", "a"), assistant("d", "설문과 비교해요", "설문 비교"),
+  ];
+  const nodes = buildConversationMap(messages, []);
+  assert.equal(nodes.length, 4);
+
+  // b를 접으면 b와 그 후손 c가 함께 접힌다. 형제 갈래 d는 남는다.
+  const pruned = getPrunedNodeIds(nodes, { b: "exclude" });
+  assert.ok(pruned.has("b"), "접은 노드가 포함되어야 한다");
+  assert.ok(pruned.has("c"), "접은 노드의 후손도 함께 접혀야 한다");
+  assert.ok(!pruned.has("a"), "부모는 접히지 않아야 한다");
+  assert.ok(!pruned.has("d"), "형제 갈래는 남아야 한다");
+
+  // 접힌 자식이 최상위 루트로 승격되지 않는다.
+  const visible = nodes.filter((node) => !pruned.has(node.id));
+  const roots = getConversationMapRoots(visible);
+  assert.deepEqual(roots.map((node) => node.id), ["a"], "접기 후 루트는 a 하나여야 한다");
+
+  // 접힌 자리에 몇 개가 감춰졌는지 알려준다.
+  const summary = summarizePrunedBranch(nodes, "b", { b: "exclude", c: "keep" });
+  assert.equal(summary.total, 2, "자기 자신과 후손을 합해 센다");
+  assert.equal(summary.keptInside, 1, "안에 든 핵심 개수를 함께 알려준다");
+
+  // 되돌릴 수 있는 자리와 안내가 화면에 있다.
+  assert.match(conversationMap, /prunedBranch/);
+  assert.match(conversationMap, /생각 \{branch\.total\}개 접힘/);
+  assert.match(conversationMap, /onRestoreBranch/);
+  assert.match(conversationMap, /접은 생각 \{prunedCount\}개/);
+  assert.match(conversationMapModel, /getPrunedNodeIds/);
+  assert.match(conversationMapModel, /collectDescendantIds/);
 });
 
 test("대화·생각 카드·지도 상태를 저장하고 내 맥락에서 다시 선택한다", () => {
