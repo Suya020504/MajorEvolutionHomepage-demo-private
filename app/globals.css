@@ -2371,6 +2371,18 @@ html[data-service-nav-guide-open="true"] .side-nav.is-guiding {
 .paper-bite-pdf-next__copy p { color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
 .paper-bite-pdf-next__note { grid-column: 1 / -1; color: var(--text-tertiary); font-size: 10px; line-height: 1.45; }
 
+.paper-bite-email-next { display: grid; gap: 14px; margin-top: 20px; padding: 20px; border: 1px solid rgba(112, 79, 219, 0.3); border-radius: 20px; background: linear-gradient(145deg, var(--surface), var(--brand-violet-soft)); }
+.paper-bite-email-next > button { justify-self: start; }
+.paper-bite-email-draft { display: grid; gap: 10px; }
+.paper-bite-email-draft__subject { padding: 12px 14px; font-size: 13px; font-weight: 700; line-height: 1.5; }
+.paper-bite-email-draft__body { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text-primary); font-family: inherit; font-size: 12px; line-height: 1.7; resize: vertical; }
+.paper-bite-email-draft__body:focus-visible { outline: 2px solid var(--brand-purple); outline-offset: 1px; }
+.paper-bite-email-draft__grounds { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 11px; line-height: 1.6; }
+.paper-bite-email-draft__checklist { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.paper-bite-email-draft__checklist li { display: grid; grid-template-columns: 15px minmax(0, 1fr); align-items: start; gap: 8px; color: var(--text-secondary); font-size: 11px; line-height: 1.55; }
+.paper-bite-email-draft__checklist svg { margin-top: 2px; color: var(--brand-purple); }
+.paper-bite-email-draft__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+
 .paper-favorite-entry {
   display: grid;
   gap: 12px;
@@ -2783,6 +2795,9 @@ html[data-service-nav-guide-open="true"] .side-nav.is-guiding {
   .paper-bite-pdf-next { grid-template-columns: 1fr; padding: 16px; }
   .paper-bite-pdf-next__copy { grid-template-columns: 38px minmax(0, 1fr); }
   .paper-bite-pdf-next__copy > span { width: 38px; height: 38px; }
+  .paper-bite-email-next { padding: 16px; }
+  .paper-bite-email-next > button { justify-self: stretch; }
+  .paper-bite-email-draft__actions > * { width: 100%; }
   .selected-professor-paper { grid-template-columns: 1fr; }
   .favorite-paper-results__heading { display: grid; }
   .favorite-paper-results__heading > a { justify-self: start; }
