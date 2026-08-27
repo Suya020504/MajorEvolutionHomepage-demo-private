@@ -194,6 +194,69 @@ export function conversationLineageToAssistant(
   ));
 }
 
+/**
+ * 한 노드 아래 달린 모든 후손 id를 모은다.
+ *
+ * 가지치기는 노드 하나가 아니라 그 아래 자란 생각까지 함께 접어야 한다.
+ * 후손을 남겨 두면 getConversationMapRoots가 부모 없는 자식을 최상위 루트로
+ * 승격시켜, 지도를 정리하려던 동작이 오히려 갈래를 흩뿌린다.
+ */
+export function collectDescendantIds(
+  nodes: ConversationMapNode[],
+  rootId: string,
+): Set<string> {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const descendants = new Set<string>();
+  const queue = [...(byId.get(rootId)?.childIds ?? [])];
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (!current || descendants.has(current)) continue;
+    descendants.add(current);
+    queue.push(...(byId.get(current)?.childIds ?? []));
+  }
+
+  return descendants;
+}
+
+/**
+ * 접기로 감춰야 할 노드 전체.
+ *
+ * 사용자가 직접 접은 노드와 그 후손을 합친다. 후손이 개별적으로 "핵심"이었더라도
+ * 부모 갈래가 접히면 함께 감춘다. 그렇지 않으면 다시 부모 없는 노드가 생긴다.
+ * 감춘 개수는 접힌 자리에 표시해 되돌릴 수 있게 한다.
+ */
+export function getPrunedNodeIds(
+  nodes: ConversationMapNode[],
+  decisions: Record<string, "keep" | "exclude">,
+): Set<string> {
+  const pruned = new Set<string>();
+
+  for (const node of nodes) {
+    if (decisions[node.id] !== "exclude") continue;
+    pruned.add(node.id);
+    for (const descendant of collectDescendantIds(nodes, node.id)) {
+      pruned.add(descendant);
+    }
+  }
+
+  return pruned;
+}
+
+/** 접힌 갈래 하나가 감추고 있는 생각 수와 그중 핵심으로 남긴 수. */
+export function summarizePrunedBranch(
+  nodes: ConversationMapNode[],
+  rootId: string,
+  decisions: Record<string, "keep" | "exclude">,
+): { total: number; keptInside: number } {
+  const descendants = collectDescendantIds(nodes, rootId);
+  let keptInside = 0;
+  for (const id of descendants) {
+    if (decisions[id] === "keep") keptInside += 1;
+  }
+  return { total: descendants.size + 1, keptInside };
+}
+
 export function getConversationMapRoots(nodes: ConversationMapNode[]) {
   const ids = new Set(nodes.map((node) => node.id));
   return nodes.filter((node) => !node.parentId || !ids.has(node.parentId));

@@ -12,6 +12,7 @@ import {
   Lightbulb,
   ListChecks,
   LoaderCircle,
+  Mail,
   RotateCcw,
   Save,
   ShieldCheck,
@@ -33,12 +34,14 @@ import {
 } from "@/components/app/primitives";
 import { FavoriteProfessorPaperPicker } from "@/components/paper-reader/favorite-professor-paper-picker";
 import { PaperReadingSteps } from "@/components/paper-reader/paper-reading-steps";
-import { requestPaperAnalysis } from "@/lib/ai-client";
+import { requestContactEmail, requestPaperAnalysis } from "@/lib/ai-client";
+import type { ContactEmailResult } from "@/lib/contact-email";
 import type { PaperAnalysisResult } from "@/lib/paper-analysis";
 import type { ProfessorPaperSelection } from "@/lib/professor-domain";
 import { requestFavoriteProfessorPaperCatalog } from "@/lib/professor-paper-client";
 import { createProfessorPaperSelection } from "@/lib/professor-paper-selection";
 import { useQuestStore } from "@/store/quest-store";
+import { useProfileStore } from "@/store/profile-store";
 import { useResearchStore } from "@/store/research-store";
 
 const MIN_CONTENT_LENGTH = 80;
@@ -91,6 +94,9 @@ const BITE_CARD_META: ReadonlyArray<{
     icon: ListChecks,
   },
 ] as const;
+
+const THREE_LINE_LABELS = ["무엇을 왜 했나", "무엇을 발견했나", "어디까지 믿을 수 있나"] as const;
+const THREE_LINE_ROLES = ["what", "found", "limit"] as const;
 
 const TEXT_SCOPE_EVIDENCE = {
   label: "사용자가 붙여 넣은 텍스트 범위 · 페이지 정보 없음",
@@ -180,6 +186,11 @@ export function PaperReaderShell({
   const titleRef = useRef<HTMLInputElement>(null);
   const verifiedPaperKeyRef = useRef<string | null>(null);
   const analysisAbortControllerRef = useRef<AbortController | null>(null);
+  const [contactEmail, setContactEmail] = useState<ContactEmailResult | null>(null);
+  const [contactEmailBody, setContactEmailBody] = useState("");
+  const [contactEmailLoading, setContactEmailLoading] = useState(false);
+  const [contactEmailError, setContactEmailError] = useState("");
+  const [contactEmailNotice, setContactEmailNotice] = useState("");
 
   const moveWorkflowStep = (nextStep: PaperBiteWorkflowStep) => {
     setWorkflowStep(nextStep);
@@ -187,6 +198,7 @@ export function PaperReaderShell({
     router.replace(`/paper/reader?mode=bite${sourceQuery}&step=${nextStep}`, { scroll: false });
   };
 
+  const studentProfile = useProfileStore((state) => state.profile);
   const hasQuestHydrated = useQuestStore((state) => state.hasHydrated);
   const savePaperBundle = useQuestStore((state) => state.savePaperBundle);
   const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
@@ -407,6 +419,59 @@ export function PaperReaderShell({
     }
   };
 
+  const generateContactEmail = async () => {
+    if (!analysis || !verifiedProfessorPaper) return;
+    setContactEmailLoading(true);
+    setContactEmailError("");
+    setContactEmailNotice("");
+    try {
+      const result = await requestContactEmail({
+        professorName: verifiedProfessorPaper.professorName,
+        professorDepartment: verifiedProfessorPaper.professorDepartment,
+        paperTitle: verifiedProfessorPaper.title,
+        paperPublishedDate: verifiedProfessorPaper.publishedDate ?? undefined,
+        paperType: verifiedProfessorPaper.publicationType,
+        summary: {
+          oneLine: analysis.oneLine,
+          background: analysis.background,
+          question: analysis.question,
+          methods: analysis.methods,
+          findings: analysis.findings,
+          limitations: analysis.limitations,
+          nextQuestions: analysis.nextQuestions,
+        },
+        student: {
+          name: studentProfile.name || undefined,
+          school: studentProfile.school || undefined,
+          major: studentProfile.major || undefined,
+          grade: studentProfile.grade || undefined,
+          interests: studentProfile.interests.length ? studentProfile.interests : undefined,
+        },
+      });
+      setContactEmail(result);
+      setContactEmailBody(result.body);
+    } catch (error) {
+      setContactEmailError(
+        error instanceof Error ? error.message : "컨택 메일 초안을 만들지 못했어요.",
+      );
+    } finally {
+      setContactEmailLoading(false);
+    }
+  };
+
+  const copyContactEmail = async () => {
+    if (!contactEmail) return;
+    const text = `제목: ${contactEmail.subject}
+
+${contactEmailBody}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setContactEmailNotice("메일 초안을 복사했어요. 보내기 전에 직접 검토해 주세요.");
+    } catch {
+      setContactEmailNotice("자동 복사가 어려워요. 본문을 직접 선택해 복사해 주세요.");
+    }
+  };
+
   const clearWorkingState = () => {
     analysisAbortControllerRef.current?.abort();
     analysisAbortControllerRef.current = null;
@@ -418,6 +483,10 @@ export function PaperReaderShell({
     setFeedback("");
     setIsSaved(false);
     setSourceConfirmed(false);
+    setContactEmail(null);
+    setContactEmailBody("");
+    setContactEmailError("");
+    setContactEmailNotice("");
   };
 
   const choosePaper = (selection: ProfessorPaperSelection) => {
@@ -483,7 +552,7 @@ export function PaperReaderShell({
           title={displayTitle}
           description={analysis.oneLine}
         />
-        <PaperReadingSteps current={2} />
+        <PaperReadingSteps current={contactEmail ? 4 : 2} />
 
         {verifiedProfessorPaper && (
           <SelectedPaperBanner
@@ -492,6 +561,27 @@ export function PaperReaderShell({
             onClear={clearPaperSelection}
           />
         )}
+
+        {/*
+          3줄 요약. 한 줄은 논문 성격만 알려주고 카드 5장은 다 읽어야 하므로 그 사이를 메운다.
+          세 번째 줄은 확인 범위를 밝히는 자리라 다른 두 줄과 구분해 표시한다.
+        */}
+        <section className="paper-bite-threeline" aria-labelledby="paper-threeline-title">
+          <h2 id="paper-threeline-title">
+            <FileSearch size={17} aria-hidden="true" /> 3줄 요약
+          </h2>
+          <ol>
+            {analysis.threeLine.map((line, index) => (
+              <li key={line} data-role={THREE_LINE_ROLES[index]}>
+                <span aria-hidden="true">{index + 1}</span>
+                <div>
+                  <small>{THREE_LINE_LABELS[index]}</small>
+                  <p>{line}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
 
         <StatusBanner icon={CheckCircle2} title="붙여 넣은 텍스트 분석 완료" tone="success">
           PDF 전체가 아니라 입력한 범위만 분석했습니다. 페이지 번호와 원문 위치는 확인할 수 없어요.
@@ -586,6 +676,18 @@ export function PaperReaderShell({
         )}
 
         <PaperPdfNextStep ready={isSaved} />
+        <ContactEmailStep
+          available={Boolean(verifiedProfessorPaper)}
+          professorName={verifiedProfessorPaper?.professorName ?? ""}
+          loading={contactEmailLoading}
+          error={contactEmailError}
+          notice={contactEmailNotice}
+          result={contactEmail}
+          body={contactEmailBody}
+          onBodyChange={setContactEmailBody}
+          onGenerate={generateContactEmail}
+          onCopy={copyContactEmail}
+        />
         {paperPicker}
       </AppShell>
     );
@@ -784,6 +886,114 @@ export function PaperReaderShell({
 
       {paperPicker}
     </AppShell>
+  );
+}
+
+/**
+ * 4단계 · 컨택 메일.
+ *
+ * 3분 카드로 만든 요약만 근거로 초안을 만듭니다. 요약 없이 보내는 메일을 막기 위해
+ * 이 단계는 분석이 끝난 화면에서만 나타나고, 공식 목록에서 고른 논문일 때만 활성화됩니다.
+ * 발송은 하지 않습니다. 학생이 검토하고 직접 보냅니다.
+ */
+function ContactEmailStep({
+  available,
+  professorName,
+  loading,
+  error,
+  notice,
+  result,
+  body,
+  onBodyChange,
+  onGenerate,
+  onCopy,
+}: {
+  available: boolean;
+  professorName: string;
+  loading: boolean;
+  error: string;
+  notice: string;
+  result: ContactEmailResult | null;
+  body: string;
+  onBodyChange: (value: string) => void;
+  onGenerate: () => void;
+  onCopy: () => void;
+}) {
+  return (
+    <section className="paper-bite-email-next" aria-labelledby="paper-email-next-title">
+      <div className="paper-bite-pdf-next__copy">
+        <span><Mail size={20} aria-hidden="true" /></span>
+        <div>
+          <small>4단계 · 컨택 메일</small>
+          <h2 id="paper-email-next-title">
+            {result ? "메일 초안을 검토해 주세요" : "이 요약으로 컨택 메일을 써볼까요?"}
+          </h2>
+          <p>
+            {available
+              ? "방금 정리한 3분 카드만 근거로 첫 연락 메일 초안을 만들어요. 요약에 없는 내용은 쓰지 않습니다."
+              : "공식 논문 목록에서 고른 논문일 때 교수님 정보를 함께 넣어 메일을 만들 수 있어요."}
+          </p>
+        </div>
+      </div>
+
+      {available ? (
+        <PrimaryButton type="button" onClick={onGenerate} disabled={loading}>
+          {loading ? (
+            <><LoaderCircle size={16} className="spin" aria-hidden="true" /> 초안 만드는 중…</>
+          ) : result ? "다시 만들기" : `${professorName} 교수님께 보낼 초안 만들기`}
+        </PrimaryButton>
+      ) : (
+        <PrimaryButton type="button" disabled>
+          공식 목록에서 논문을 선택해 주세요
+        </PrimaryButton>
+      )}
+
+      {error && (
+        <p className="action-feedback is-error" role="alert">{error}</p>
+      )}
+
+      {result && (
+        <div className="paper-bite-email-draft">
+          <SectionHeading title="메일 제목" />
+          <Card className="paper-bite-email-draft__subject">{result.subject}</Card>
+
+          <SectionHeading title="메일 본문" />
+          <textarea
+            className="paper-bite-email-draft__body"
+            value={body}
+            onChange={(event) => onBodyChange(event.target.value)}
+            rows={14}
+            aria-label="컨택 메일 본문 초안"
+          />
+
+          <SectionHeading title="이 초안이 근거로 삼은 요약" />
+          <ul className="paper-bite-email-draft__grounds">
+            {result.groundedOn.map((ground) => (
+              <li key={ground}>{ground}</li>
+            ))}
+          </ul>
+
+          <SectionHeading title="보내기 전에 확인할 것" />
+          <ul className="paper-bite-email-draft__checklist">
+            {result.beforeSending.map((item) => (
+              <li key={item}><ListChecks size={15} aria-hidden="true" /> {item}</li>
+            ))}
+          </ul>
+
+          <div className="paper-bite-email-draft__actions">
+            <SecondaryButton type="button" onClick={onCopy}>
+              <Copy size={16} aria-hidden="true" /> 제목·본문 복사
+            </SecondaryButton>
+          </div>
+
+          {notice && <p className="action-feedback" role="status">{notice}</p>}
+        </div>
+      )}
+
+      <small className="paper-bite-pdf-next__note">
+        이 서비스는 교수님께 메일을 보내지 않습니다. 초안을 복사해 학생이 직접 검토하고 발송해 주세요.
+      </small>
+    </section>
   );
 }
 

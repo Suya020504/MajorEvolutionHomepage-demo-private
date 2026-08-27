@@ -356,6 +356,24 @@ strong {
   .service-bottom-nav { display: none; }
 }
 
+/* 메뉴 설명서도 화면 도움말과 같은 명암 규칙을 사용합니다. */
+html[data-service-nav-guide-open="true"] body::before {
+  position: fixed;
+  z-index: 64;
+  inset: 0;
+  background: rgba(16, 26, 52, 0.56);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  content: "";
+  pointer-events: auto;
+  animation: serviceHelpFadeIn 150ms ease-out both;
+}
+
+html[data-service-nav-guide-open="true"] .service-bottom-nav.is-guiding,
+html[data-service-nav-guide-open="true"] .side-nav.is-guiding {
+  z-index: 70;
+}
+
 /*
  * 768~1279px는 사이드바가 콘텐츠 폭을 빼앗지 않는 중간 화면입니다.
  * 모바일 셸의 560px 상한을 풀고, 하단 탐색도 같은 폭으로 유연하게 넓힙니다.
@@ -498,6 +516,49 @@ strong {
   gap: 7px;
 }
 
+.service-tab-header__intro,
+.top-app-bar__intro {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(196, 206, 226, 0.88);
+  border-radius: 12px;
+  color: #48546d;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 5px 16px rgba(34, 48, 85, 0.065);
+  font-size: 12px;
+  font-weight: 790;
+  line-height: 1;
+  text-decoration: none;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.service-tab-header__intro {
+  padding: 0 12px;
+}
+
+.top-app-bar__intro {
+  width: 40px;
+  height: 40px;
+}
+
+.service-tab-header__intro:hover,
+.top-app-bar__intro:hover {
+  border-color: #c9c1f1;
+  color: #6043d9;
+  background: #faf9ff;
+}
+
+.service-tab-header__intro:focus-visible,
+.top-app-bar__intro:focus-visible {
+  outline: 3px solid rgba(50, 207, 180, 0.42);
+  outline-offset: 2px;
+}
+
 .service-tab-header__profile {
   display: grid;
   width: 44px;
@@ -538,6 +599,27 @@ strong {
   }
 
   .service-tab-header .service-help-trigger > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 560px) {
+  .service-tab-header__intro,
+  .service-tab-header .service-help-trigger,
+  .top-app-bar .service-help-trigger {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .service-tab-header__intro > span,
+  .service-tab-header .service-help-trigger > span,
+  .top-app-bar .service-help-trigger > span {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -590,6 +672,37 @@ strong {
   font-size: 13px;
   font-weight: 750;
   text-align: center;
+}
+
+/* AppShell 바깥에서 단독으로 쓰이는 두 튜토리얼도 동일한 도움말 진입점을 유지합니다. */
+.standalone-tutorial-header-actions {
+  display: flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .standalone-tutorial-header-actions {
+    gap: 8px;
+  }
+
+  .standalone-tutorial-header-actions .service-help-trigger {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .standalone-tutorial-header-actions .service-help-trigger > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
 }
 
 /*
@@ -2353,6 +2466,33 @@ strong {
 .paper-bite-pdf-next__copy p { color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
 .paper-bite-pdf-next__note { grid-column: 1 / -1; color: var(--text-tertiary); font-size: 10px; line-height: 1.45; }
 
+/*
+  3줄 요약. 세 번째 줄(확인 범위)은 앞의 두 줄과 색을 달리해,
+  낙관적인 마무리가 아니라 한계라는 것이 눈에 들어오게 한다.
+*/
+.paper-bite-threeline { margin-top: 18px; padding: 18px; border: 1px solid rgba(112, 79, 219, 0.28); border-radius: 18px; background: linear-gradient(150deg, var(--surface), var(--brand-violet-soft)); }
+.paper-bite-threeline > h2 { display: flex; align-items: center; gap: 7px; color: var(--brand-purple); font-size: 12px; font-weight: 830; }
+.paper-bite-threeline > ol { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.paper-bite-threeline li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 10px; }
+.paper-bite-threeline li > span { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 50%; background: var(--surface); color: var(--brand-purple); font-size: 11px; font-weight: 820; }
+.paper-bite-threeline li > div { display: grid; min-width: 0; gap: 2px; }
+.paper-bite-threeline small { color: var(--text-tertiary); font-size: 10px; font-weight: 760; }
+.paper-bite-threeline p { color: var(--text-primary); font-size: 13px; line-height: 1.6; }
+.paper-bite-threeline li[data-role="limit"] > span { color: var(--brand-blue); }
+.paper-bite-threeline li[data-role="limit"] p { color: var(--text-secondary); }
+
+.paper-bite-email-next { display: grid; gap: 14px; margin-top: 20px; padding: 20px; border: 1px solid rgba(112, 79, 219, 0.3); border-radius: 20px; background: linear-gradient(145deg, var(--surface), var(--brand-violet-soft)); }
+.paper-bite-email-next > button { justify-self: start; }
+.paper-bite-email-draft { display: grid; gap: 10px; }
+.paper-bite-email-draft__subject { padding: 12px 14px; font-size: 13px; font-weight: 700; line-height: 1.5; }
+.paper-bite-email-draft__body { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text-primary); font-family: inherit; font-size: 12px; line-height: 1.7; resize: vertical; }
+.paper-bite-email-draft__body:focus-visible { outline: 2px solid var(--brand-purple); outline-offset: 1px; }
+.paper-bite-email-draft__grounds { display: grid; gap: 6px; margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 11px; line-height: 1.6; }
+.paper-bite-email-draft__checklist { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.paper-bite-email-draft__checklist li { display: grid; grid-template-columns: 15px minmax(0, 1fr); align-items: start; gap: 8px; color: var(--text-secondary); font-size: 11px; line-height: 1.55; }
+.paper-bite-email-draft__checklist svg { margin-top: 2px; color: var(--brand-purple); }
+.paper-bite-email-draft__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+
 .paper-favorite-entry {
   display: grid;
   gap: 12px;
@@ -2765,6 +2905,10 @@ strong {
   .paper-bite-pdf-next { grid-template-columns: 1fr; padding: 16px; }
   .paper-bite-pdf-next__copy { grid-template-columns: 38px minmax(0, 1fr); }
   .paper-bite-pdf-next__copy > span { width: 38px; height: 38px; }
+  .paper-bite-threeline { padding: 15px; }
+  .paper-bite-email-next { padding: 16px; }
+  .paper-bite-email-next > button { justify-self: stretch; }
+  .paper-bite-email-draft__actions > * { width: 100%; }
   .selected-professor-paper { grid-template-columns: 1fr; }
   .favorite-paper-results__heading { display: grid; }
   .favorite-paper-results__heading > a { justify-self: start; }
@@ -7998,7 +8142,7 @@ html[data-service-help-open="true"][data-service-help-trigger-target="true"] .se
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgba(17, 27, 52, 0.34);
+  background: rgba(17, 27, 52, 0.44);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: serviceHelpFadeIn 160ms ease-out both;
@@ -8009,6 +8153,12 @@ html[data-service-help-open="true"][data-service-help-trigger-target="true"] .se
   z-index: 112;
   inset: 0;
   animation: serviceHelpFadeIn 150ms ease-out both;
+}
+
+.service-help-tour-backdrop.is-measuring {
+  background: rgba(16, 26, 52, 0.56);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 .service-help-tour__spotlight {
@@ -8408,6 +8558,25 @@ html[data-service-help-open="true"][data-service-help-trigger-target="true"] .se
   border: 1px solid #dfe4ee;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.78);
+}
+
+.service-help-dialog__actions-now article:first-child {
+  border-color: rgba(103, 72, 221, 0.32);
+  background: linear-gradient(145deg, #f2efff, #fff);
+  box-shadow: inset 3px 0 0 #6748dd;
+}
+
+.service-help-dialog__actions-now article:first-child span {
+  color: #6043d9;
+}
+
+.service-help-dialog__actions-now article:first-child p {
+  color: var(--brand-navy-900);
+  font-weight: 720;
+}
+
+.service-help-dialog__actions-now article:last-child {
+  background: #f7f8fb;
 }
 
 .service-help-dialog__journey {

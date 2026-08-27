@@ -8,11 +8,15 @@ import {
   BookOpenCheck,
   Bot,
   Check,
+  Clock3,
+  FolderOpen,
   GitBranch,
   GraduationCap,
   Lightbulb,
   LoaderCircle,
   MessageCircleMore,
+  Plus,
+  Save,
   Send,
   ShieldCheck,
   Sparkles,
@@ -84,6 +88,17 @@ function formatTime(value: string) {
   }).format(date);
 }
 
+function formatSavedDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "최근 저장";
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 export function AiProfessorScreen() {
   const hasResearchHydrated = useResearchStore((state) => state.hasHydrated);
   const conditions = useResearchStore((state) => state.conditions);
@@ -96,12 +111,18 @@ export function AiProfessorScreen() {
   const messages = useAiProfessorStore((state) => state.messages);
   const growthNotes = useAiProfessorStore((state) => state.growthNotes);
   const mapDecisions = useAiProfessorStore((state) => state.mapDecisions);
+  const savedConversations = useAiProfessorStore((state) => state.savedConversations);
+  const activeConversationId = useAiProfessorStore((state) => state.activeConversationId);
   const addUserMessage = useAiProfessorStore((state) => state.addUserMessage);
   const addAssistantMessage = useAiProfessorStore((state) => state.addAssistantMessage);
   const saveReflection = useAiProfessorStore((state) => state.saveReflection);
   const removeGrowthNote = useAiProfessorStore((state) => state.removeGrowthNote);
   const setMapDecision = useAiProfessorStore((state) => state.setMapDecision);
   const clearMapDecision = useAiProfessorStore((state) => state.clearMapDecision);
+  const saveCurrentConversation = useAiProfessorStore((state) => state.saveCurrentConversation);
+  const startNewConversation = useAiProfessorStore((state) => state.startNewConversation);
+  const openConversation = useAiProfessorStore((state) => state.openConversation);
+  const removeSavedConversation = useAiProfessorStore((state) => state.removeSavedConversation);
   const clearConversation = useAiProfessorStore((state) => state.clearConversation);
 
   const [viewMode, setViewMode] = useState<"chat" | "map" | "context">("chat");
@@ -109,9 +130,13 @@ export function AiProfessorScreen() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const [savedMessageId, setSavedMessageId] = useState<string | null>(null);
+  const [conversationStatus, setConversationStatus] = useState("");
   const [branchOrigin, setBranchOrigin] = useState<{ parentId: string; title: string } | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const activeConversation = savedConversations.find(
+    (conversation) => conversation.id === activeConversationId,
+  ) ?? null;
 
   const context = useMemo<GrowthProfessorContext>(() => {
     const latestProject = projects.at(-1) ?? null;
@@ -142,6 +167,10 @@ export function AiProfessorScreen() {
 
   const lastMessage = messages.at(-1) ?? null;
   const lastAssistantMessage = lastMessage?.role === "assistant" ? lastMessage : null;
+  const currentCardCount = messages.filter((message) => message.role === "assistant").length;
+  const currentBranchCount = messages.filter(
+    (message) => message.role === "user" && Boolean(message.branchParentMessageId),
+  ).length;
   const branchSourceMessage = branchOrigin
     ? messages.find((message) => message.id === branchOrigin.parentId && message.role === "assistant") ?? null
     : null;
@@ -216,6 +245,68 @@ export function AiProfessorScreen() {
     );
   };
 
+  const resetConversationComposer = () => {
+    setBranchOrigin(null);
+    setDraft("");
+    setError("");
+    setSavedMessageId(null);
+  };
+
+  const handleSaveConversation = () => {
+    if (isSending) return;
+    const result = saveCurrentConversation();
+    if (result.status === "empty") {
+      setConversationStatus("저장할 대화가 아직 없어요.");
+      return;
+    }
+    setConversationStatus(
+      result.status === "updated"
+        ? `‘${result.conversation.title}’ 저장본을 업데이트했어요.`
+        : `‘${result.conversation.title}’ 대화와 생각 지도를 저장했어요.`,
+    );
+  };
+
+  const handleStartNewConversation = () => {
+    if (isSending) return;
+    if (draft.trim()) {
+      setConversationStatus("작성 중인 메시지를 먼저 보내거나 비워 주세요.");
+      setViewMode("chat");
+      window.requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
+    const result = startNewConversation();
+    resetConversationComposer();
+    setViewMode("chat");
+    setConversationStatus(
+      result.status === "empty"
+        ? "저장할 대화가 없어 바로 새 대화를 시작했어요."
+        : `‘${result.conversation.title}’ 대화와 지도를 저장하고 새 대화를 시작했어요.`,
+    );
+    window.requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const handleOpenConversation = (id: string, nextView: "chat" | "map") => {
+    if (isSending) return;
+    const target = savedConversations.find((conversation) => conversation.id === id);
+    if (!target || !openConversation(id)) return;
+    resetConversationComposer();
+    setViewMode(nextView);
+    setConversationStatus(`‘${target.title}’ 저장본을 열었어요.`);
+    if (nextView === "chat") {
+      window.requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  };
+
+  const handleRemoveConversation = (id: string) => {
+    const target = savedConversations.find((conversation) => conversation.id === id);
+    if (!target || isSending) return;
+    if (!window.confirm(`‘${target.title}’ 저장본을 삭제할까요? 현재 열려 있는 대화 내용은 남아 있습니다.`)) {
+      return;
+    }
+    removeSavedConversation(id);
+    setConversationStatus(`‘${target.title}’ 저장본을 삭제했어요.`);
+  };
+
   if (!hasResearchHydrated || !hasAiHydrated) {
     return (
       <div className="research-loading">
@@ -243,33 +334,40 @@ export function AiProfessorScreen() {
             <ShieldCheck size={17} aria-hidden="true" />
             <span>실제 교수님의 지도나 학교의 공식 답변을 대신하지 않으며, 중요한 결정은 직접 확인해요.</span>
           </div>
-          <nav className={styles.viewTabs} aria-label="AI 교수님 보기 방식">
-            <button
-              type="button"
-              aria-current={viewMode === "chat" ? "page" : undefined}
-              onClick={() => setViewMode("chat")}
-            >
-              <MessageCircleMore size={17} aria-hidden="true" /> 대화하기
-            </button>
-            <button
-              type="button"
-              aria-current={viewMode === "map" ? "page" : undefined}
-              onClick={() => setViewMode("map")}
-            >
-              <GitBranch size={17} aria-hidden="true" /> 대화 지도
-              {messages.some((message) => message.role === "assistant") ? (
-                <span>{messages.filter((message) => message.role === "assistant").length}</span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              aria-current={viewMode === "context" ? "page" : undefined}
-              onClick={() => setViewMode("context")}
-            >
-              <BookOpenCheck size={17} aria-hidden="true" /> 내 맥락
-              {growthNotes.length ? <span>{growthNotes.length}</span> : null}
-            </button>
-          </nav>
+          <div className={styles.viewControlRow}>
+            <nav className={styles.viewTabs} aria-label="AI 교수님 보기 방식">
+              <button
+                type="button"
+                aria-current={viewMode === "chat" ? "page" : undefined}
+                onClick={() => setViewMode("chat")}
+              >
+                <MessageCircleMore size={17} aria-hidden="true" /> 대화하기
+              </button>
+              <button
+                type="button"
+                aria-current={viewMode === "map" ? "page" : undefined}
+                onClick={() => setViewMode("map")}
+              >
+                <GitBranch size={17} aria-hidden="true" /> 대화 지도
+                {messages.some((message) => message.role === "assistant") ? (
+                  <span>{messages.filter((message) => message.role === "assistant").length}</span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                aria-current={viewMode === "context" ? "page" : undefined}
+                onClick={() => setViewMode("context")}
+              >
+                <BookOpenCheck size={17} aria-hidden="true" /> 내 맥락
+                {savedConversations.length ? <span>{savedConversations.length}</span> : null}
+              </button>
+            </nav>
+          </div>
+          <p className={styles.sessionStatus} role="status" aria-live="polite">
+            {conversationStatus || (activeConversation
+              ? `열린 저장본 · ${activeConversation.title}`
+              : "대화·생각 카드·지도 분기를 한 묶음으로 저장할 수 있어요.")}
+          </p>
         </header>
 
         {viewMode !== "map" ? <div className={styles.workspace}>
@@ -280,19 +378,31 @@ export function AiProfessorScreen() {
                 <h2 id="ai-professor-conversation"><MessageCircleMore size={19} /> 가볍게 이야기하기</h2>
               </div>
               {messages.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm("AI 교수님과 나눈 대화를 모두 삭제할까요? 성장 메모는 남아 있습니다.")) {
-                      clearConversation();
-                      setBranchOrigin(null);
-                      setDraft("");
-                    }
-                  }}
-                  className={styles.clearButton}
-                >
-                  <Trash2 size={15} aria-hidden="true" /> 대화 비우기
-                </button>
+                <div className={styles.conversationHeaderActions} role="group" aria-label="현재 대화 관리">
+                  <button
+                    type="button"
+                    disabled={isSending}
+                    onClick={handleSaveConversation}
+                    className={styles.saveConversationButton}
+                    aria-label="현재 대화 저장"
+                  >
+                    <Save size={15} aria-hidden="true" /> 대화 저장
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm("AI 교수님과 나눈 대화를 모두 삭제할까요? 성장 메모는 남아 있습니다.")) {
+                        clearConversation();
+                        setBranchOrigin(null);
+                        setDraft("");
+                        setConversationStatus("현재 대화를 비웠어요. 저장한 대화는 내 맥락에 남아 있습니다.");
+                      }
+                    }}
+                    className={styles.clearButton}
+                  >
+                    <Trash2 size={15} aria-hidden="true" /> 대화 비우기
+                  </button>
+                </div>
               ) : null}
             </header>
 
@@ -459,6 +569,107 @@ export function AiProfessorScreen() {
 
           {viewMode === "context" ? (
             <aside className={styles.growthRail} aria-label="나의 성장 맥락과 저장 메모">
+            <section className={styles.savedConversationSection} aria-labelledby="saved-conversations-title">
+              <header>
+                <div>
+                  <FolderOpen size={19} aria-hidden="true" />
+                  <div>
+                    <h2 id="saved-conversations-title">저장한 대화</h2>
+                    <p>대화·생각 카드·지도 분기를 골라 다시 이어갈 수 있어요.</p>
+                  </div>
+                </div>
+                <span>{savedConversations.length}개</span>
+              </header>
+              <div className={styles.savedConversationToolbar}>
+                <div className={styles.currentConversationSnapshot}>
+                  <span>현재 대화</span>
+                  <strong>{messages.length ? "지금까지의 대화와 상상나무" : "새로운 주제로 시작할 준비가 됐어요"}</strong>
+                  <p>
+                    {messages.length
+                      ? `메시지 ${messages.length}개 · 생각 카드 ${currentCardCount}개 · 새 가지 ${currentBranchCount}개`
+                      : "저장한 대화는 그대로 두고, 빈 화면에서 다른 고민을 시작할 수 있어요."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={isSending}
+                  aria-label={messages.length ? "현재 내용 저장 후 새 대화 시작" : "새 대화 시작"}
+                  onClick={handleStartNewConversation}
+                >
+                  <Plus size={18} aria-hidden="true" />
+                  <span>
+                    <strong>{messages.length ? "저장하고 새 대화 시작하기" : "새 대화 시작하기"}</strong>
+                    <small>{messages.length ? "대화·생각 카드·지도 분기를 함께 저장해요" : "첫 질문부터 가볍게 시작해요"}</small>
+                  </span>
+                  <ArrowRight size={17} aria-hidden="true" />
+                </button>
+                {draft.trim() ? (
+                  <p className={styles.draftGuardNote}>작성 중인 메시지가 있어요. 먼저 보내거나 비운 뒤 새 대화를 시작할 수 있어요.</p>
+                ) : null}
+              </div>
+              {savedConversations.length ? (
+                <ul>
+                  {[...savedConversations].reverse().map((conversation) => {
+                    const cardCount = conversation.messages.filter(
+                      (message) => message.role === "assistant",
+                    ).length;
+                    const active = conversation.id === activeConversationId;
+                    return (
+                      <li key={conversation.id} data-active={active ? "true" : "false"}>
+                        <div className={styles.savedConversationCopy}>
+                          <div>
+                            <strong>{conversation.title}</strong>
+                            {active ? <span>현재 열림</span> : null}
+                          </div>
+                          <p>{conversation.preview}</p>
+                          <small>
+                            <Clock3 size={13} aria-hidden="true" />
+                            <time dateTime={conversation.updatedAt}>{formatSavedDate(conversation.updatedAt)}</time>
+                            <span aria-hidden="true">·</span> 생각 카드 {cardCount}개
+                          </small>
+                        </div>
+                        <div className={styles.savedConversationActions}>
+                          <button
+                            type="button"
+                            disabled={isSending}
+                            aria-label={`${conversation.title} 대화 열기`}
+                            onClick={() => handleOpenConversation(conversation.id, "chat")}
+                          >
+                            <MessageCircleMore size={15} aria-hidden="true" /> 대화
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSending}
+                            aria-label={`${conversation.title} 생각 지도 열기`}
+                            onClick={() => handleOpenConversation(conversation.id, "map")}
+                          >
+                            <GitBranch size={15} aria-hidden="true" /> 지도
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSending}
+                            className={styles.savedConversationDelete}
+                            aria-label={`${conversation.title} 저장본 삭제`}
+                            onClick={() => handleRemoveConversation(conversation.id)}
+                          >
+                            <Trash2 size={15} aria-hidden="true" />
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className={styles.savedConversationEmpty}>
+                  <MessageCircleMore size={22} aria-hidden="true" />
+                  <div>
+                    <strong>아직 저장한 대화가 없어요</strong>
+                    <p>대화 화면에서 ‘대화 저장’을 누르면 이곳에 모여요.</p>
+                  </div>
+                </div>
+              )}
+            </section>
+
             <section className={styles.contextSection}>
               <header><Lightbulb size={18} aria-hidden="true" /><h2>함께 보고 있는 내 맥락</h2></header>
               <dl>

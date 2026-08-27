@@ -25,6 +25,55 @@
   min-width: 0;
 }
 
+.recommendationReady {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 13px;
+  padding: 17px 19px;
+  border: 1px solid #dfe5ee;
+  border-radius: 16px;
+  color: var(--brand-navy-950);
+  background: #fbfcfe;
+  box-shadow: 0 2px 10px rgba(36, 50, 91, 0.035);
+}
+
+.recommendationReadyIcon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--brand-mint-dark);
+  background: var(--brand-mint-soft);
+}
+
+.recommendationReady > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.recommendationReady span {
+  color: var(--brand-mint-dark);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.recommendationReady strong {
+  font-size: 16px;
+  font-weight: 820;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+.recommendationReady p {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
 .projectSection,
 .supportingSection {
   margin-top: 24px;
@@ -174,23 +223,66 @@
   gap: 12px;
 }
 
-.contextCard {
-  display: grid;
+/*
+  추천 기준·신뢰 안내는 접어 둔다. 좁은 화면에서 이 두 카드가 펼쳐져 있으면
+  정작 봐야 할 교수 카드가 화면 밖으로 밀린다.
+*/
+.contextDetails {
   min-width: 0;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 12px;
-  padding: 18px;
+  overflow: hidden;
   border: 1px solid rgba(205, 214, 231, 0.82);
   border-radius: 16px;
   background: #fff;
-  box-shadow: 0 9px 24px rgba(36, 50, 91, 0.055);
+  box-shadow: 0 3px 12px rgba(36, 50, 91, 0.035);
 }
 
-.projectSummaryCard {
-  background:
-    radial-gradient(circle at 100% 0%, rgba(117, 87, 246, 0.09), transparent 42%),
-    #fff;
+.contextDetails > summary {
+  display: grid;
+  min-height: 52px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.contextDetails > summary::-webkit-details-marker {
+  display: none;
+}
+
+.contextDetails > summary:focus-visible {
+  outline: 2px solid var(--brand-purple);
+  outline-offset: -2px;
+}
+
+.contextDetailsCopy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.contextDetailsCopy strong {
+  color: var(--brand-navy-950);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+}
+
+.contextChevron {
+  color: var(--text-tertiary);
+  transition: transform 0.18s ease;
+}
+
+.contextDetails[open] .contextChevron {
+  transform: rotate(180deg);
+}
+
+.contextDetailsBody {
+  display: grid;
+  gap: 7px;
+  padding: 0 16px 16px;
 }
 
 .contextIcon {
@@ -213,11 +305,7 @@
   background: var(--brand-blue-soft);
 }
 
-.contextCard > div {
-  display: grid;
-  min-width: 0;
-  gap: 7px;
-}
+
 
 .contextLabel {
   color: var(--text-secondary);
@@ -225,7 +313,7 @@
   font-weight: 760;
 }
 
-.contextCard h2 {
+.contextDetailsBody h2 {
   color: var(--brand-navy-950);
   font-size: 15px;
   font-weight: 810;
@@ -233,31 +321,15 @@
   line-height: 1.4;
 }
 
-.contextCard p,
-.contextCard small {
+.contextDetailsBody p,
+.contextDetailsBody small {
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.55;
 }
 
-.contextCard small {
+.contextDetailsBody small {
   display: block;
-}
-
-.contextLink {
-  display: inline-flex;
-  width: fit-content;
-  align-items: center;
-  gap: 5px;
-  margin-top: 2px;
-  color: var(--brand-purple);
-  font-size: 12px;
-  font-weight: 780;
-}
-
-.contextLink:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .roleList {
@@ -362,6 +434,10 @@
     padding: 19px 16px 18px;
   }
 
+  .recommendationReady {
+    padding: 15px;
+  }
+
   .sectionHeading {
     align-items: start;
   }
@@ -386,12 +462,20 @@
     width: 100%;
   }
 
-  .contextCard {
-    padding: 16px;
+  .contextDetails > summary {
+    padding: 12px 14px;
+  }
+
+  .contextDetailsBody {
+    padding: 0 14px 14px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .contextChevron {
+    transition: none;
+  }
+
   .leadProfessorCard {
     transition: none;
   }

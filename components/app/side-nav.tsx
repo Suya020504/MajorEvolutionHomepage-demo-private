@@ -4,7 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, CompassIcon, FlaskConical, GraduationCap, Home, MessagesSquare, TrendingUp, UserRound } from "lucide-react";
-import { Suspense, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { guideCharacter } from "@/lib/brand-assets";
 import {
@@ -136,6 +144,94 @@ function markNavigationGuideOpen() {
   };
 }
 
+function useNavigationGuideModal({
+  open,
+  onClose,
+  dialogRef,
+  viewport,
+}: {
+  open: boolean;
+  onClose: () => void;
+  dialogRef: RefObject<HTMLElement | null>;
+  viewport: "mobile" | "desktop";
+}) {
+  useEffect(() => {
+    if (!open) return;
+
+    const releaseGuideOpen = markNavigationGuideOpen();
+    const appViewport = document.querySelector<HTMLElement>(".app-viewport");
+    const inertTargets = viewport === "desktop"
+      ? appViewport ? [appViewport] : []
+      : Array.from(document.querySelectorAll<HTMLElement>(
+          ".app-viewport > header, .app-viewport > main, .app-viewport > .sticky-action",
+        ));
+    const previousInert = inertTargets.map((element) => [element, element.inert] as const);
+    inertTargets.forEach((element) => { element.inert = true; });
+
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>("button.is-primary, button")?.focus();
+    });
+
+    const handleKeys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => !element.hasAttribute("hidden"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (!dialogRef.current?.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeys);
+    return () => {
+      releaseGuideOpen();
+      window.cancelAnimationFrame(focusFrame);
+      previousInert.forEach(([element, inert]) => { element.inert = inert; });
+      document.body.style.overflow = previousBodyOverflow;
+      window.removeEventListener("keydown", handleKeys);
+    };
+  }, [dialogRef, onClose, open, viewport]);
+}
+
+function useNavigationGuideStepFocus({
+  open,
+  step,
+  dialogRef,
+}: {
+  open: boolean;
+  step: number;
+  dialogRef: RefObject<HTMLElement | null>;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const frame = window.requestAnimationFrame(() => {
+      dialogRef.current?.querySelector<HTMLElement>("button.is-primary, button")?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [dialogRef, open, step]);
+}
+
 function hasRequestedNavigationGuide(pathname: string) {
   if (pathname !== "/home") return false;
   return new URLSearchParams(window.location.search).get(SERVICE_NAV_GUIDE_QUERY_PARAM)
@@ -159,6 +255,7 @@ function ServiceBottomNavContent() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
   const forcedGuideRef = useRef(false);
+  const guideDialogRef = useRef<HTMLElement>(null);
   const guide = SERVICE_GUIDE_STEPS[guideStep];
   const professorTabHref = useProfessorTabHref();
   const projectTabHref = useProjectTabHref();
@@ -231,19 +328,13 @@ function ServiceBottomNavContent() {
     return () => window.removeEventListener(SERVICE_NAV_GUIDE_EVENT, openGuide);
   }, []);
 
-  useEffect(() => {
-    if (!guideOpen) return;
-    const closeWithEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") finishGuide();
-    };
-    window.addEventListener("keydown", closeWithEscape);
-    return () => window.removeEventListener("keydown", closeWithEscape);
-  }, [finishGuide, guideOpen]);
-
-  useEffect(() => {
-    if (!guideOpen) return;
-    return markNavigationGuideOpen();
-  }, [guideOpen]);
+  useNavigationGuideModal({
+    open: guideOpen,
+    onClose: finishGuide,
+    dialogRef: guideDialogRef,
+    viewport: "mobile",
+  });
+  useNavigationGuideStepFocus({ open: guideOpen, step: guideStep, dialogRef: guideDialogRef });
 
   const goToNextGuideStep = () => {
     if (guideStep === SERVICE_GUIDE_STEPS.length - 1) {
@@ -286,8 +377,10 @@ function ServiceBottomNavContent() {
             aria-current={isActive ? "page" : undefined}
             aria-label={journey ? `${item.label}, ${journey.label} ${journey.step}단계` : item.label}
             aria-describedby={isGuideTarget ? "bottom-nav-guide-description" : undefined}
-            onClick={() => {
-              if (guideOpen) finishGuide();
+            aria-disabled={guideOpen || undefined}
+            tabIndex={guideOpen ? -1 : undefined}
+            onClick={(event) => {
+              if (guideOpen) event.preventDefault();
             }}
           >
             {journey?.step === 1 ? (
@@ -300,11 +393,12 @@ function ServiceBottomNavContent() {
       })}
       {guideOpen ? (
         <aside
+          ref={guideDialogRef}
           key={guide.label}
           className="service-bottom-nav__guide"
           style={{ "--nav-guide-anchor": guide.anchor } as CSSProperties}
           role="dialog"
-          aria-modal="false"
+          aria-modal="true"
           aria-label="하단 메뉴 사용 가이드"
           aria-live="polite"
         >
@@ -377,6 +471,7 @@ function SideNavContent() {
   const [guideOpen, setGuideOpen] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
   const forcedGuideRef = useRef(false);
+  const guideDialogRef = useRef<HTMLElement>(null);
   const guide = SERVICE_GUIDE_STEPS[guideStep];
   const professorTabHref = useProfessorTabHref();
   const projectTabHref = useProjectTabHref();
@@ -455,18 +550,13 @@ function SideNavContent() {
     return () => window.removeEventListener(SERVICE_NAV_GUIDE_EVENT, openGuide);
   }, []);
 
-  useEffect(() => {
-    if (!guideOpen) return;
-    const releaseGuideOpen = markNavigationGuideOpen();
-    const closeWithEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") finishGuide();
-    };
-    window.addEventListener("keydown", closeWithEscape);
-    return () => {
-      releaseGuideOpen();
-      window.removeEventListener("keydown", closeWithEscape);
-    };
-  }, [finishGuide, guideOpen]);
+  useNavigationGuideModal({
+    open: guideOpen,
+    onClose: finishGuide,
+    dialogRef: guideDialogRef,
+    viewport: "desktop",
+  });
+  useNavigationGuideStepFocus({ open: guideOpen, step: guideStep, dialogRef: guideDialogRef });
 
   useEffect(() => {
     if (!guideOpen) return;
@@ -534,9 +624,10 @@ function SideNavContent() {
               </Link>
               {isGuideTarget ? (
                 <aside
+                  ref={guideDialogRef}
                   className="side-nav__guide"
                   role="dialog"
-                  aria-modal="false"
+                  aria-modal="true"
                   aria-label="주요 메뉴 사용 가이드"
                   aria-live="polite"
                 >

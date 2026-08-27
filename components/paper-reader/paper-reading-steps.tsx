@@ -1,4 +1,4 @@
-import { BookOpenCheck, FileSearch, Upload } from "lucide-react";
+import { BookOpenCheck, FileSearch, Mail, Upload } from "lucide-react";
 
 const PAPER_READING_STEPS = [
   {
@@ -19,11 +19,17 @@ const PAPER_READING_STEPS = [
     description: "원문 읽기·요약·질문",
     icon: Upload,
   },
+  {
+    number: 4,
+    label: "컨택 메일",
+    description: "요약 근거로 초안 작성",
+    icon: Mail,
+  },
 ] as const;
 
-export function PaperReadingSteps({ current }: { current: 1 | 2 | 3 }) {
+export function PaperReadingSteps({ current }: { current: 1 | 2 | 3 | 4 }) {
   return (
-    <nav className="paper-reading-steps" aria-label="논문 읽기 3단계">
+    <nav className="paper-reading-steps" aria-label="논문 읽기 4단계">
       <ol>
         {PAPER_READING_STEPS.map((step) => {
           const Icon = step.icon;

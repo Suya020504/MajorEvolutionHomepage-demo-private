@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  ChevronDown,
   FlaskConical,
   GraduationCap,
   LoaderCircle,
@@ -148,28 +149,50 @@ export function ProjectProfessorHubScreen() {
         <ServiceHubIntro
           title="내 프로젝트에 맞는 교수님을 찾아볼까요?"
           description="학생 고민을 위한 첫 교수 매칭과 분리해, 선택한 프로젝트의 성공적인 실행에 필요한 전문성을 기준으로 연결해요."
+          variant="compact"
         />
 
         <div className={styles.responsiveLayout}>
           <div className={styles.mainColumn}>
             <div className={styles.primaryTaskWrap} data-service-help="project-primary">
-              <HubPrimaryTask {...primary} />
+              {leadMatch ? (
+                <section className={styles.recommendationReady} aria-label="프로젝트 교수 추천 완료">
+                  <span className={styles.recommendationReadyIcon} aria-hidden="true">
+                    <GraduationCap size={23} />
+                  </span>
+                  <div>
+                    <span>추천 준비 완료</span>
+                    <strong>먼저 확인할 교수님과 연결 근거를 골랐어요</strong>
+                    <p>아래 대표 교수 카드에서 연구 역할과 공식 근거를 확인해 보세요.</p>
+                  </div>
+                </section>
+              ) : (
+                <HubPrimaryTask {...primary} />
+              )}
             </div>
 
-            {selectedTopic ? (
-              <div className={styles.projectSection}>
-                <HubList title="선택한 프로젝트" trailing={<span>AI 공동설계 완료</span>}>
-                  <HubRow
-                    icon={FlaskConical}
-                    title={selectedTopic.topic.title}
-                    description={selectedTopic.topic.question}
-                    status="선택됨"
-                    href="/result"
-                    tone="violet"
-                  />
-                </HubList>
-              </div>
-            ) : null}
+            {/*
+              추천 기준이 되는 프로젝트는 화면 위쪽에 한 번만 둔다.
+              이전에는 같은 내용이 오른쪽 레일에도 있어 좁은 화면에서 두 번 읽혔다.
+              도움말 투어가 선택자를 못 찾으면 투어 전체가 중단되므로(service-help-guide.tsx)
+              선택 전에도 이 영역은 항상 렌더링한다.
+            */}
+            <div className={styles.projectSection} data-service-help="project-summary">
+              <HubList
+                title="선택한 프로젝트"
+                trailing={<span>{selectedTopic ? "AI 공동설계 완료" : "선택 전"}</span>}
+              >
+                <HubRow
+                  icon={FlaskConical}
+                  title={selectedTopic?.topic.title ?? "아직 고른 프로젝트가 없어요"}
+                  description={selectedTopic?.topic.question
+                    ?? "프로젝트를 고르면 그 프로젝트에 맞춰 교수님을 추천해요."}
+                  status={selectedTopic ? "선택됨" : "선택하기"}
+                  href={selectedTopic ? "/result" : primary.href}
+                  tone="violet"
+                />
+              </HubList>
+            </div>
 
             {leadMatch ? (
               <section
@@ -208,31 +231,26 @@ export function ProjectProfessorHubScreen() {
           </div>
 
           <aside className={styles.contextRail} aria-label="프로젝트 교수 추천 기준과 신뢰 안내">
-            <section
-              className={`${styles.contextCard} ${styles.projectSummaryCard}`}
-              data-service-help="project-summary"
-            >
-              <span className={styles.contextIcon} aria-hidden="true"><FlaskConical size={20} /></span>
-              <div>
-                <span className={styles.contextLabel}>선택 프로젝트</span>
-                <h2>{selectedTopic?.topic.title ?? "프로젝트 선택 전"}</h2>
-                <p>
-                  {selectedTopic?.topic.question
-                    ?? "AI와 프로젝트를 설계하고 후보를 고르면 이곳에서 추천 기준을 함께 확인할 수 있어요."}
-                </p>
-                <Link href={selectedTopic ? "/result" : primary.href} className={styles.contextLink}>
-                  {selectedTopic ? "프로젝트 다시 보기" : "프로젝트 설계하기"}
-                  <ArrowRight size={15} aria-hidden="true" />
-                </Link>
-              </div>
-            </section>
-
-            <section className={styles.contextCard} data-service-help="recommendation-criteria">
-              <span className={`${styles.contextIcon} ${styles.contextIconMint}`} aria-hidden="true">
-                <Sparkles size={20} />
-              </span>
-              <div>
-                <span className={styles.contextLabel}>정렬 방식과 역할 범위</span>
+            {/*
+              추천 기준과 신뢰 안내는 읽고 넘어가는 참고 정보다. 매번 펼쳐 두면
+              정작 봐야 할 교수 카드가 밀려나서, 접어 두고 요약만 한 줄로 보여준다.
+              닫힌 상태에서도 정렬 방식과 역할 충족 수가 드러나게 한다.
+            */}
+            <details className={styles.contextDetails} data-service-help="recommendation-criteria">
+              <summary>
+                <span className={`${styles.contextIcon} ${styles.contextIconMint}`} aria-hidden="true">
+                  <Sparkles size={18} />
+                </span>
+                <span className={styles.contextDetailsCopy}>
+                  <span className={styles.contextLabel}>추천 기준</span>
+                  <strong>
+                    {rankingSourceLabel}
+                    {projectMatches.length > 0 ? ` · ${matchedRoleCount}/3 역할 확인` : ""}
+                  </strong>
+                </span>
+                <ChevronDown size={16} aria-hidden="true" className={styles.contextChevron} />
+              </summary>
+              <div className={styles.contextDetailsBody}>
                 <h2>
                   {projectCoverage?.rankingSource === "ai-reranked"
                     ? "공식 후보 안에서 AI가 다시 정렬했어요"
@@ -250,15 +268,20 @@ export function ProjectProfessorHubScreen() {
                   <small>{matchedRoleCount}개 역할 · {projectMatches.length}명 확인</small>
                 ) : null}
               </div>
-            </section>
+            </details>
 
-            <section className={`${styles.contextCard} ${styles.trustCard}`}>
-              <span className={`${styles.contextIcon} ${styles.contextIconTrust}`} aria-hidden="true">
-                <ShieldCheck size={20} />
-              </span>
-              <div>
-                <span className={styles.contextLabel}>신뢰 안내</span>
-                <h2>확인 가능한 공식 정보만 사용해요</h2>
+            <details className={`${styles.contextDetails} ${styles.trustCard}`}>
+              <summary>
+                <span className={`${styles.contextIcon} ${styles.contextIconTrust}`} aria-hidden="true">
+                  <ShieldCheck size={18} />
+                </span>
+                <span className={styles.contextDetailsCopy}>
+                  <span className={styles.contextLabel}>신뢰 안내</span>
+                  <strong>확인 가능한 공식 정보만 사용해요</strong>
+                </span>
+                <ChevronDown size={16} aria-hidden="true" className={styles.contextChevron} />
+              </summary>
+              <div className={styles.contextDetailsBody}>
                 <p>
                   {projectCoverage
                     ? `${projectCoverage.officialRecordCount}명 공식 레코드 · ${SCOPE_LABEL[projectCoverage.scopeStatus]}`
@@ -266,7 +289,7 @@ export function ProjectProfessorHubScreen() {
                 </p>
                 <small>추천 이유는 연결 근거이며, 면담 가능 여부와 프로젝트 성공을 보장하지 않아요.</small>
               </div>
-            </section>
+            </details>
           </aside>
         </div>
       </div>

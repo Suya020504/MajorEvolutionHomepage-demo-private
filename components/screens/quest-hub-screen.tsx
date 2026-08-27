@@ -285,6 +285,7 @@ export function QuestHubScreen() {
             ? `${selectedProfessor.name} 교수님과 첫 만남을 준비해요`
             : "교수님과 첫 만남을 준비해요"}
           description="교수 선택부터 연락, 대화 중 질문, 면담 후 행동까지 현재 단계와 다음 할 일을 한 화면에서 이어가요."
+          variant="compact"
         />
         <HubAdaptiveLayout
           layout="stacked"
@@ -292,6 +293,7 @@ export function QuestHubScreen() {
           primary={(
             <HubPrimaryTask
               icon={primary.icon}
+              eyebrow="지금 먼저 할 일"
               title={primary.taskTitle}
               description={primary.description}
               cta={primary.cta}
@@ -314,13 +316,17 @@ export function QuestHubScreen() {
                 {selectedProfessorMatch?.reason ? (
                   <blockquote>{selectedProfessorMatch.reason}</blockquote>
                 ) : null}
-                <Link
-                  href={selectedProfessor ? `/professors/${selectedProfessor.id}` : "/professors"}
-                  className={questStyles.contextLink}
-                >
-                  {selectedProfessor ? "연결 근거 다시 보기" : "교수 찾기"}
-                  <ArrowRight size={16} aria-hidden="true" />
-                </Link>
+                {selectedProfessor ? (
+                  <Link
+                    href={`/professors/${selectedProfessor.id}`}
+                    className={questStyles.contextLink}
+                  >
+                    연결 근거 다시 보기
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                ) : (
+                  <p className={questStyles.contextNextHint}>위의 ‘교수 찾기’부터 시작하면 연결 상태가 여기에 표시돼요.</p>
+                )}
                 <Link href="/quest/all#saved-cards" className={questStyles.mobileSavedLink}>
                   저장한 준비물 {beforeCount + silenceCount + afterCount}개 보기
                   <ArrowRight size={16} aria-hidden="true" />
@@ -338,13 +344,6 @@ export function QuestHubScreen() {
                   <div><dt>대화 중</dt><dd>{silenceCount}</dd></div>
                   <div><dt>만난 후</dt><dd>{afterCount}</dd></div>
                 </dl>
-                <div className={questStyles.contextProgressCopy}>
-                  <span>첫 만남 여정</span>
-                  <strong>{progressPercent}%</strong>
-                </div>
-                <div className={questStyles.contextProgressTrack} aria-hidden="true">
-                  <span style={{ width: `${progressPercent}%` }} />
-                </div>
               </section>
             </div>
           )}
