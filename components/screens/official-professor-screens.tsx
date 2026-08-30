@@ -28,6 +28,7 @@ import {
   AppShell,
   Card,
   PrimaryButton,
+  SecondaryButton,
   SectionHeading,
   StatusBanner,
   Tag,
@@ -133,6 +134,7 @@ function ProfessorPortrait({
         alt={portrait.alt}
         width={large ? 64 : 48}
         height={large ? 64 : 48}
+        priority={large}
         style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }}
       />
     </div>
@@ -840,7 +842,7 @@ export function ProfessorPitchScreen() {
   };
 
   const openProfessor = (match: ProfessorMatch) => {
-    router.push(`/professors/${match.professor.id}`);
+    router.push(`/professors/${match.professor.id}?from=pitch`);
   };
 
   const openProfessorPaper = () => {
@@ -971,9 +973,20 @@ export function ProfessorPitchScreen() {
 export function OfficialProfessorDetailScreen({ professor }: { professor: OfficialProfessor }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const backHref = searchParams.get("from") === "project" ? "/project-professors" : "/professors";
-  const matches = useResearchStore((state) => state.professorMatches);
-  const selectProfessor = useResearchStore((state) => state.selectProfessor);
+  const from = searchParams.get("from");
+  const backHref = ({
+    home: "/home",
+    portfolio: "/portfolio",
+    quest: "/quest",
+    result: "/result/compare",
+    project: "/project-professors",
+    pitch: "/professors/pitch",
+  } as Record<string, string>)[from ?? ""] ?? "/professors";
+  const studentMatches = useResearchStore((state) => state.professorMatches);
+  const projectMatches = useResearchStore((state) => state.projectProfessorMatches);
+  const selectStudentProfessor = useResearchStore((state) => state.selectProfessor);
+  const selectProjectProfessor = useResearchStore((state) => state.selectProjectProfessor);
+  const matches = from === "project" ? projectMatches : studentMatches;
   const match = useMemo(
     () => matches.find((item) => item.professor.id === professor.id),
     [matches, professor.id],
@@ -990,12 +1003,19 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
             professorId={professor.id}
             professorName={professor.name}
           />
-          <PrimaryButton onClick={() => {
-            selectProfessor(professor.id);
-            router.push("/quest");
-          }}>
-            이 교수님과 첫 대화 준비하기 <ArrowRight size={17} />
-          </PrimaryButton>
+          {match ? (
+            <PrimaryButton onClick={() => {
+              if (from === "project") selectProjectProfessor(professor.id);
+              else selectStudentProfessor(professor.id);
+              router.push(from === "project" ? "/project-execution" : "/quest");
+            }}>
+              {from === "project" ? "이 교수님과 프로젝트 시작하기" : "이 교수님과 첫 대화 준비하기"} <ArrowRight size={17} />
+            </PrimaryButton>
+          ) : (
+            <SecondaryButton onClick={() => router.push("/professors/discover")}>
+              교수님 찾기에서 연결 맥락 만들기 <ArrowRight size={17} />
+            </SecondaryButton>
+          )}
         </>
       )}
     >

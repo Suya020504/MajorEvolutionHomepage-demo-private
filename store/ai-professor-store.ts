@@ -2,7 +2,16 @@
 
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { GrowthProfessorResponse } from "@/lib/ai-growth-professor";
+import {
+  normalizeGrowthProfessorSuggestions,
+  type GrowthProfessorResponse,
+  type GrowthProfessorSuggestion,
+} from "@/lib/ai-growth-professor";
+import {
+  hideConversationMapBranchState,
+  reconcileConversationMapStateAfterTrim,
+  restoreConversationMapBranchState,
+} from "@/lib/ai-conversation-map";
 
 export type AiProfessorMessage = {
   id: string;
@@ -15,7 +24,7 @@ export type AiProfessorMessage = {
    */
   branchParentMessageId: string | null;
   reflection: GrowthProfessorResponse["reflection"] | null;
-  suggestedPrompts: string[];
+  suggestedPrompts: GrowthProfessorSuggestion[];
 };
 
 export type AiGrowthNote = {
@@ -33,6 +42,8 @@ type AiProfessorState = {
   messages: AiProfessorMessage[];
   growthNotes: AiGrowthNote[];
   mapDecisions: Record<string, AiConversationMapDecision>;
+  collapsedMapNodeIds: string[];
+  detachedMapNodeIds: string[];
   setHasHydrated: (value: boolean) => void;
   addUserMessage: (content: string, branchParentMessageId?: string | null) => AiProfessorMessage;
   addAssistantMessage: (response: GrowthProfessorResponse) => AiProfessorMessage;
@@ -41,6 +52,16 @@ type AiProfessorState = {
   removeGrowthNote: (id: string) => void;
   setMapDecision: (messageId: string, decision: AiConversationMapDecision) => void;
   clearMapDecision: (messageId: string) => void;
+  toggleCollapsedMapNode: (messageId: string) => void;
+  collapseMapNode: (messageId: string) => void;
+  expandMapNode: (messageId: string) => void;
+  clearCollapsedMapNode: (messageId: string) => void;
+  clearCollapsedMapNodes: () => void;
+  detachMapNode: (messageId: string) => void;
+  attachMapNode: (messageId: string) => void;
+  clearDetachedMapNodes: () => void;
+  hideMapBranch: (messageId: string) => void;
+  restoreMapBranch: (messageId: string) => void;
   clearConversation: () => void;
   clearGrowthNotes: () => void;
 };
@@ -128,6 +149,8 @@ export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get)
   messages: [],
   growthNotes: [],
   mapDecisions: {},
+  collapsedMapNodeIds: [],
+  detachedMapNodeIds: [],
   setHasHydrated: (hasHydrated) => set({ hasHydrated }),
   addUserMessage: (content, branchParentMessageId = null) => {
     const message: AiProfessorMessage = {
@@ -139,7 +162,20 @@ export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get)
       reflection: null,
       suggestedPrompts: [],
     };
-    set((state) => ({ messages: [...state.messages, message].slice(-MAX_MESSAGES) }));
+    set((state) => {
+      const previousMessages = [...state.messages, message];
+      const messages = previousMessages.slice(-MAX_MESSAGES);
+      return {
+        messages,
+        ...reconcileConversationMapStateAfterTrim({
+          previousMessages,
+          nextMessages: messages,
+          mapDecisions: state.mapDecisions,
+          collapsedMapNodeIds: state.collapsedMapNodeIds,
+          detachedMapNodeIds: state.detachedMapNodeIds,
+        }),
+      };
+    });
     return message;
   },
   addAssistantMessage: (response) => {
@@ -153,9 +189,22 @@ export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get)
         title: trimText(response.reflection.title, 80),
         body: trimMultilineText(response.reflection.body, 180),
       },
-      suggestedPrompts: response.suggestedPrompts.map((item) => trimText(item, 40)),
+      suggestedPrompts: normalizeGrowthProfessorSuggestions(response.suggestedPrompts),
     };
-    set((state) => ({ messages: [...state.messages, message].slice(-MAX_MESSAGES) }));
+    set((state) => {
+      const previousMessages = [...state.messages, message];
+      const messages = previousMessages.slice(-MAX_MESSAGES);
+      return {
+        messages,
+        ...reconcileConversationMapStateAfterTrim({
+          previousMessages,
+          nextMessages: messages,
+          mapDecisions: state.mapDecisions,
+          collapsedMapNodeIds: state.collapsedMapNodeIds,
+          detachedMapNodeIds: state.detachedMapNodeIds,
+        }),
+      };
+    });
     return message;
   },
   saveReflection: (messageId) => {
@@ -181,6 +230,8 @@ export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get)
     return {
       messages: state.messages.filter((message) => !removedMessageIds.has(message.id)),
       mapDecisions,
+      collapsedMapNodeIds: state.collapsedMapNodeIds.filter((id) => !removedMessageIds.has(id)),
+      detachedMapNodeIds: state.detachedMapNodeIds.filter((id) => !removedMessageIds.has(id)),
     };
   }),
   removeGrowthNote: (id) => set((state) => ({
@@ -194,17 +245,58 @@ export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get)
     delete mapDecisions[messageId];
     return { mapDecisions };
   }),
-  clearConversation: () => set({ messages: [], mapDecisions: {} }),
+  toggleCollapsedMapNode: (messageId) => set((state) => ({
+    collapsedMapNodeIds: state.collapsedMapNodeIds.includes(messageId)
+      ? state.collapsedMapNodeIds.filter((id) => id !== messageId)
+      : [...state.collapsedMapNodeIds, messageId],
+  })),
+  collapseMapNode: (messageId) => set((state) => ({
+    collapsedMapNodeIds: state.collapsedMapNodeIds.includes(messageId)
+      ? state.collapsedMapNodeIds
+      : [...state.collapsedMapNodeIds, messageId],
+  })),
+  expandMapNode: (messageId) => set((state) => ({
+    collapsedMapNodeIds: state.collapsedMapNodeIds.filter((id) => id !== messageId),
+  })),
+  clearCollapsedMapNode: (messageId) => set((state) => ({
+    collapsedMapNodeIds: state.collapsedMapNodeIds.filter((id) => id !== messageId),
+  })),
+  clearCollapsedMapNodes: () => set({ collapsedMapNodeIds: [] }),
+  detachMapNode: (messageId) => set((state) => ({
+    detachedMapNodeIds: state.detachedMapNodeIds.includes(messageId)
+      ? state.detachedMapNodeIds
+      : [...state.detachedMapNodeIds, messageId],
+  })),
+  attachMapNode: (messageId) => set((state) => ({
+    detachedMapNodeIds: state.detachedMapNodeIds.filter((id) => id !== messageId),
+  })),
+  clearDetachedMapNodes: () => set({ detachedMapNodeIds: [] }),
+  hideMapBranch: (messageId) => set((state) => hideConversationMapBranchState(state, messageId)),
+  restoreMapBranch: (messageId) => set((state) => restoreConversationMapBranchState(state, messageId)),
+  clearConversation: () => set({
+    messages: [],
+    mapDecisions: {},
+    collapsedMapNodeIds: [],
+    detachedMapNodeIds: [],
+  }),
   clearGrowthNotes: () => set({ growthNotes: [] }),
 }), {
   name: "major-evolution-ai-professor-v1",
-  version: 3,
+  version: 7,
   storage: createJSONStorage(() => localStorage),
   skipHydration: true,
-  partialize: ({ messages, growthNotes, mapDecisions }) => ({
+  partialize: ({
     messages,
     growthNotes,
     mapDecisions,
+    collapsedMapNodeIds,
+    detachedMapNodeIds,
+  }) => ({
+    messages,
+    growthNotes,
+    mapDecisions,
+    collapsedMapNodeIds,
+    detachedMapNodeIds,
   }),
   migrate: (persistedState) => {
     const state = persistedState as Partial<AiProfessorState> | undefined;
@@ -215,12 +307,21 @@ export const useAiProfessorStore = create<AiProfessorState>()(persist((set, get)
           branchParentMessageId: typeof message.branchParentMessageId === "string"
             ? message.branchParentMessageId
             : null,
+          suggestedPrompts: message.role === "assistant"
+            ? normalizeGrowthProfessorSuggestions(message.suggestedPrompts)
+            : [],
         }))
         : [],
       growthNotes: Array.isArray(state?.growthNotes) ? state.growthNotes : [],
       mapDecisions: state?.mapDecisions && typeof state.mapDecisions === "object"
         ? state.mapDecisions
         : {},
+      collapsedMapNodeIds: Array.isArray(state?.collapsedMapNodeIds)
+        ? state.collapsedMapNodeIds.filter((id): id is string => typeof id === "string")
+        : [],
+      detachedMapNodeIds: Array.isArray(state?.detachedMapNodeIds)
+        ? state.detachedMapNodeIds.filter((id): id is string => typeof id === "string")
+        : [],
     };
   },
   onRehydrateStorage: () => (state) => state?.setHasHydrated(true),

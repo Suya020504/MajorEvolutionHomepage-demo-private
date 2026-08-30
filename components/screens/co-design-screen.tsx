@@ -262,7 +262,7 @@ export function CoDesignScreen() {
           <Image src={guideCharacter.makeLab} alt="" width={38} height={38} unoptimized />
         </div>
       )}
-      className="research-screen co-design-screen"
+      className={`research-screen co-design-screen co-design-mode-${ideaMode}`}
     >
       <section className="co-desktop-studio" aria-label="AI 공동설계 스튜디오">
         <div className="co-studio-context" aria-label="현재 프로젝트 맥락">
@@ -355,7 +355,9 @@ export function CoDesignScreen() {
                   value={custom}
                   maxLength={160}
                   rows={4}
-                  placeholder="자유롭게 답변을 입력해 주세요."
+                  placeholder={question.id === "problem"
+                    ? "문제를 해결하고자 하는 대상이 겪는 어려움을 짧게 적어 주세요."
+                    : "자유롭게 답변을 입력해 주세요."}
                   onChange={(event) => {
                     setCustom(event.target.value);
                     if (event.target.value) setSelected("");
@@ -528,7 +530,9 @@ export function CoDesignScreen() {
               <input
                 value={custom}
                 maxLength={160}
-                placeholder="관찰한 문제나 원하는 방향을 짧게 적어 주세요"
+                placeholder={question.id === "problem"
+                  ? "문제를 해결하고자 하는 대상이 겪는 어려움을 짧게 적어 주세요"
+                  : "관찰한 문제나 원하는 방향을 짧게 적어 주세요"}
                 onChange={(event) => {
                   setCustom(event.target.value);
                   if (event.target.value) setSelected("");

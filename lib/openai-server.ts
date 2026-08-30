@@ -18,9 +18,10 @@ import type {
   ProfessorMatch,
   ProfessorMatchTopic,
 } from "@/lib/professor-domain";
-import type {
-  GrowthProfessorRequest,
-  GrowthProfessorResponse,
+import {
+  normalizeGrowthProfessorSuggestions,
+  type GrowthProfessorRequest,
+  type GrowthProfessorResponse,
 } from "@/lib/ai-growth-professor";
 
 const OPENAI_URL = "https://api.openai.com/v1/responses";
@@ -49,9 +50,18 @@ const growthProfessorSchema = {
     },
     suggestedPrompts: {
       type: "array",
-      minItems: 4,
-      maxItems: 4,
-      items: { type: "string", minLength: 1, maxLength: 40 },
+      minItems: 3,
+      maxItems: 3,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          text: { type: "string", minLength: 1, maxLength: 40 },
+          kind: { type: "string", enum: ["continue", "branch"] },
+          axis: { type: "string", enum: ["clarify", "evidence_action", "alternative"] },
+        },
+        required: ["text", "kind", "axis"],
+      },
     },
   },
   required: ["reply", "reflection", "suggestedPrompts"],
@@ -1112,11 +1122,14 @@ reply는 220자 이내, 2~4개의 짧은 문장으로 작성하고 문장마다 
 4. 이어갈 질문: 마지막에는 두 방법 중 어디부터 볼지 질문 하나만 물으세요. 한 번에 여러 질문을 묻지 마세요.
 입력에 없는 성격, 적성, 성과, 교수의 의도, 지도 가능성, 프로젝트 성공 가능성을 만들지 마세요. 최신 사실이나 공식 제도 확인이 필요한 사안은 학교 공식 안내나 실제 교수에게 확인하라고 구분하세요.
 reflection은 학생이 직접 저장할 수 있는 짧은 성장 메모 후보입니다. title은 24자 이내의 명사형으로 쓰고, body는 '현재 고민:', '시도할 방향:', '다음 행동:'을 각각 한 문장으로 적으세요. 확정적 평가나 입력에 없는 사실을 넣지 마세요.
-suggestedPrompts는 현재 답변에서 새 가지로 이어질 서로 다른 짧은 말 네 개를 아래 순서대로 쓰세요. 학생이 직접 말하는 10~24자의 자연스러운 존댓말로 작성하고, 같은 제안을 표현만 바꿔 반복하지 마세요.
-1. 비교하기: 두 선택이나 기준을 쉽게 비교해 달라는 말
-2. 필요한 준비: 필요한 정보나 준비를 확인해 달라는 말
-3. 직접 해보기: 작은 경험이나 다음 행동을 정해 달라는 말
-4. 교수님께 묻기: 실제 교수님께 드릴 질문을 만들어 달라는 말
+suggestedPrompts는 학생이 다음에 실제로 물어볼 짧은 질문 세 개입니다. 학생이 직접 말하는 10~24자의 자연스러운 존댓말로 작성하세요. 답을 이미 아는 사람처럼 제안하거나 다짐하지 말고, 대학생이 모르는 것을 묻는 문장으로 만드세요.
+세 문장은 반드시 물음표로 끝내고, '해볼게요', '정리할래요', '만들어볼래요' 같은 제안·다짐형 표현을 쓰지 마세요. 같은 질문을 표현만 바꿔 반복하지 마세요.
+앞의 두 개는 현재 답변을 자연스럽게 이어가는 질문으로 만들고 kind는 반드시 'continue'로 쓰세요.
+첫 번째는 axis를 'clarify'로 쓰고 현재 답변의 의미나 차이를 더 이해하는 질문으로 만드세요.
+두 번째는 axis를 'evidence_action'으로 쓰고 필요한 자료·근거·방법·다음 행동을 확인하는 질문으로 만드세요.
+세 번째는 axis를 'alternative'로 쓰고 현재 전제·목표·기준과 실제로 다른 관점을 묻는 질문으로 만드세요. 세 번째도 기본값은 'continue'입니다. 다른 관점이 자연스럽게 생기지 않으면 현재 답변을 더 깊게 잇는 질문으로 만드세요.
+세 번째가 현재 답변의 핵심 질문에서 벗어나 별도의 목표·비교 기준·관점으로 돌아가야 할 때만 kind를 'branch'로 쓰세요. 필요한 자료, 설명 구체화, 예시, 바로 할 행동처럼 현재 답변을 깊게 잇는 질문은 'branch'가 아닙니다.
+갈래 여부를 문장에 직접 설명하지 말고 text에는 학생이 실제로 누를 질문만 적으세요.
 입력:
 ${input}`;
 
@@ -1128,8 +1141,8 @@ ${input}`;
   if (!isRecord(data) || !isRecord(data.reflection)) {
     throw new AiServiceError("invalid_output", "AI 성장 대화 결과가 올바르지 않습니다.", 502);
   }
-  const suggestedPrompts = readStringArray(data.suggestedPrompts, "suggestedPrompts");
-  if (suggestedPrompts.length !== 4) {
+  const suggestedPrompts = normalizeGrowthProfessorSuggestions(data.suggestedPrompts);
+  if (suggestedPrompts.length !== 3) {
     throw new AiServiceError("invalid_output", "이어갈 질문이 올바르지 않습니다.", 502);
   }
   return {
@@ -1139,10 +1152,9 @@ ${input}`;
       body: readString(data.reflection.body, "reflection.body").slice(0, 180),
     },
     suggestedPrompts: [
-      suggestedPrompts[0].slice(0, 40),
-      suggestedPrompts[1].slice(0, 40),
-      suggestedPrompts[2].slice(0, 40),
-      suggestedPrompts[3].slice(0, 40),
+      suggestedPrompts[0],
+      suggestedPrompts[1],
+      suggestedPrompts[2],
     ],
     generatedAt: new Date().toISOString(),
     model,

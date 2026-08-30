@@ -8,6 +8,7 @@ import {
   Bookmark,
   Check,
   ChevronRight,
+  Info,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import { ServiceHelpGuide } from "@/components/app/service-help-guide";
 import { SideNav } from "@/components/app/side-nav";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { brandLogo } from "@/lib/brand-assets";
+import { backLabelForDestination, resolveBackNavigation } from "@/lib/navigation-flow";
 
 export function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -212,6 +214,7 @@ export function AppShell({
   children,
   title,
   backHref,
+  backLabel,
   onBack,
   step,
   stickyAction,
@@ -224,6 +227,7 @@ export function AppShell({
   children: ReactNode;
   title?: string;
   backHref?: string;
+  backLabel?: string;
   onBack?: () => void;
   step?: { current: number; total: number };
   stickyAction?: ReactNode;
@@ -235,6 +239,20 @@ export function AppShell({
   className?: string;
 }) {
   const router = useRouter();
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+
+    const navigation = resolveBackNavigation(backHref);
+    if (navigation?.mode === "back") {
+      router.back();
+    } else if (navigation?.mode === "replace") {
+      router.replace(navigation.href);
+    }
+  };
+
   return (
     <>
     {showSideNav && <SideNav />}
@@ -243,6 +261,16 @@ export function AppShell({
         <header className="service-tab-header" aria-label="서비스 공통 메뉴">
           <BrandLogo href="/home" compact className="service-tab-header__brand" />
           <div className="service-tab-header__actions">
+            <Link
+              href="/welcome"
+              className="service-tab-header__intro"
+              aria-label="서비스 소개"
+              title="서비스 소개"
+            >
+              <Info size={18} aria-hidden="true" />
+              <span className="service-tab-header__intro-long">서비스 소개</span>
+              <span className="service-tab-header__intro-short" aria-hidden="true">소개</span>
+            </Link>
             <ServiceHelpGuide placement="header" />
             <Link
               href="/profile"
@@ -260,7 +288,7 @@ export function AppShell({
         <header className="top-app-bar">
           <div className="top-app-bar__side">
             {(backHref || onBack) && (
-              <IconButton label="이전 화면" onClick={() => onBack ? onBack() : backHref === "back" ? router.back() : router.push(backHref!)}>
+              <IconButton label={backLabel ?? backLabelForDestination(backHref)} onClick={handleBack}>
                 <ArrowLeft size={21} aria-hidden="true" />
               </IconButton>
             )}

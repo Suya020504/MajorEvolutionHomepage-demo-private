@@ -410,7 +410,7 @@ export function ProfessorTutorialScreen({
           <div><dt>전공</dt><dd>{context.college} · {context.major}</dd></div>
           <div><dt>관심 분야</dt><dd>{context.interests.join(" · ")}</dd></div>
         </dl>
-        <div className={styles.sourcePromise}><ShieldCheck size={18} /><span>교수님께 자동으로 연락하지 않아요. 연결 이유를 확인한 뒤 최종 선택은 직접 할 수 있어요.</span></div>
+        <div className={styles.sourcePromise}><ShieldCheck size={18} /><span>공식 정보에서 연결 이유를 살펴보고, 대화하고 싶은 교수를 골라보세요.</span></div>
       </div>
     );
   };

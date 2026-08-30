@@ -1,3 +1,12 @@
+.meetingShell {
+  --brand-purple: #e86c4d;
+  --brand-violet-soft: #fff0e9;
+  --service-stage-accent: #e86c4d;
+  background: #fff8f3;
+}
+
+.meetingShell :global(.screen-content) { background: transparent; }
+
 .journey {
   container-name: meeting-journey;
   container-type: inline-size;

@@ -19,6 +19,7 @@ import {
   SERVICE_NAV_GUIDE_QUERY_PARAM,
   SERVICE_NAV_GUIDE_QUERY_VALUE,
   SERVICE_NAV_GUIDE_STORAGE_KEY,
+  projectExecutionTabHref,
 } from "@/lib/service-navigation";
 import { useProfileStore } from "@/store/profile-store";
 import { useResearchStore } from "@/store/research-store";
@@ -37,8 +38,8 @@ export const NAV_ITEMS = [
   { href: "/home", section: "/home", label: "홈", shortLabel: "홈", icon: Home },
   { href: "/home?professor=quick", section: "/professors", label: "교수 매칭", shortLabel: "매칭", icon: CompassIcon },
   { href: "/quest", section: "/quest", label: "교수 만남 준비", shortLabel: "만남", icon: MessagesSquare },
-  { href: "/home?project=quick", section: "/research", label: "AI 프로젝트 설계", shortLabel: "프로젝트", icon: FlaskConical },
-  { href: "/project-professors", section: "/project-professors", label: "맞춤 교수 추천", shortLabel: "추천", icon: GraduationCap },
+  { href: "/research", section: "/research", label: "AI 프로젝트 설계", shortLabel: "프로젝트", icon: FlaskConical },
+  { href: "/project-professors", section: "/project-professors", label: "프로젝트 실행", shortLabel: "실행", icon: GraduationCap },
   { href: "/portfolio", section: "/portfolio", label: "나의 성장과정", shortLabel: "성장", icon: TrendingUp },
 ] as const;
 
@@ -79,43 +80,28 @@ function useProfessorTabHref() {
   return canOpenProfessorHome ? "/professors" : "/home?professor=quick";
 }
 
-function useProjectTabHref(): "/home?project=quick" | "/research" | "/co-design" | "/result" {
+function useProjectExecutionTabHref(): "/project-professors" | "/project-execution" {
   const hasHydrated = useResearchStore((state) => state.hasHydrated);
-  const result = useResearchStore((state) => state.result);
-  const ideaMode = useResearchStore((state) => state.ideaMode);
-  const conditions = useResearchStore((state) => state.conditions);
-  const hasSavedDraft = Boolean(
-    ideaMode
-    || conditions.majorArea
-    || conditions.major
-    || conditions.interests.length
-    || conditions.methods.length,
-  );
-  const hasCompleteSetup = Boolean(
-    ideaMode
-    && conditions.school.trim()
-    && conditions.majorArea
-    && conditions.major?.trim()
-    && conditions.interests.length
-    && conditions.experience
-    && conditions.methods.length
-    && conditions.period
-    && conditions.dataAccess,
-  );
-
-  if (!hasHydrated) return "/home?project=quick";
-  if (result) return "/result";
-  if (hasCompleteSetup) return "/co-design";
-  return hasSavedDraft ? "/research" : "/home?project=quick";
+  const selectedTopicId = useResearchStore((state) => state.selectedTopicId);
+  const projectProfessorMatchTopicId = useResearchStore((state) => state.projectProfessorMatchTopicId);
+  const selectedProjectProfessorId = useResearchStore((state) => state.selectedProjectProfessorId);
+  const projectProfessorMatches = useResearchStore((state) => state.projectProfessorMatches);
+  return projectExecutionTabHref({
+    hasHydrated,
+    selectedTopicId,
+    projectProfessorMatchTopicId,
+    selectedProjectProfessorId,
+    availableProfessorIds: projectProfessorMatches.map((match) => match.professor.id),
+  });
 }
 
 function navigationHref(
   item: (typeof NAV_ITEMS)[number],
   professorTabHref: "/professors" | "/home?professor=quick",
-  projectTabHref: "/home?project=quick" | "/research" | "/co-design" | "/result",
+  projectExecutionHref: "/project-professors" | "/project-execution",
 ) {
   if (item.section === "/professors") return professorTabHref;
-  if (item.section === "/research") return projectTabHref;
+  if (item.section === "/project-professors") return projectExecutionHref;
   return item.href;
 }
 
@@ -161,7 +147,7 @@ function ServiceBottomNavContent() {
   const forcedGuideRef = useRef(false);
   const guide = SERVICE_GUIDE_STEPS[guideStep];
   const professorTabHref = useProfessorTabHref();
-  const projectTabHref = useProjectTabHref();
+  const projectExecutionHref = useProjectExecutionTabHref();
 
   const finishGuide = useCallback(() => {
     forcedGuideRef.current = false;
@@ -265,7 +251,7 @@ function ServiceBottomNavContent() {
     >
       {NAV_ITEMS.map((item, index) => {
         const Icon = item.icon;
-        const href = navigationHref(item, professorTabHref, projectTabHref);
+        const href = navigationHref(item, professorTabHref, projectExecutionHref);
         const isActive = active === item.section;
         const journey = navigationJourney(item.section);
         const isGuideTarget = guideOpen && guideStep === index;
@@ -379,7 +365,7 @@ function SideNavContent() {
   const forcedGuideRef = useRef(false);
   const guide = SERVICE_GUIDE_STEPS[guideStep];
   const professorTabHref = useProfessorTabHref();
-  const projectTabHref = useProjectTabHref();
+  const projectExecutionHref = useProjectExecutionTabHref();
   const hasProfileHydrated = useProfileStore((state) => state.hasHydrated);
   const hasEnteredService = useProfileStore((state) => state.hasEnteredService);
   const markServiceEntered = useProfileStore((state) => state.markServiceEntered);
@@ -497,7 +483,7 @@ function SideNavContent() {
       <ul>
         {NAV_ITEMS.map((item, index) => {
           const Icon = item.icon;
-          const href = navigationHref(item, professorTabHref, projectTabHref);
+          const href = navigationHref(item, professorTabHref, projectExecutionHref);
           const isActive = active === item.section;
           const journey = navigationJourney(item.section);
           const isGuideTarget = guideOpen && guideStep === index;
@@ -589,7 +575,6 @@ function SideNavContent() {
         })}
       </ul>
       <div className="side-nav__footer">
-        <p className="side-nav__note">연락과 면담은 학생이 직접 진행합니다.</p>
         <Link
           href="/profile"
           className={`side-nav__profile${active === "/profile" ? " is-active" : ""}`}

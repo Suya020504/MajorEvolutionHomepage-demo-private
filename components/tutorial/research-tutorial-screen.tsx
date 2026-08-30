@@ -27,6 +27,7 @@ import {
   MAJOR_AREAS,
   MAJOR_SUGGESTIONS,
   UNIVERSAL_INTEREST_TAGS,
+  mergeAcademicProfileDefaults,
   type MajorArea,
 } from "@/data/academic-options";
 import { IDEA_MODES, modeById, type IdeaMode } from "@/data/co-design";
@@ -83,7 +84,7 @@ type StepCopy = {
 const STEP_COPY: Record<TutorialStep, StepCopy> = {
   welcome: {
     title: "나만의 프로젝트를 AI와 설계해 볼까요?",
-    description: "지금 편한 방식을 골라 시작하세요. 진행 중인 답은 이 브라우저에 자동으로 저장돼요.",
+    description: "AI가 필요한 조건만 한 단계씩 물어보고, 저장된 답은 자동으로 건너뛰어요.",
   },
   major: {
     title: "지금 공부하고 있는 전공은 무엇인가요?",
@@ -286,7 +287,7 @@ export function ResearchTutorialScreen({
   const TutorialMain = presentation === "page" ? "main" : "div";
   const topRef = useRef<HTMLDivElement>(null);
   const markServiceEntered = useProfileStore((state) => state.markServiceEntered);
-  const profileSchool = useProfileStore((state) => state.profile.school);
+  const profile = useProfileStore((state) => state.profile);
   const hasHydrated = useResearchStore((state) => state.hasHydrated);
   const storedConditions = useResearchStore((state) => state.conditions);
   const storedIdeaMode = useResearchStore((state) => state.ideaMode);
@@ -311,13 +312,12 @@ export function ResearchTutorialScreen({
     const saved = fromFullForm
       ? null
       : restoreDraft(browserStorage()?.getItem(STORAGE_KEY) ?? "");
-    const conditionsWithKnownSchool = storedConditions.school.trim()
-      ? storedConditions
-      : { ...storedConditions, school: profileSchool };
-    setDraft(saved ?? createDraft(conditionsWithKnownSchool, storedIdeaMode));
+    const academicDefaults = mergeAcademicProfileDefaults(storedConditions, profile);
+    const conditionsWithProfile = { ...storedConditions, ...academicDefaults };
+    setDraft(saved ?? createDraft(conditionsWithProfile, storedIdeaMode));
     if (fromFullForm) window.history.replaceState(null, "", window.location.pathname);
     setReady(true);
-  }, [hasHydrated, profileSchool, ready, storedConditions, storedIdeaMode]);
+  }, [hasHydrated, profile, ready, storedConditions, storedIdeaMode]);
 
   useEffect(() => {
     if (!ready || submitting) return;
@@ -392,10 +392,10 @@ export function ResearchTutorialScreen({
     if (index < ALL_STEPS.length - 1) goTo(ALL_STEPS[index + 1]);
   };
 
-  const switchToFullForm = () => {
+  const openConditionEditor = () => {
     saveIdeaDraft({ ideaMode: draft.ideaMode, conditions: draft.conditions });
     browserStorage()?.setItem(STORAGE_KEY, JSON.stringify(draft));
-    router.push("/research");
+    router.push("/research/conditions?view=review");
   };
 
   const addCustomInterest = () => {
@@ -470,28 +470,24 @@ export function ResearchTutorialScreen({
         <div className={styles.welcome}>
           <div className={styles.promiseList}>
             <p><Sparkles size={19} /> 가능한 후보 2개와 비교 근거를 만들어요.</p>
-            <p><ShieldCheck size={19} /> 두 방식 모두 자동 저장되며 언제든 바꿀 수 있어요.</p>
+            <p><ShieldCheck size={19} /> 답변은 자동 저장되고 최종 확인에서 다시 고칠 수 있어요.</p>
           </div>
           <div className={styles.pathGrid} data-service-help="research-actions">
             <button type="button" className={`${styles.pathCard} ${styles.pathCardPrimary}`} onClick={startGuided}>
               <span className={styles.pathIcon}><Route size={25} /></span>
               <span className={styles.pathCopy}>
-                <small>{completedInputSteps ? `${completedInputSteps}/${totalInputSteps}개 답변 저장됨` : "처음 시작하거나 아직 막막하다면"}</small>
-                <strong>{completedInputSteps ? "한 단계씩 이어가기" : "한 단계씩 질문받기"}</strong>
-                <span>전공부터 기간까지 한 번에 하나씩 정리해요.</span>
-              </span>
-              <ArrowRight size={20} aria-hidden="true" />
-            </button>
-            <button type="button" className={styles.pathCard} onClick={switchToFullForm}>
-              <span className={styles.pathIcon}><SlidersHorizontal size={25} /></span>
-              <span className={styles.pathCopy}>
-                <small>이미 생각해 둔 조건이 있다면</small>
-                <strong>한 화면에서 직접 입력</strong>
-                <span>전체 조건을 펼쳐 놓고 원하는 순서로 조정해요.</span>
+                <small>{completedInputSteps ? `${completedInputSteps}/${totalInputSteps}개 조건 확인됨` : "처음 시작해도 괜찮아요"}</small>
+                <strong>{completedInputSteps ? "이어서 설계하기" : "프로젝트 설계 시작하기"}</strong>
+                <span>{completedInputSteps ? "남은 조건부터 이어가거나 최종 내용을 확인해요." : "전공부터 기간까지 필요한 내용만 하나씩 정리해요."}</span>
               </span>
               <ArrowRight size={20} aria-hidden="true" />
             </button>
           </div>
+          {completedInputSteps ? (
+            <button type="button" className={styles.conditionEditorLink} onClick={openConditionEditor}>
+              <SlidersHorizontal size={17} /> 저장된 조건 빠르게 수정
+            </button>
+          ) : null}
           {result ? (
             <Link href="/result" className={styles.resumeResult}>
               <Lightbulb size={19} /> 기존 프로젝트 결과 이어보기 <ChevronRight size={17} />
@@ -711,7 +707,7 @@ export function ResearchTutorialScreen({
         ))}
         <div className={styles.trustNote}>
           <ShieldCheck size={20} />
-          <p>AI 제안은 정답이 아니며, 최종 선택은 학생이 직접 해요.</p>
+          <p>AI 제안에서 마음에 드는 방향을 고르고, 필요한 부분을 직접 다듬어 이어가세요.</p>
         </div>
       </div>
     );
@@ -730,7 +726,7 @@ export function ResearchTutorialScreen({
         )}
         <div className={styles.headerActions}>
           {step !== "welcome" ? (
-            <button type="button" onClick={() => goTo("welcome")}>방식 바꾸기</button>
+            <button type="button" onClick={() => goTo("welcome")}>시작 화면</button>
           ) : null}
           {presentation !== "page" ? (
             <button

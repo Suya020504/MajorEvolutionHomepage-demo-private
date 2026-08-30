@@ -10,6 +10,7 @@ const entryGate = source("components/landing/entry-gate.tsx");
 const profileStore = source("store/profile-store.ts");
 const profileScreen = source("components/screens/profile-screen.tsx");
 const sideNav = source("components/app/side-nav.tsx");
+const primitives = source("components/app/primitives.tsx");
 const landing = source("components/landing/landing-page.tsx");
 const landingProductPreview = source("components/landing/landing-product-preview.tsx");
 const landingProductPreviewStyles = source("components/landing/landing-product-preview.module.css");
@@ -75,18 +76,20 @@ test("마이페이지 정보는 브라우저 로컬 저장소에만 보존한다
   assert.match(profileScreen, /내 정보 저장/);
 });
 
-test("좌측 하단 프로필과 랜딩 다시 보기 경로가 분리되어 있다", () => {
+test("좌측 하단 프로필과 공통 헤더 서비스 소개 경로가 분리되어 있다", () => {
   assert.match(sideNav, /side-nav__footer/);
   assert.match(sideNav, /href="\/profile"/);
   assert.match(sideNav, /href="\/home"/);
-  assert.match(profileScreen, /href="\/welcome"/);
+  assert.match(primitives, /href="\/welcome"/);
+  assert.doesNotMatch(profileScreen, /href="\/welcome"/);
   assert.match(welcomePage, /<LandingPage \/>/);
 });
 
-test("내 기록 관리는 성장 허브가 아니라 마이페이지에서 진입한다", () => {
+test("내 기록 관리는 성장 허브가 아니라 마이페이지 출처를 보존해 진입한다", () => {
   assert.doesNotMatch(portfolioHub, /내 기록 관리/);
-  assert.match(profileScreen, /href="\/portfolio\/manage"/);
+  assert.match(profileScreen, /href="\/portfolio\/manage\?from=profile"/);
   assert.match(profileScreen, /내 기록 관리/);
   assert.match(profileScreen, /저장한 기록을 백업하거나 필요한 항목만 직접 정리해요/);
-  assert.match(recordsPage, /backHref="\/profile"/);
+  assert.match(recordsPage, /searchParams: Promise<\{ from\?: string \}>/);
+  assert.match(recordsPage, /portfolioManageReturnHref\(from\)/);
 });
