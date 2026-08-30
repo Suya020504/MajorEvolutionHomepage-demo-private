@@ -91,11 +91,13 @@ test("성장 메모와 이어갈 말도 짧고 학생이 직접 말하는 형식
   assert.match(server, /title은 24자 이내의 명사형/);
   assert.match(server, /학생이 직접 말하는 10~24자의 자연스러운 존댓말/);
   assert.match(server, /body: \{ type: "string", minLength: 1, maxLength: 180 \}/);
-  assert.match(server, /items: \{ type: "string", minLength: 1, maxLength: 40 \}/);
+  assert.match(server, /minItems: 3/);
+  assert.match(server, /maxItems: 3/);
+  assert.match(server, /kind: \{ type: "string", enum: \["continue", "branch"\] \}/);
   assert.match(store, /function trimMultilineText/);
   assert.match(store, /content: trimMultilineText\(response\.reply, 220\)/);
   assert.match(store, /body: trimMultilineText\(response\.reflection\.body, 180\)/);
-  assert.match(store, /response\.suggestedPrompts\.map\(\(item\) => trimText\(item, 40\)\)/);
+  assert.match(store, /normalizeGrowthProfessorSuggestions\(response\.suggestedPrompts\)/);
 });
 
 test("긴 대화와 실제 원문에 근거한 대화 지도를 오갈 수 있다", () => {
@@ -125,7 +127,7 @@ test("긴 대화와 실제 원문에 근거한 대화 지도를 오갈 수 있�
   assert.match(conversationMap, /선택한 갈림길/);
   assert.match(conversationMap, /다음 발걸음/);
   assert.match(conversationMap, /대화가 깊어지면 새 질문은 옆 가지로 자라요/);
-  assert.match(conversationMap, /data-branching=\{children\.length > 1/);
+  assert.match(conversationMap, /data-branching=\{originalChildCount > 1/);
   assert.match(screenStyles, /\.mapNode\[data-branching="true"\]/);
 });
 
@@ -168,16 +170,52 @@ test("홈에서 실제 AI 대화 지도 요약을 확인하고 전체 지도 탭
   assert.match(homeStyles, /\.aiMapNode \{[\s\S]*?margin-inline: auto/);
 });
 
-test("사용자가 핵심 흐름을 남기거나 제외해도 원문 대화는 보존한다", () => {
+test("사용자가 선택한 카드에서 하위 가지를 접거나 숨기고 다시 복원한다", () => {
   assert.match(conversationMap, /핵심으로 남기기/);
-  assert.match(conversationMap, /지도에서 제외/);
+  assert.match(conversationMap, /하위 가지 접기/);
+  assert.match(conversationMap, /하위 가지 펼치기/);
+  assert.match(conversationMap, /이 가지 숨기기/);
+  assert.match(conversationMap, /숨긴 가지 \{archivedRoots\.length\}개/);
+  assert.match(conversationMap, /지도에 복원/);
+  assert.match(conversationMap, /getRenderableConversationMapNodes/);
+  assert.match(conversationMap, /getConversationSubtreeIds/);
+  assert.match(conversationMap, /visibleNodes\.some\(\(node\) => node\.id === selectedId\)/);
   assert.match(conversationMap, /원문 대화는 삭제되지 않아요/);
   assert.match(conversationMap, /나의 성장과정에 반영하기/);
   assert.match(store, /mapDecisions/);
+  assert.match(store, /collapsedMapNodeIds/);
   assert.match(store, /setMapDecision/);
   assert.match(store, /clearMapDecision/);
-  assert.match(store, /version: 3/);
+  assert.match(store, /toggleCollapsedMapNode/);
+  assert.match(store, /clearCollapsedMapNode/);
+  assert.match(store, /version: 7/);
   assert.match(store, /migrate:/);
+  assert.match(screenStyles, /\.mapArchiveDrawer/);
+  assert.match(screenStyles, /\.mapArchiveButton/);
+});
+
+test("선택한 카드의 가지를 독립 루트로 분리하고 원래 위치로 되돌린다", () => {
+  assert.match(conversationMap, /applyConversationMapDetachments\(originalNodes, detachedMapNodeIds\)/);
+  assert.match(conversationMap, /이 가지 분리/);
+  assert.match(conversationMap, /원래 위치로 되돌리기/);
+  assert.match(conversationMap, /분리된 가지/);
+  assert.match(conversationMap, /onDetachMapNode/);
+  assert.match(conversationMap, /onAttachMapNode/);
+  assert.match(conversationMap, /data-multiple-roots/);
+  assert.match(screen, /detachedMapNodeIds=\{detachedMapNodeIds\}/);
+  assert.match(screen, /onDetachMapNode=\{detachMapNode\}/);
+  assert.match(screen, /onAttachMapNode=\{attachMapNode\}/);
+  assert.match(screenStyles, /\.detachedNodeBadge/);
+  assert.match(screenStyles, /\.mapTree\[data-multiple-roots="true"\]/);
+});
+
+test("생각 지도는 70에서 130퍼센트까지 확대·축소하고 100퍼센트로 돌아간다", () => {
+  assert.match(conversationMap, /Math\.min\(130, Math\.max\(70, nextZoom\)\)/);
+  assert.match(conversationMap, /aria-label="생각 지도 축소"/);
+  assert.match(conversationMap, /aria-label="생각 지도 확대"/);
+  assert.match(conversationMap, /100퍼센트로 되돌리기/);
+  assert.match(conversationMap, /style=\{\{ zoom: mapZoom \/ 100/);
+  assert.match(screenStyles, /\.mapZoomControls/);
 });
 
 test("과거 노드에서 새 갈래를 시작하고 트리에서 여러 자식 흐름을 확인한다", () => {
@@ -190,23 +228,30 @@ test("과거 노드에서 새 갈래를 시작하고 트리에서 여러 자식 
   assert.match(conversationMapModel, /getConversationMapRoots/);
   assert.match(screen, /선택한 대화에서 이어가는 중/);
   assert.match(screen, /branchOrigin/);
-  assert.match(screen, /hasBranchChoices/);
-  assert.match(screen, /새 대화 갈래 후보/);
+  assert.match(screen, /suggestion\.kind === "branch"/);
+  assert.match(screen, /새 대화 갈래 시작/);
   assert.match(screen, /lastMessage\?\.role === "assistant"/);
-  assert.match(screen, /Array\.from\(new Set/);
   assert.match(screen, /messages\.length === 0[\s\S]*?QUICK_PROMPTS/);
-  assert.match(screen, /parentId: suggestionSourceMessage\.id/);
+  assert.match(screen, /진로 고민을 어디서부터 정리하면 좋을까요\?/);
+  assert.match(screen, /지금 프로젝트에서 제가 먼저 결정해야 할 것은 무엇인가요\?/);
+  assert.match(screen, /교수님께 처음에는 어떤 질문을 드리면 좋을까요\?/);
+  assert.match(screen, /resolveGrowthProfessorSuggestionParentId/);
   assert.match(screen, /suggestionSourceMessage\.reflection\?\.title \?\? "현재 대화"/);
   assert.match(screenStyles, /\.branchPromptMark/);
+  assert.match(screen, /getParallelBranchUserMessageIds/);
+  assert.match(screen, /parallelBranchUserMessageIds\.has\(message\.id\)/);
   assert.match(screen, /conversationLineageToAssistant\(messages, parentAssistantId\)/);
   assert.match(screen, /conversationLineageToAssistant\(messages, retryParentId\)/);
   assert.match(conversationMapModel, /export function conversationLineageToAssistant/);
   assert.match(screen, /clearConversation\(\);[\s\S]*setBranchOrigin\(null\);[\s\S]*setDraft\(""\);/);
   assert.match(store, /branchParentMessageId/);
-  assert.match(server, /1\. 비교하기:[\s\S]*2\. 필요한 준비:[\s\S]*3\. 직접 해보기:[\s\S]*4\. 교수님께 묻기:/);
-  assert.match(server, /minItems: 4/);
-  assert.match(server, /maxItems: 4/);
-  assert.match(conversationMap, /prompts\.length >= 4 \? prompts\.slice\(0, 4\) : FALLBACK_BRANCH_PROMPTS\[node\.topic\]/);
+  assert.match(server, /앞의 두 개는 현재 답변을 자연스럽게 이어가는 질문/);
+  assert.match(server, /세 번째도 기본값은 'continue'/);
+  assert.match(server, /필요한 자료, 설명 구체화, 예시, 바로 할 행동처럼 현재 답변을 깊게 잇는 질문은 'branch'가 아닙니다/);
+  assert.match(conversationMap, /suggestion\.text/);
+  assert.match(conversationMap, /isStudentQuestionText\(suggestion\.text\)/);
+  assert.match(conversationMap, /\.\.\.FALLBACK_BRANCH_PROMPTS\[node\.topic\]/);
+  assert.doesNotMatch(conversationMap, /해볼래요|할게요|정리할래요|만들래요|볼래요/);
   assert.match(conversationMap, /BRANCH_AXES = \["비교·결정", "근거·역량", "프로젝트·실행", "교수 대화"\]/);
   assert.match(conversationMap, /branchPrompts\.map/);
   assert.match(conversationMap, /이 대화에서 이어가기/);
@@ -216,7 +261,7 @@ test("과거 노드에서 새 갈래를 시작하고 트리에서 여러 자식 
   assert.match(conversationMap, /nodeDetailRef\.current\?\.scrollIntoView\(\{ block: "start", behavior: "smooth" \}\)/);
   assert.doesNotMatch(conversationMap, /manualBranchButton/);
   assert.match(screen, /setBranchOrigin\(\{ parentId, title \}\)/);
-  assert.match(screen, /setViewMode\("chat"\)/);
+  assert.match(screen, /changeViewMode\("chat"\)/);
   assert.match(screen, /inputRef\.current\?\.focus\(\)/);
 });
 

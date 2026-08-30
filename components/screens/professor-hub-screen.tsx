@@ -11,6 +11,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { AppShell } from "@/components/app/primitives";
+import { JourneyStageHero } from "@/components/app/journey-stage-hero";
 import { ServiceBottomNav } from "@/components/app/side-nav";
 import {
   HubList,
@@ -18,7 +19,6 @@ import {
   HubRow,
   HubUtilityLink,
   HubUtilityLinks,
-  ServiceHubIntro,
   serviceHubStyles as styles,
 } from "@/components/app/service-hub";
 import { useResearchStore } from "@/store/research-store";
@@ -72,11 +72,13 @@ export function ProfessorHubScreen() {
   return (
     <AppShell
       showHeader={false}
-      className={styles.shell}
+      className={`${styles.shell} ${routeStyles.matchShell}`}
       bottomNav={<ServiceBottomNav />}
     >
       <div className={styles.hub}>
-        <ServiceHubIntro
+        <JourneyStageHero
+          stage="match"
+          eyebrow="교수 연결 · 1단계"
           title="누구와 이야기할지 찾아볼까요?"
           description="지금 고민을 정리하면 학교 공식 정보에서 대화할 교수를 찾아드려요."
         />
@@ -126,7 +128,7 @@ export function ProfessorHubScreen() {
           <div className={routeStyles.moreArea} data-service-help="professor-hub-tools">
             <HubUtilityLinks>
               <HubUtilityLink icon={Search} href="/professors/discover">조건을 직접 입력해 교수 찾기</HubUtilityLink>
-              <HubUtilityLink icon={Settings2} href="/portfolio/manage">저장한 연결 관리</HubUtilityLink>
+              <HubUtilityLink icon={Settings2} href="/portfolio/manage?from=professors">저장한 연결 관리</HubUtilityLink>
             </HubUtilityLinks>
           </div>
         </div>

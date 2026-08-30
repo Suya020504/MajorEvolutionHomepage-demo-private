@@ -39,6 +39,7 @@ import { useResearchStore } from "@/store/research-store";
 import styles from "./professor-tutorial.module.css";
 
 const STORAGE_KEY = "major-evolution-professor-tutorial-v2";
+const TUTORIAL_STORAGE_ERROR_MESSAGE = "이 브라우저에 저장하지 못했지만 현재 화면에서는 계속 진행할 수 있어요.";
 
 const SETUP_STEPS = ["academic", "interests"] as const;
 const ALL_STEPS = [...SETUP_STEPS, "ready"] as const;
@@ -86,12 +87,58 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function tutorialStorage(): Storage | null {
+  return typeof window !== "undefined" ? window.localStorage : null;
+}
+
+function isStorageAccessError(error: unknown): boolean {
+  return Boolean(
+    error
+    && typeof error === "object"
+    && "name" in error
+    && (error.name === "SecurityError" || error.name === "QuotaExceededError"),
+  );
+}
+
+export function readProfessorTutorialStorage(
+  getStorage: () => Pick<Storage, "getItem"> | null = tutorialStorage,
+): { value: string | null; error: string | null } {
   try {
-    return typeof window !== "undefined" && window.localStorage
-      ? window.localStorage
-      : null;
+    return { value: getStorage()?.getItem(STORAGE_KEY) ?? null, error: null };
   } catch {
+    return { value: null, error: TUTORIAL_STORAGE_ERROR_MESSAGE };
+  }
+}
+
+export function writeProfessorTutorialStorage(
+  value: string,
+  getStorage: () => Pick<Storage, "setItem"> | null = tutorialStorage,
+): string | null {
+  try {
+    getStorage()?.setItem(STORAGE_KEY, value);
     return null;
+  } catch {
+    return TUTORIAL_STORAGE_ERROR_MESSAGE;
+  }
+}
+
+export function removeProfessorTutorialStorage(
+  getStorage: () => Pick<Storage, "removeItem"> | null = tutorialStorage,
+): string | null {
+  try {
+    getStorage()?.removeItem(STORAGE_KEY);
+    return null;
+  } catch {
+    return TUTORIAL_STORAGE_ERROR_MESSAGE;
+  }
+}
+
+export function runProfessorTutorialStoredAction(action: () => void): string | null {
+  try {
+    action();
+    return null;
+  } catch (error) {
+    if (!isStorageAccessError(error)) throw error;
+    return TUTORIAL_STORAGE_ERROR_MESSAGE;
   }
 }
 
@@ -157,7 +204,6 @@ export function ProfessorTutorialScreen({
   const setDiscoverySummary = useResearchStore((state) => state.setProfessorDiscoverySummary);
   const setMatchError = useResearchStore((state) => state.setProfessorMatchError);
   const setRejectedIds = useResearchStore((state) => state.setProfessorRejectedIds);
-  const clearProfessorMatches = useResearchStore((state) => state.clearProfessorMatches);
 
   const [step, setStep] = useState<TutorialStep>("academic");
   const [context, setContext] = useState<ProfessorDiscoveryContext>({
@@ -172,16 +218,20 @@ export function ProfessorTutorialScreen({
   const [isMatching, setIsMatching] = useState(false);
   const [loadingPhase, setLoadingPhase] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const userEditedRef = useRef(false);
 
   useEffect(() => {
-    markServiceEntered();
+    const nextStorageError = runProfessorTutorialStoredAction(markServiceEntered);
+    if (nextStorageError) setStorageError(nextStorageError);
   }, [markServiceEntered]);
 
   useEffect(() => {
     if (!profileHasHydrated || restored) return;
-    const saved = restoreDraft(tutorialStorage()?.getItem(STORAGE_KEY) ?? "");
+    const storedDraft = readProfessorTutorialStorage();
+    if (storedDraft.error) setStorageError(storedDraft.error);
+    const saved = restoreDraft(storedDraft.value ?? "");
     if (saved) {
       setStep(saved.step);
       setContext({ ...saved.context, university: taxonomy.university });
@@ -207,7 +257,8 @@ export function ProfessorTutorialScreen({
   useEffect(() => {
     if (!restored || isMatching) return;
     const draft: StoredDraft = { version: 2, step, context, directMajor };
-    tutorialStorage()?.setItem(STORAGE_KEY, JSON.stringify(draft));
+    const nextStorageError = writeProfessorTutorialStorage(JSON.stringify(draft));
+    if (nextStorageError) setStorageError(nextStorageError);
   }, [context, directMajor, isMatching, restored, step]);
 
   useEffect(() => () => requestRef.current?.abort(), []);
@@ -245,8 +296,8 @@ export function ProfessorTutorialScreen({
 
   const resetTutorial = () => {
     requestRef.current?.abort();
-    tutorialStorage()?.removeItem(STORAGE_KEY);
-    clearProfessorMatches();
+    const draftError = removeProfessorTutorialStorage();
+    if (draftError) setStorageError(draftError);
     setContext({
       ...EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
       university: taxonomy.university,
@@ -285,37 +336,57 @@ export function ProfessorTutorialScreen({
     const matchTopic = discoveryContextToMatchTopic(context);
     setError(null);
     setIsMatching(true);
-    clearProfessorMatches();
-    setRejectedIds([]);
-    setLoading(matchTopic.id);
+    for (const action of [
+      () => setRejectedIds([]),
+      () => setLoading(matchTopic.id),
+    ]) {
+      const nextStorageError = runProfessorTutorialStoredAction(action);
+      if (nextStorageError) setStorageError(nextStorageError);
+    }
     try {
       const response = await requestProfessorDiscoveryMatches(context, { signal: controller.signal });
       if (requestRef.current !== controller) return;
-      setMatches(response);
-      setDiscoveryTopic(matchTopic);
-      setDiscoverySummary({
-        major: context.major,
-        interests: context.interests,
-        careerConcerns: context.careerConcerns,
-      });
+      for (const action of [
+        () => setMatches(response),
+        () => setDiscoveryTopic(matchTopic),
+        () => setDiscoverySummary({
+          major: context.major,
+          interests: context.interests,
+          careerConcerns: context.careerConcerns,
+        }),
+      ]) {
+        const nextStorageError = runProfessorTutorialStoredAction(action);
+        if (nextStorageError) setStorageError(nextStorageError);
+      }
       const profileState = useProfileStore.getState();
-      profileState.saveProfile({
-        name: profileState.profile.name,
-        school: context.university,
-        major: context.major,
-        grade: profileState.profile.grade,
-        careerConcern: profileState.profile.careerConcern,
-        interests: context.interests,
-      });
-      profileState.completeProfessorTutorial();
-      tutorialStorage()?.removeItem(STORAGE_KEY);
+      for (const action of [
+        () => profileState.saveProfile({
+          name: profileState.profile.name,
+          school: context.university,
+          major: context.major,
+          grade: profileState.profile.grade,
+          careerConcern: profileState.profile.careerConcern,
+          interests: context.interests,
+        }),
+        () => {
+          profileState.completeProfessorTutorial();
+        },
+      ]) {
+        const nextStorageError = runProfessorTutorialStoredAction(action);
+        if (nextStorageError) setStorageError(nextStorageError);
+      }
+      const draftError = removeProfessorTutorialStorage();
+      if (draftError) setStorageError(draftError);
       router.push("/professors/pitch");
     } catch (caught) {
       if (requestRef.current !== controller || controller.signal.aborted) return;
       const message = caught instanceof Error
         ? caught.message
         : "공식 교수 정보를 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.";
-      setMatchError(matchTopic.id, message);
+      const nextStorageError = runProfessorTutorialStoredAction(() => {
+        setMatchError(matchTopic.id, message);
+      });
+      if (nextStorageError) setStorageError(nextStorageError);
       setError(message);
       setIsMatching(false);
     }
@@ -410,7 +481,7 @@ export function ProfessorTutorialScreen({
           <div><dt>전공</dt><dd>{context.college} · {context.major}</dd></div>
           <div><dt>관심 분야</dt><dd>{context.interests.join(" · ")}</dd></div>
         </dl>
-        <div className={styles.sourcePromise}><ShieldCheck size={18} /><span>교수님께 자동으로 연락하지 않아요. 연결 이유를 확인한 뒤 최종 선택은 직접 할 수 있어요.</span></div>
+        <div className={styles.sourcePromise}><ShieldCheck size={18} /><span>공식 정보에서 연결 이유를 살펴보고, 대화하고 싶은 교수를 골라보세요.</span></div>
       </div>
     );
   };
@@ -449,6 +520,7 @@ export function ProfessorTutorialScreen({
               </li>
             ))}
           </ol>
+          {storageError ? <div className={styles.errorBox} role="status">{storageError}</div> : null}
         </div>
       </TutorialMain>
     );
@@ -544,6 +616,7 @@ export function ProfessorTutorialScreen({
 
           <div className={styles.questionBody} data-service-help="professor-options">{renderQuestion()}</div>
 
+          {storageError && <div className={styles.errorBox} role="status">{storageError}</div>}
           {error && <div className={styles.errorBox} role="alert">{error}</div>}
 
           <div className={styles.actions} data-service-help="professor-actions">

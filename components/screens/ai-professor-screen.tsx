@@ -14,7 +14,6 @@ import {
   LoaderCircle,
   MessageCircleMore,
   Send,
-  ShieldCheck,
   Sparkles,
   Trash2,
   X,
@@ -23,10 +22,15 @@ import { AppShell } from "@/components/app/primitives";
 import { ServiceBottomNav } from "@/components/app/side-nav";
 import { AiConversationMap } from "@/components/screens/ai-conversation-map";
 import { requestGrowthProfessorReply } from "@/lib/ai-client";
-import { conversationLineageToAssistant } from "@/lib/ai-conversation-map";
-import type {
-  GrowthProfessorContext,
-  GrowthProfessorMessage,
+import {
+  conversationLineageToAssistant,
+  getParallelBranchUserMessageIds,
+} from "@/lib/ai-conversation-map";
+import {
+  resolveGrowthProfessorSuggestionParentId,
+  type GrowthProfessorSuggestion,
+  type GrowthProfessorContext,
+  type GrowthProfessorMessage,
 } from "@/lib/ai-growth-professor";
 import {
   useAiProfessorStore,
@@ -36,10 +40,22 @@ import { useResearchStore } from "@/store/research-store";
 import styles from "./ai-professor-screen.module.css";
 
 const QUICK_PROMPTS = [
-  "내 진로 고민을 한 문장으로 정리하고 싶어요",
-  "지금 프로젝트의 다음 한 걸음을 같이 정해요",
-  "교수님께 물어볼 첫 질문을 만들고 싶어요",
-] as const;
+  {
+    text: "진로 고민을 어디서부터 정리하면 좋을까요?",
+    kind: "continue",
+    axis: "clarify",
+  },
+  {
+    text: "지금 프로젝트에서 제가 먼저 결정해야 할 것은 무엇인가요?",
+    kind: "continue",
+    axis: "evidence_action",
+  },
+  {
+    text: "교수님께 처음에는 어떤 질문을 드리면 좋을까요?",
+    kind: "continue",
+    axis: "alternative",
+  },
+] satisfies readonly GrowthProfessorSuggestion[];
 
 const CURRENT_REPLY_LIMIT = 220;
 
@@ -96,12 +112,20 @@ export function AiProfessorScreen() {
   const messages = useAiProfessorStore((state) => state.messages);
   const growthNotes = useAiProfessorStore((state) => state.growthNotes);
   const mapDecisions = useAiProfessorStore((state) => state.mapDecisions);
+  const collapsedMapNodeIds = useAiProfessorStore((state) => state.collapsedMapNodeIds);
+  const detachedMapNodeIds = useAiProfessorStore((state) => state.detachedMapNodeIds);
   const addUserMessage = useAiProfessorStore((state) => state.addUserMessage);
   const addAssistantMessage = useAiProfessorStore((state) => state.addAssistantMessage);
   const saveReflection = useAiProfessorStore((state) => state.saveReflection);
   const removeGrowthNote = useAiProfessorStore((state) => state.removeGrowthNote);
   const setMapDecision = useAiProfessorStore((state) => state.setMapDecision);
   const clearMapDecision = useAiProfessorStore((state) => state.clearMapDecision);
+  const toggleCollapsedMapNode = useAiProfessorStore((state) => state.toggleCollapsedMapNode);
+  const clearCollapsedMapNode = useAiProfessorStore((state) => state.clearCollapsedMapNode);
+  const detachMapNode = useAiProfessorStore((state) => state.detachMapNode);
+  const attachMapNode = useAiProfessorStore((state) => state.attachMapNode);
+  const hideMapBranch = useAiProfessorStore((state) => state.hideMapBranch);
+  const restoreMapBranch = useAiProfessorStore((state) => state.restoreMapBranch);
   const clearConversation = useAiProfessorStore((state) => state.clearConversation);
 
   const [viewMode, setViewMode] = useState<"chat" | "map" | "context">("chat");
@@ -146,17 +170,16 @@ export function AiProfessorScreen() {
     ? messages.find((message) => message.id === branchOrigin.parentId && message.role === "assistant") ?? null
     : null;
   const suggestionSourceMessage = branchSourceMessage ?? lastAssistantMessage;
-  const lastSuggestions = Array.from(new Set(
-    (suggestionSourceMessage?.suggestedPrompts ?? [])
-      .map((prompt) => prompt.trim())
-      .filter(Boolean),
-  )).slice(0, 3);
+  const lastSuggestions = suggestionSourceMessage?.suggestedPrompts ?? [];
   const visiblePrompts = lastSuggestions.length
     ? lastSuggestions
     : messages.length === 0
-      ? [...QUICK_PROMPTS]
+      ? QUICK_PROMPTS
       : [];
-  const hasBranchChoices = Boolean(suggestionSourceMessage && lastSuggestions.length >= 2);
+  const parallelBranchUserMessageIds = useMemo(
+    () => getParallelBranchUserMessageIds(messages),
+    [messages],
+  );
 
   useEffect(() => {
     const messageList = messageListRef.current;
@@ -164,9 +187,23 @@ export function AiProfessorScreen() {
   }, [isSending, messages.length]);
 
   useEffect(() => {
-    const requestedView = new URLSearchParams(window.location.search).get("view");
-    if (requestedView === "map" || requestedView === "context") setViewMode(requestedView);
+    const syncViewFromUrl = () => {
+      const requestedView = new URLSearchParams(window.location.search).get("view");
+      setViewMode(requestedView === "map" || requestedView === "context" ? requestedView : "chat");
+    };
+    syncViewFromUrl();
+    window.addEventListener("popstate", syncViewFromUrl);
+    return () => window.removeEventListener("popstate", syncViewFromUrl);
   }, []);
+
+  const changeViewMode = (nextView: "chat" | "map" | "context") => {
+    if (nextView === viewMode) return;
+    const url = new URL(window.location.href);
+    if (nextView === "chat") url.searchParams.delete("view");
+    else url.searchParams.set("view", nextView);
+    window.history.pushState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    setViewMode(nextView);
+  };
 
   const requestReply = async (conversation: GrowthProfessorMessage[]) => {
     setError("");
@@ -239,22 +276,22 @@ export function AiProfessorScreen() {
               <p>교수님을 만나기 전후, 내 고민과 프로젝트 방향을 함께 정리하는 AI 성장 파트너예요.</p>
             </div>
           </div>
-          <div className={styles.boundaryNote} role="note">
-            <ShieldCheck size={17} aria-hidden="true" />
-            <span>실제 교수님의 지도나 학교의 공식 답변을 대신하지 않으며, 중요한 결정은 직접 확인해요.</span>
-          </div>
-          <nav className={styles.viewTabs} aria-label="AI 교수님 보기 방식">
+          <nav className={styles.viewTabs} aria-label="AI 교수님 보기 방식" role="tablist">
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "chat"}
               aria-current={viewMode === "chat" ? "page" : undefined}
-              onClick={() => setViewMode("chat")}
+              onClick={() => changeViewMode("chat")}
             >
               <MessageCircleMore size={17} aria-hidden="true" /> 대화하기
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "map"}
               aria-current={viewMode === "map" ? "page" : undefined}
-              onClick={() => setViewMode("map")}
+              onClick={() => changeViewMode("map")}
             >
               <GitBranch size={17} aria-hidden="true" /> 대화 지도
               {messages.some((message) => message.role === "assistant") ? (
@@ -263,8 +300,10 @@ export function AiProfessorScreen() {
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "context"}
               aria-current={viewMode === "context" ? "page" : undefined}
-              onClick={() => setViewMode("context")}
+              onClick={() => changeViewMode("context")}
             >
               <BookOpenCheck size={17} aria-hidden="true" /> 내 맥락
               {growthNotes.length ? <span>{growthNotes.length}</span> : null}
@@ -322,7 +361,7 @@ export function AiProfessorScreen() {
                     ) : null}
                     <div>
                       <div className={styles.bubble}>
-                        {message.role === "user" && message.branchParentMessageId ? (
+                        {message.role === "user" && parallelBranchUserMessageIds.has(message.id) ? (
                           <span className={styles.branchMessageLabel}><GitBranch size={12} /> 새 갈래에서 이어짐</span>
                         ) : null}
                         {isLegacyLongReply ? (
@@ -399,31 +438,38 @@ export function AiProfessorScreen() {
                 </div>
               ) : null}
               {visiblePrompts.length ? (
-                <div className={styles.promptSuggestions} aria-label="이어갈 대화 예시">
-                  {visiblePrompts.map((prompt) => (
+                <div className={styles.promptSuggestions} role="group" aria-label="이어갈 대화 예시">
+                  {visiblePrompts.map((suggestion) => (
                     <button
-                      key={prompt}
+                      key={suggestion.text}
                       type="button"
-                      aria-label={hasBranchChoices ? `새 대화 갈래 후보: ${prompt}` : prompt}
+                      aria-label={suggestion.kind === "branch"
+                        ? `새 대화 갈래 시작: ${suggestion.text}`
+                        : suggestion.text}
                       onClick={() => {
-                        if (hasBranchChoices && suggestionSourceMessage) {
+                        const parentId = resolveGrowthProfessorSuggestionParentId(
+                          suggestion,
+                          suggestionSourceMessage?.id ?? null,
+                          Boolean(branchOrigin),
+                        );
+                        if (parentId && suggestionSourceMessage) {
                           setBranchOrigin({
-                            parentId: suggestionSourceMessage.id,
+                            parentId,
                             title: suggestionSourceMessage.reflection?.title ?? "현재 대화",
                           });
                         } else {
                           setBranchOrigin(null);
                         }
-                        setDraft(prompt);
+                        setDraft(suggestion.text);
                         inputRef.current?.focus();
                       }}
                     >
-                      {hasBranchChoices ? (
-                        <span className={styles.branchPromptMark} title="새 대화 갈래 후보" aria-hidden="true">
+                      {suggestion.kind === "branch" ? (
+                        <span className={styles.branchPromptMark} title="새 대화 갈래 시작" aria-hidden="true">
                           <GitBranch size={12} />
                         </span>
                       ) : null}
-                      <span className={styles.promptLabel}>{prompt}</span>
+                      <span className={styles.promptLabel}>{suggestion.text}</span>
                     </button>
                   ))}
                 </div>
@@ -467,7 +513,7 @@ export function AiProfessorScreen() {
                 <div><dt>프로젝트</dt><dd>{context.project?.title ?? "아직 선택한 프로젝트 없음"}</dd></div>
                 <div><dt>연결 교수</dt><dd>{context.professor ? `${context.professor.name} 교수` : "아직 선택한 교수 없음"}</dd></div>
               </dl>
-              <p>저장한 내용만 참고하며, 입력하지 않은 성향이나 적성을 추정하지 않아요.</p>
+              <p>저장한 전공·관심·프로젝트·교수 정보를 대화 맥락으로 함께 볼 수 있어요.</p>
             </section>
 
             <section className={styles.noteSection}>
@@ -518,14 +564,22 @@ export function AiProfessorScreen() {
             messages={messages}
             growthNotes={growthNotes}
             mapDecisions={mapDecisions}
+            collapsedMapNodeIds={collapsedMapNodeIds}
+            detachedMapNodeIds={detachedMapNodeIds}
             onSetDecision={setMapDecision}
             onClearDecision={clearMapDecision}
+            onToggleCollapsedMapNode={toggleCollapsedMapNode}
+            onClearCollapsedMapNode={clearCollapsedMapNode}
+            onDetachMapNode={detachMapNode}
+            onAttachMapNode={attachMapNode}
+            onHideMapBranch={hideMapBranch}
+            onRestoreMapBranch={restoreMapBranch}
             onSaveReflection={saveReflection}
-            onBackToChat={() => setViewMode("chat")}
+            onBackToChat={() => changeViewMode("chat")}
             onStartBranch={(parentId, prompt, title) => {
               setBranchOrigin({ parentId, title });
               setDraft(prompt);
-              setViewMode("chat");
+              changeViewMode("chat");
               window.requestAnimationFrame(() => inputRef.current?.focus());
             }}
           />
