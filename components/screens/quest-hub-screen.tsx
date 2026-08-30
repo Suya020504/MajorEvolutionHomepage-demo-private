@@ -545,12 +545,12 @@ export function QuestAllToolsScreen() {
         <ArrowRight size={16} aria-hidden="true" />
       </button>
 
-      {cards.length > 0 && (
-        <div id="saved-cards">
-          <SectionHeading
-            title="저장한 카드"
-            description="여기에 저장한 결과물만 준비 증거로 사용합니다."
-          />
+      <div id="saved-cards" tabIndex={-1}>
+        <SectionHeading
+          title="저장한 카드"
+          description="여기에 저장한 결과물만 준비 증거로 사용합니다."
+        />
+        {cards.length > 0 ? (
           <div className="quest-saved-list">
             {cards.map((card) => (
               <article key={card.id} className="quest-saved">
@@ -595,8 +595,22 @@ export function QuestAllToolsScreen() {
               </article>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="quest-saved-empty">
+            <FileText size={24} aria-hidden="true" />
+            <div>
+              <strong>저장한 준비물이 아직 없어요</strong>
+              <p>위 준비 도구에서 논문 카드나 첫 질문을 저장하면 이곳에서 다시 볼 수 있어요.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => document.querySelector(".quest-tool-grid")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            >
+              준비 도구 살펴보기 <ArrowRight size={15} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+      </div>
     </AppShell>
   );
 }
