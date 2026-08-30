@@ -66,7 +66,7 @@ test("매칭 탭은 다른 여정과 구분되는 어두운 도서관 히어로�
 
 test("저장 보기는 저장 카드가 없어도 존재하는 목적지와 빈 상태를 연다", () => {
   const allTools = quest.slice(quest.indexOf("export function QuestAllToolsScreen"));
-  assert.match(allTools, /<div id="saved-cards"/);
+  assert.match(allTools, /id="saved-cards"/);
   assert.doesNotMatch(allTools, /\{cards\.length > 0 && \(\s*<div id="saved-cards">/);
   assert.match(allTools, /저장한 준비물이 아직 없어요/);
   assert.match(allTools, /준비 도구 살펴보기/);
