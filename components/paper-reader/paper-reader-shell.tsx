@@ -49,10 +49,20 @@ import { useResearchStore } from "@/store/research-store";
 
 const MIN_CONTENT_LENGTH = 80;
 const MAX_CONTENT_LENGTH = 12_000;
+const PAPER_BITE_WORKING_DRAFT_STORAGE_KEY = "major-evolution-paper-bite-working-draft-v1";
 
 type BiteCardKey = "problem" | "method" | "result" | "limitations" | "questions";
 type BiteDraft = Record<BiteCardKey, string>;
 type PaperBiteWorkflowStep = "select" | "card";
+
+type StoredPaperBiteWorkingDraft = {
+  version: 1;
+  title: string;
+  content: string;
+  analysis: PaperAnalysisResult;
+  draft: BiteDraft;
+  sourceConfirmed: boolean;
+};
 
 const BITE_CARD_META: ReadonlyArray<{
   key: BiteCardKey;
@@ -97,6 +107,77 @@ const BITE_CARD_META: ReadonlyArray<{
     icon: ListChecks,
   },
 ] as const;
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isPaperAnalysisResult(value: unknown): value is PaperAnalysisResult {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const raw = value as Record<string, unknown>;
+  return ["title", "oneLine", "background", "question", "generatedAt", "model"]
+    .every((key) => typeof raw[key] === "string")
+    && isStringList(raw.methods)
+    && isStringList(raw.findings)
+    && isStringList(raw.limitations)
+    && isStringList(raw.nextQuestions)
+    && Array.isArray(raw.glossary)
+    && raw.glossary.every((item) => (
+      Boolean(item)
+      && typeof item === "object"
+      && !Array.isArray(item)
+      && typeof (item as Record<string, unknown>).term === "string"
+      && typeof (item as Record<string, unknown>).meaning === "string"
+    ));
+}
+
+function isBiteDraft(value: unknown): value is BiteDraft {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const raw = value as Record<string, unknown>;
+  return BITE_CARD_META.every((card) => typeof raw[card.key] === "string");
+}
+
+function readPaperBiteWorkingDraft(): StoredPaperBiteWorkingDraft | null {
+  try {
+    const stored = window.sessionStorage.getItem(PAPER_BITE_WORKING_DRAFT_STORAGE_KEY);
+    if (!stored || stored.length > 100_000) return null;
+    const parsed = JSON.parse(stored) as Partial<StoredPaperBiteWorkingDraft>;
+    if (
+      parsed.version !== 1
+      || typeof parsed.title !== "string"
+      || typeof parsed.content !== "string"
+      || typeof parsed.sourceConfirmed !== "boolean"
+      || !isPaperAnalysisResult(parsed.analysis)
+      || !isBiteDraft(parsed.draft)
+    ) return null;
+    return {
+      version: 1,
+      title: parsed.title.slice(0, 180),
+      content: parsed.content.slice(0, MAX_CONTENT_LENGTH),
+      analysis: parsed.analysis,
+      draft: parsed.draft,
+      sourceConfirmed: parsed.sourceConfirmed,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writePaperBiteWorkingDraft(value: StoredPaperBiteWorkingDraft): void {
+  try {
+    window.sessionStorage.setItem(PAPER_BITE_WORKING_DRAFT_STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    // The explicit exit guard remains active when browser storage is unavailable.
+  }
+}
+
+function clearPaperBiteWorkingDraft(): void {
+  try {
+    window.sessionStorage.removeItem(PAPER_BITE_WORKING_DRAFT_STORAGE_KEY);
+  } catch {
+    // A stale session-only draft is safer than deleting unrelated user data.
+  }
+}
 
 const TEXT_SCOPE_EVIDENCE = {
   label: "사용자가 붙여 넣은 텍스트 범위 · 페이지 정보 없음",
@@ -275,6 +356,62 @@ export function PaperReaderShell({
   const verifiedPaperKeyRef = useRef<string | null>(null);
   const analysisAbortControllerRef = useRef<AbortController | null>(null);
   const paperContentAbortControllerRef = useRef<AbortController | null>(null);
+  const restoredWorkingDraftRef = useRef(false);
+  const restoredWorkingDraftValueRef = useRef(false);
+  const hasUnsavedDraft = Boolean(analysis && draft && !isSaved);
+
+  const confirmDiscardUnsavedDraft = () => (
+    !hasUnsavedDraft
+    || window.confirm("저장하지 않은 논문 카드 수정 내용이 있어요. 저장하지 않고 이동할까요?")
+  );
+
+  const openPaperPicker = () => {
+    if (!confirmDiscardUnsavedDraft()) return;
+    setIsPickerOpen(true);
+  };
+
+  const discardAndNavigate = (href: string) => {
+    if (!confirmDiscardUnsavedDraft()) return;
+    clearPaperBiteWorkingDraft();
+    router.replace(href);
+  };
+
+  useEffect(() => {
+    if (restoredWorkingDraftRef.current) return;
+    restoredWorkingDraftRef.current = true;
+    const restored = readPaperBiteWorkingDraft();
+    if (!restored) return;
+    restoredWorkingDraftValueRef.current = true;
+    setTitle(restored.title);
+    setContent(restored.content);
+    setAnalysis(restored.analysis);
+    setDraft(restored.draft);
+    setSourceConfirmed(restored.sourceConfirmed);
+    setWorkflowStep("card");
+    setFeedback("저장하지 않은 논문 카드 수정 내용을 복원했어요.");
+  }, []);
+
+  useEffect(() => {
+    if (!hasUnsavedDraft || !analysis || !draft) return;
+    writePaperBiteWorkingDraft({
+      version: 1,
+      title,
+      content,
+      analysis,
+      draft,
+      sourceConfirmed,
+    });
+  }, [analysis, content, draft, hasUnsavedDraft, sourceConfirmed, title]);
+
+  useEffect(() => {
+    if (!hasUnsavedDraft) return;
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [hasUnsavedDraft]);
 
   const moveWorkflowStep = (nextStep: PaperBiteWorkflowStep) => {
     setWorkflowStep(nextStep);
@@ -389,7 +526,7 @@ export function PaperReaderShell({
   }, []);
 
   useEffect(() => {
-    setWorkflowStep(initialStep);
+    if (!restoredWorkingDraftValueRef.current) setWorkflowStep(initialStep);
   }, [initialStep]);
 
   const verifiedProfessorPaper = paperValidationStatus === "verified"
@@ -397,6 +534,14 @@ export function PaperReaderShell({
     : null;
 
   useEffect(() => {
+    if (analysis && draft) {
+      paperContentAbortControllerRef.current?.abort();
+      paperContentAbortControllerRef.current = null;
+      setPaperContentStatus("idle");
+      setPaperContentResult(null);
+      setPaperContentError("");
+      return;
+    }
     if (!verifiedProfessorPaper || workflowStep !== "card") {
       paperContentAbortControllerRef.current?.abort();
       paperContentAbortControllerRef.current = null;
@@ -448,6 +593,8 @@ export function PaperReaderShell({
 
     return () => controller.abort();
   }, [
+    analysis,
+    draft,
     paperContentRetryKey,
     verifiedProfessorPaper?.paperId,
     verifiedProfessorPaper?.professorId,
@@ -569,6 +716,7 @@ export function PaperReaderShell({
           body: draft[card.key].trim() || "아직 작성된 내용이 없어요.",
         })),
       });
+      clearPaperBiteWorkingDraft();
       setIsSaved(true);
       setFeedback("교수님 퀘스트에 3분 준비 카드 5장을 저장했어요. 같은 논문은 최신 내용으로 갱신됩니다.");
     } catch {
@@ -595,6 +743,7 @@ export function PaperReaderShell({
     setPaperContentStatus("idle");
     setPaperContentResult(null);
     setPaperContentError("");
+    clearPaperBiteWorkingDraft();
   };
 
   const acceptRelatedCandidate = () => {
@@ -656,6 +805,7 @@ export function PaperReaderShell({
   };
 
   const clearPaperSelection = () => {
+    if (!confirmDiscardUnsavedDraft()) return;
     verifiedPaperKeyRef.current = null;
     setPaperValidationStatus("idle");
     setPaperValidationError("");
@@ -688,18 +838,18 @@ export function PaperReaderShell({
 
   if (analysis && draft) {
     return (
-      <AppShell title="Q01 논문 한입" backHref="/quest" className="paper-bite-screen">
+      <AppShell title="Q01 논문 한입" onBack={() => discardAndNavigate("/quest")} className="paper-bite-screen">
         <PageHeader
           eyebrow="교수님 퀘스트 · 만나기 전"
           title={displayTitle}
           description={analysis.oneLine}
         />
-        <PaperReadingSteps current={2} />
+        <PaperReadingSteps current={2} navigationLocked={hasUnsavedDraft} />
 
         {verifiedProfessorPaper && (
           <SelectedPaperBanner
             selection={verifiedProfessorPaper}
-            onChange={() => setIsPickerOpen(true)}
+            onChange={openPaperPicker}
             onClear={clearPaperSelection}
           />
         )}
@@ -765,7 +915,7 @@ export function PaperReaderShell({
         </Card>
 
         <div className="paper-bite-actions">
-          <SecondaryButton type="button" onClick={() => setIsPickerOpen(true)}>
+          <SecondaryButton type="button" onClick={openPaperPicker}>
             <RotateCcw size={17} aria-hidden="true" /> 다른 논문
           </SecondaryButton>
           <SecondaryButton type="button" onClick={() => void copyText(fullCopy, "카드 5장을 모두 복사했어요.")}>
@@ -1037,17 +1187,24 @@ function PaperPdfNextStep({ ready }: { ready: boolean }) {
         </div>
       </div>
       <div className="paper-bite-next-actions">
-        <LinkButton href={FIRST_QUESTION_FROM_PAPER_HREF}>
-          4단계 · 목적별 첫 질문 고르기
-        </LinkButton>
         {ready ? (
-          <LinkButton href="/paper/reader?mode=pdf&from=card" secondary>
-            PDF 해설 더 보기 · 선택
-          </LinkButton>
+          <>
+            <LinkButton href={FIRST_QUESTION_FROM_PAPER_HREF}>
+              4단계 · 목적별 첫 질문 고르기
+            </LinkButton>
+            <LinkButton href="/paper/reader?mode=pdf&from=card" secondary>
+              PDF 해설 더 보기 · 선택
+            </LinkButton>
+          </>
         ) : (
-          <PrimaryButton type="button" disabled>
-            PDF 해설은 카드 저장 후 이용
-          </PrimaryButton>
+          <>
+            <PrimaryButton type="button" disabled>
+              첫 질문은 카드 저장 후 이용
+            </PrimaryButton>
+            <SecondaryButton type="button" disabled>
+              PDF 해설은 카드 저장 후 이용
+            </SecondaryButton>
+          </>
         )}
       </div>
       <small className="paper-bite-pdf-next__note">

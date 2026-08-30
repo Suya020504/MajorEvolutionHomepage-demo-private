@@ -42,3 +42,21 @@ test("공개 논문 조회 결과는 30일 동안 재사용하고 이후 만료�
   now += 2;
   assert.equal(cache.get("professor-1:paper-1"), undefined);
 });
+
+test("공개 논문 미발견 결과는 짧게만 보관해 다시 찾기를 막지 않는다", () => {
+  assert.ok(cacheModule, "논문 조회 캐시 모듈이 필요합니다.");
+  let now = 1_000;
+  const cache = cacheModule.createPaperContentCache({ now: () => now });
+  cache.set(
+    "professor-1:paper-missing",
+    { status: "unavailable" },
+    cacheModule.PAPER_CONTENT_NEGATIVE_CACHE_TTL_MS,
+  );
+
+  now += cacheModule.PAPER_CONTENT_NEGATIVE_CACHE_TTL_MS - 1;
+  assert.deepEqual(cache.get("professor-1:paper-missing"), { status: "unavailable" });
+
+  now += 2;
+  assert.equal(cache.get("professor-1:paper-missing"), undefined);
+  assert.ok(cacheModule.PAPER_CONTENT_NEGATIVE_CACHE_TTL_MS < cacheModule.PAPER_CONTENT_CACHE_TTL_MS);
+});

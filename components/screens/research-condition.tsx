@@ -69,8 +69,12 @@ const ERROR_STEP: Record<string, ResearchStep> = {
 
 export function ConditionSelectScreen({
   initialStep = "direction",
+  returnHref = "/research/tutorial?source=full",
+  returnLabel = "단계별 설계로 돌아가기",
 }: {
   initialStep?: ResearchStep;
+  returnHref?: string;
+  returnLabel?: string;
 } = {}) {
   const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -145,7 +149,7 @@ export function ConditionSelectScreen({
 
   const goBack = () => {
     if (activeIndex === 0) {
-      router.push("/research/tutorial?source=full");
+      router.replace(returnHref);
       return;
     }
     moveTo(RESEARCH_STEPS[activeIndex - 1].id);
@@ -179,7 +183,7 @@ export function ConditionSelectScreen({
       focusTop();
       return;
     }
-    router.push("/co-design");
+    router.replace("/co-design");
   };
 
   const modeIcon: Record<IdeaMode, typeof Brain> = {
@@ -410,7 +414,7 @@ export function ConditionSelectScreen({
       )}
     >
       <header className="research-workspace-header">
-        <Link href="/research/tutorial?source=full" className="research-back-link" aria-label="단계별 설계로 돌아가기"><ArrowLeft size={19} /> 돌아가기</Link>
+        <Link href={returnHref} className="research-back-link" aria-label={returnLabel}><ArrowLeft size={19} /> 돌아가기</Link>
         <Image src={guideCharacter.questFlag} alt="" width={52} height={50} priority unoptimized />
       </header>
 

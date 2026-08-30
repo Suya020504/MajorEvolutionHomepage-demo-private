@@ -15,6 +15,7 @@ import {
   SectionHeading,
   Tag,
 } from "@/components/app/primitives";
+import { professorDetailQuery } from "@/lib/navigation-flow";
 import type { OfficialProfessor } from "@/lib/professor-domain";
 
 /**
@@ -35,19 +36,28 @@ function portalOrigin(url: string): string | null {
   }
 }
 
-export function OfficialCoursesScreen({ professor }: { professor: OfficialProfessor }) {
+export function OfficialCoursesScreen({
+  professor,
+  from,
+  journey,
+}: {
+  professor: OfficialProfessor;
+  from?: string;
+  journey?: string;
+}) {
   const [semester, setSemester] = useState(SEMESTERS[0]);
   const portal = portalOrigin(professor.officialProfileUrl);
   const collectedAt = new Date(professor.collectedAt).toLocaleDateString("ko-KR");
+  const detailHref = `/professors/${professor.id}${professorDetailQuery(from, journey)}`;
 
   return (
     <AppShell
       title="공식 강의정보"
-      backHref={`/professors/${professor.id}`}
+      backHref={detailHref}
       className="courses-screen"
     >
       <nav className="courses-breadcrumb" aria-label="현재 위치">
-        <Link href={`/professors/${professor.id}`}>교수님 상세</Link>
+        <Link href={detailHref}>교수님 상세</Link>
         <span aria-hidden="true">›</span>
         <strong>공식 강의정보</strong>
       </nav>
@@ -125,7 +135,7 @@ export function OfficialCoursesScreen({ professor }: { professor: OfficialProfes
         </div>
         {portal && (
           <Link href={portal} target="_blank" rel="noopener noreferrer">
-            공식 시간표에서 확인 <ExternalLink size={15} />
+            대학 포털에서 확인 <ExternalLink size={15} />
           </Link>
         )}
       </Card>

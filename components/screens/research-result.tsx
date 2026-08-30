@@ -491,7 +491,6 @@ function ProfessorBlock({
   scopeMessage,
   scopeAction,
   onLoad,
-  onSelectProfessor,
 }: {
   topic: TopicWithChecks["topic"];
   matches: ProfessorMatch[];
@@ -504,7 +503,6 @@ function ProfessorBlock({
   scopeMessage: string | null;
   scopeAction?: { label: string; onClick: () => void };
   onLoad: () => void;
-  onSelectProfessor: (id: string) => void;
 }) {
   if (scopeMessage) {
     return (
@@ -631,7 +629,7 @@ function ProfessorBlock({
             <span className="prof-unknown"><CircleAlert size={13} /> 모집·면담 가능 여부 미확인</span>
           </div>
           <div className="official-match-actions">
-            <Link className="prof-link" href={`/professors/${professor.id}?from=project`} onClick={() => onSelectProfessor(professor.id)}>
+            <Link className="prof-link" href={`/professors/${professor.id}?from=result`}>
               상세 근거 보기 <ArrowUpRight size={14} />
             </Link>
             <Link className="prof-link prof-link--secondary" href={professor.officialProfileUrl} target="_blank" rel="noopener noreferrer">
@@ -682,7 +680,6 @@ export function ResearchResultScreen({ view = "summary" }: { view?: ResultPageVi
   const setProfessorMatchLoading = useResearchStore((s) => s.setProjectProfessorMatchLoading);
   const setProfessorMatches = useResearchStore((s) => s.setProjectProfessorMatches);
   const setProfessorMatchError = useResearchStore((s) => s.setProjectProfessorMatchError);
-  const selectProfessor = useResearchStore((s) => s.selectProjectProfessor);
   const reRecommend = useResearchStore((s) => s.reRecommend);
   const reRecommendNote = useResearchStore((s) => s.reRecommendNote);
   const loadKey = useResearchStore((s) => s.loadKey);
@@ -769,6 +766,7 @@ export function ResearchResultScreen({ view = "summary" }: { view?: ResultPageVi
         ? currentResult.candidate
         : undefined;
     if (!chosen) return;
+    if (selectedTopicId === id) return;
     professorRequestRef.current?.abort();
     professorRequestRef.current = null;
     setContinuing(false);
@@ -832,7 +830,7 @@ export function ResearchResultScreen({ view = "summary" }: { view?: ResultPageVi
       </SecondaryButton>
       <PrimaryButton
         onClick={() => {
-          if (view === "summary") router.push(primaryAction.href ?? "/result/compare");
+          if (view === "summary") router.replace(primaryAction.href ?? "/result/compare");
           else if (professorScopeMessage) router.push(primaryAction.href ?? "/research/conditions?view=review");
           else void continueToProfessors();
         }}
@@ -851,7 +849,7 @@ export function ResearchResultScreen({ view = "summary" }: { view?: ResultPageVi
   return (
     <AppShell
       title={view === "summary" ? "프로젝트 후보 이해" : "프로젝트 근거 비교"}
-      onBack={() => router.push(view === "summary" ? "/research" : "/result")}
+      onBack={() => router.replace(view === "summary" ? "/research" : "/result")}
       className={cx("research-screen result-screen", styles.shell)}
       stickyAction={stickyAction}
     >

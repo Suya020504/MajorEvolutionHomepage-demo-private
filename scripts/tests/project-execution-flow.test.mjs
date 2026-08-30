@@ -21,6 +21,47 @@ function loadModule() {
 
 const flow = loadModule();
 
+function loadDraftHookModule() {
+  const sourceUrl = new URL("../../components/screens/use-project-execution-draft.ts", import.meta.url);
+  if (!existsSync(fileURLToPath(sourceUrl))) return null;
+  const source = readFileSync(sourceUrl, "utf8");
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const loaded = { exports: {} };
+  const testRequire = (specifier) => {
+    if (specifier === "react") return {};
+    if (specifier === "@/lib/project-execution") return flow;
+    throw new Error(`Unexpected test import: ${specifier}`);
+  };
+  new Function("exports", "module", "require", compiled)(loaded.exports, loaded, testRequire);
+  return loaded.exports;
+}
+
+const draftHook = loadDraftHookModule();
+const executionStyleSource = readFileSync(
+  new URL("../../components/screens/project-execution-screen.module.css", import.meta.url),
+  "utf8",
+);
+const professorStyleSource = readFileSync(
+  new URL("../../components/screens/project-professor-hub-screen.module.css", import.meta.url),
+  "utf8",
+);
+
+function mediaBlock(source, query) {
+  const marker = `@media ${query}`;
+  const start = source.indexOf(marker);
+  assert.notEqual(start, -1, `${query} 미디어 쿼리가 필요합니다.`);
+  const bodyStart = source.indexOf("{", start);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(bodyStart + 1, index);
+  }
+  throw new Error(`${query} 미디어 쿼리가 닫히지 않았습니다.`);
+}
+
 test("프로젝트 자문은 일반 교수 만남 기록과 다른 저장 키를 사용한다", () => {
   assert.ok(flow, "프로젝트 실행 흐름 모듈이 필요합니다.");
   assert.equal(
@@ -165,4 +206,52 @@ test("저장 실패 뒤 다음 저장이 성공하면 오류가 없는 저장 �
     JSON.parse(stored.get("project-execution:topic-1:professor-1")).executionPlan,
     "표본 20개를 수집한다.",
   );
+});
+
+test("브라우저 저장소 접근 자체가 차단되어도 호출부가 표시할 실패 상태를 반환한다", () => {
+  assert.ok(draftHook, "프로젝트 실행 저장 훅 모듈이 필요합니다.");
+  const draft = flow.createProjectExecutionDraft({
+    topicId: "topic-1",
+    professorId: "professor-1",
+    topicTitle: "프로젝트",
+    topicQuestion: "질문",
+    methodDetail: "방법",
+  });
+
+  const result = draftHook.persistProjectExecutionDraftFromProvider(
+    () => {
+      throw new DOMException("Access denied", "SecurityError");
+    },
+    "project-execution:topic-1:professor-1",
+    draft,
+  );
+
+  assert.equal(result.status, "error");
+  assert.match(result.error, /저장하지 못했어요/);
+});
+
+test("701~1279px 프로젝트 액션 도크는 하단 내비 위에 머물고 마지막 콘텐츠 여유를 확보한다", () => {
+  for (const source of [executionStyleSource, professorStyleSource]) {
+    const tablet = mediaBlock(source, "(min-width: 701px) and (max-width: 1279px)");
+    assert.match(
+      tablet,
+      /\.page\s*\{[^}]*padding-bottom:\s*calc\(176px \+ env\(safe-area-inset-bottom\)\)/,
+    );
+    assert.match(
+      tablet,
+      /\.actionDock\s*\{[^}]*bottom:\s*calc\(var\(--app-bottom-nav-height\) \+ env\(safe-area-inset-bottom\) \+ 12px\)/,
+    );
+    assert.match(tablet, /\.actionDock\s*\{[^}]*z-index:\s*30/);
+  }
+});
+
+test("390px 프로젝트 액션 도크의 기존 단일 열·하단 내비 여유를 유지한다", () => {
+  for (const source of [executionStyleSource, professorStyleSource]) {
+    const mobile = mediaBlock(source, "(max-width: 700px)");
+    assert.match(
+      mobile,
+      /\.actionDock\s*\{[^}]*bottom:\s*calc\(var\(--app-bottom-nav-height\) \+ env\(safe-area-inset-bottom\) \+ 8px\)/,
+    );
+    assert.match(mobile, /\.actionDock\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/);
+  }
 });

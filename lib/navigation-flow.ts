@@ -9,6 +9,74 @@ const BACK_LABELS: Record<string, string> = {
   "/portfolio": "나의 성장과정으로 돌아가기",
 };
 
+export const PROFESSOR_DETAIL_ORIGINS = [
+  "home",
+  "quest",
+  "portfolio",
+  "result",
+  "project",
+  "project-execution",
+  "project-meeting",
+  "pitch",
+] as const;
+
+export type ProfessorDetailOrigin = (typeof PROFESSOR_DETAIL_ORIGINS)[number];
+
+function normalizeProfessorDetailOrigin(value?: string | null): ProfessorDetailOrigin | null {
+  return PROFESSOR_DETAIL_ORIGINS.includes(value as ProfessorDetailOrigin)
+    ? value as ProfessorDetailOrigin
+    : null;
+}
+
+export function professorDetailNavigation(from?: string | null, journey?: string | null) {
+  const origin = normalizeProfessorDetailOrigin(from);
+  const projectOrigin = origin === "result"
+    || origin === "project"
+    || origin === "project-execution"
+    || origin === "project-meeting";
+  const matchBucket = journey === "project" || projectOrigin ? "project" : "student";
+  const backByOrigin = {
+    home: "/home",
+    quest: "/quest",
+    portfolio: "/portfolio",
+    result: "/result/compare",
+    project: "/project-professors",
+    "project-execution": "/project-execution",
+    "project-meeting": "/project-meeting",
+    pitch: "/professors/pitch",
+  } as const satisfies Record<ProfessorDetailOrigin, string>;
+  const backHref = origin ? backByOrigin[origin] : "/professors";
+
+  return {
+    origin,
+    backHref,
+    matchBucket,
+    nextHref: matchBucket === "project" ? "/project-execution" : "/quest",
+  } as const;
+}
+
+export function professorDetailQuery(from?: string | null, journey?: string | null): string {
+  const origin = normalizeProfessorDetailOrigin(from);
+  if (!origin) return "";
+  const query = new URLSearchParams({ from: origin });
+  if (journey === "project") query.set("journey", "project");
+  return `?${query.toString()}`;
+}
+
+export function growthProjectRecordHref({
+  recordTopicId,
+  selectedTopicId,
+  currentResultTopicIds,
+}: {
+  recordTopicId: string;
+  selectedTopicId: string | null;
+  currentResultTopicIds: readonly string[];
+}): string {
+  return recordTopicId === selectedTopicId && currentResultTopicIds.includes(recordTopicId)
+    ? "/result"
+    : `/portfolio/builder?topic=${encodeURIComponent(recordTopicId)}`;
+}
+
 export function pdfReaderBackHref(from?: string): string {
   return from === "card"
     ? "/paper/reader?mode=bite&source=favorites&step=card"

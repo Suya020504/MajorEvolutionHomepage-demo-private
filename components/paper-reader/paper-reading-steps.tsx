@@ -8,7 +8,13 @@ const PAPER_READING_STEPS = PAPER_TO_EMAIL_STEPS.map((step, index) => ({
   icon: STEP_ICONS[index],
 }));
 
-export function PaperReadingSteps({ current }: { current: 1 | 2 | 3 | 4 | 5 }) {
+export function PaperReadingSteps({
+  current,
+  navigationLocked = false,
+}: {
+  current: 1 | 2 | 3 | 4 | 5;
+  navigationLocked?: boolean;
+}) {
   return (
     <nav className="paper-reading-steps" aria-label="논문 활용과 메일 준비 5단계">
       <ol>
@@ -17,6 +23,7 @@ export function PaperReadingSteps({ current }: { current: 1 | 2 | 3 | 4 | 5 }) {
           const state = step.number < current
             ? "complete"
             : step.number === current ? "current" : "upcoming";
+          const locked = Boolean(step.href && state !== "current" && navigationLocked);
           const content = (
             <>
               <span className="paper-reading-steps__icon">
@@ -25,20 +32,26 @@ export function PaperReadingSteps({ current }: { current: 1 | 2 | 3 | 4 | 5 }) {
               <span className="paper-reading-steps__copy">
                 <small>{step.number}단계</small>
                 <strong>{step.label}</strong>
-                <em>{step.description}</em>
+                <em>{locked ? "카드 저장 후 이동" : step.description}</em>
               </span>
             </>
           );
           return (
             <li
               key={step.number}
-              className={`is-${state}`}
+              className={`is-${state}${locked ? " is-locked" : ""}`}
               aria-current={state === "current" ? "step" : undefined}
             >
               {step.href && state !== "current" ? (
-                <Link href={step.href} aria-label={`${step.number}단계 ${step.label}, ${step.description}`}>
-                  {content}
-                </Link>
+                locked ? (
+                  <span className="paper-reading-steps__locked" aria-disabled="true">
+                    {content}
+                  </span>
+                ) : (
+                  <Link href={step.href} aria-label={`${step.number}단계 ${step.label}, ${step.description}`}>
+                    {content}
+                  </Link>
+                )
               ) : content}
             </li>
           );

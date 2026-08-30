@@ -187,9 +187,23 @@ export function AiProfessorScreen() {
   }, [isSending, messages.length]);
 
   useEffect(() => {
-    const requestedView = new URLSearchParams(window.location.search).get("view");
-    if (requestedView === "map" || requestedView === "context") setViewMode(requestedView);
+    const syncViewFromUrl = () => {
+      const requestedView = new URLSearchParams(window.location.search).get("view");
+      setViewMode(requestedView === "map" || requestedView === "context" ? requestedView : "chat");
+    };
+    syncViewFromUrl();
+    window.addEventListener("popstate", syncViewFromUrl);
+    return () => window.removeEventListener("popstate", syncViewFromUrl);
   }, []);
+
+  const changeViewMode = (nextView: "chat" | "map" | "context") => {
+    if (nextView === viewMode) return;
+    const url = new URL(window.location.href);
+    if (nextView === "chat") url.searchParams.delete("view");
+    else url.searchParams.set("view", nextView);
+    window.history.pushState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    setViewMode(nextView);
+  };
 
   const requestReply = async (conversation: GrowthProfessorMessage[]) => {
     setError("");
@@ -262,18 +276,22 @@ export function AiProfessorScreen() {
               <p>교수님을 만나기 전후, 내 고민과 프로젝트 방향을 함께 정리하는 AI 성장 파트너예요.</p>
             </div>
           </div>
-          <nav className={styles.viewTabs} aria-label="AI 교수님 보기 방식">
+          <nav className={styles.viewTabs} aria-label="AI 교수님 보기 방식" role="tablist">
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "chat"}
               aria-current={viewMode === "chat" ? "page" : undefined}
-              onClick={() => setViewMode("chat")}
+              onClick={() => changeViewMode("chat")}
             >
               <MessageCircleMore size={17} aria-hidden="true" /> 대화하기
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "map"}
               aria-current={viewMode === "map" ? "page" : undefined}
-              onClick={() => setViewMode("map")}
+              onClick={() => changeViewMode("map")}
             >
               <GitBranch size={17} aria-hidden="true" /> 대화 지도
               {messages.some((message) => message.role === "assistant") ? (
@@ -282,8 +300,10 @@ export function AiProfessorScreen() {
             </button>
             <button
               type="button"
+              role="tab"
+              aria-selected={viewMode === "context"}
               aria-current={viewMode === "context" ? "page" : undefined}
-              onClick={() => setViewMode("context")}
+              onClick={() => changeViewMode("context")}
             >
               <BookOpenCheck size={17} aria-hidden="true" /> 내 맥락
               {growthNotes.length ? <span>{growthNotes.length}</span> : null}
@@ -418,7 +438,7 @@ export function AiProfessorScreen() {
                 </div>
               ) : null}
               {visiblePrompts.length ? (
-                <div className={styles.promptSuggestions} aria-label="이어갈 대화 예시">
+                <div className={styles.promptSuggestions} role="group" aria-label="이어갈 대화 예시">
                   {visiblePrompts.map((suggestion) => (
                     <button
                       key={suggestion.text}
@@ -555,11 +575,11 @@ export function AiProfessorScreen() {
             onHideMapBranch={hideMapBranch}
             onRestoreMapBranch={restoreMapBranch}
             onSaveReflection={saveReflection}
-            onBackToChat={() => setViewMode("chat")}
+            onBackToChat={() => changeViewMode("chat")}
             onStartBranch={(parentId, prompt, title) => {
               setBranchOrigin({ parentId, title });
               setDraft(prompt);
-              setViewMode("chat");
+              changeViewMode("chat");
               window.requestAnimationFrame(() => inputRef.current?.focus());
             }}
           />

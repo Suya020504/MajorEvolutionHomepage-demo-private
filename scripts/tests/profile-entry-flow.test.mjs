@@ -30,8 +30,8 @@ test("최초 진입만 랜딩을 보여주고 서비스 이용 뒤에는 홈으�
   assert.equal((landing.match(/href=\{SERVICE_HOME_WITH_NAV_GUIDE\}/g) ?? []).length, 4);
   assert.equal((landing.match(/서비스 시작하기/g) ?? []).length, 4);
   assert.doesNotMatch(landing, /3분 방향 찾기/);
-  assert.match(professorTutorial, /markServiceEntered\(\);/);
-  assert.match(researchTutorial, /markServiceEntered\(\);/);
+  assert.match(professorTutorial, /runProfessorTutorialStoredAction\(markServiceEntered\)/);
+  assert.match(researchTutorial, /runResearchTutorialStoredAction\(markServiceEntered\)/);
 });
 
 test("랜딩에서 실제 서비스 화면과 AI 대화의 생각 진화 과정을 미리 본다", () => {

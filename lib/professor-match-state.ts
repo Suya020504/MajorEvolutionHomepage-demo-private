@@ -1,3 +1,5 @@
+import type { ProfessorMatch, ProfessorPaperSelection } from "@/lib/professor-domain";
+
 /** 학생 탐색과 프로젝트 자문 추천을 같은 배열에 섞지 않기 위한 순수 상태 계약입니다. */
 export type ProfessorMatchStatus = "idle" | "loading" | "success" | "error";
 
@@ -76,6 +78,143 @@ export function resolveStudentProfessorMatch<
   if (selected) return selected;
   const favoriteIds = new Set(favoriteStudentProfessorIds);
   return studentMatches.find((match) => favoriteIds.has(match.professor.id)) ?? null;
+}
+
+/**
+ * 명시적으로 선택한 프로젝트 교수의 논문은 해당 논문의 질문·이메일 맥락에서
+ * 우선합니다. 그 외에는 일반 만남에서 고른 학생 교수 맥락을 유지합니다.
+ */
+export function resolveQuestProfessorMatch<
+  TMatch extends { professor: { id: string } },
+>({
+  studentMatches,
+  selectedStudentProfessorId,
+  favoriteStudentProfessorIds = [],
+  projectMatches,
+  selectedProjectProfessorId,
+  selectedPaperProfessorId,
+}: {
+  studentMatches: readonly TMatch[];
+  selectedStudentProfessorId: string | null | undefined;
+  favoriteStudentProfessorIds?: readonly string[];
+  projectMatches: readonly TMatch[];
+  selectedProjectProfessorId: string | null | undefined;
+  selectedPaperProfessorId: string | null | undefined;
+}): TMatch | null {
+  if (selectedPaperProfessorId && selectedProjectProfessorId === selectedPaperProfessorId) {
+    const explicitProjectPaper = projectMatches.find(
+      (match) => match.professor.id === selectedPaperProfessorId,
+    );
+    if (explicitProjectPaper) return explicitProjectPaper;
+  }
+  return resolveStudentProfessorMatch({
+    studentMatches,
+    selectedStudentProfessorId,
+    favoriteStudentProfessorIds,
+  });
+}
+
+/**
+ * 현재 추천 배열이 새 검색으로 교체된 뒤에도, 학생이 대학 공식 프로필에서 직접
+ * 고른 논문 교수의 최소 퀘스트 맥락을 선택 스냅샷만으로 복원합니다.
+ */
+export function createProfessorPaperQuestMatch(
+  selection: ProfessorPaperSelection,
+): ProfessorMatch {
+  return {
+    professor: {
+      id: selection.professorId,
+      university: "단국대학교",
+      college: "",
+      department: selection.professorDepartment,
+      departments: [selection.professorDepartment],
+      associationStatuses: [],
+      name: selection.professorName,
+      title: "교수",
+      researchFields: [],
+      publications: [{
+        id: selection.paperId,
+        title: selection.title,
+        publicationType: selection.publicationType,
+        publishedDate: selection.publishedDate,
+        doi: selection.doi,
+        kciId: selection.kciId,
+        officialProfileUrl: selection.officialProfileUrl,
+      }],
+      publicationCount: 1,
+      officialProfileUrl: selection.officialProfileUrl,
+      sourceUrl: selection.officialProfileUrl,
+      collectedAt: selection.selectedAt,
+      status: "FOUND",
+      researchFieldsStatus: "NOT_LISTED_ON_OFFICIAL_PROFILE",
+      publicationsStatus: "FOUND",
+      failureReason: null,
+      profileEvidenceId: `paper-selection:${selection.professorId}`,
+    },
+    role: "CONTEXT",
+    strength: "DIRECT",
+    reason: "학생이 대학 공식 프로필에서 이 교수님의 논문을 직접 선택했습니다.",
+    evidenceIds: [selection.paperId],
+    matchedTerms: [selection.title],
+    doesNotEstablish: ["논문 선택만으로 지도·면담 가능 여부를 판단할 수 없습니다."],
+    decisionBasis: {
+      matchedConcepts: [selection.title],
+      departmentMatchesMajor: false,
+      roleMatches: { topic: false, method: false, context: true },
+      sources: {
+        officialProfile: true,
+        researchFields: false,
+        matchedPublication: true,
+      },
+    },
+  };
+}
+
+/**
+ * 논문에서 시작한 퀘스트의 교수와 출처를 한 번에 결정합니다. 동일 교수가 두
+ * 버킷에 있어도 실제 활성 선택과 같은 버킷을 우선해 질문과 이메일이 갈라지지 않습니다.
+ */
+export function resolveQuestProfessorContextMatch({
+  studentMatches,
+  selectedStudentProfessorId,
+  favoriteStudentProfessorIds = [],
+  projectMatches,
+  selectedProjectProfessorId,
+  selectedProfessorPaper,
+}: {
+  studentMatches: readonly ProfessorMatch[];
+  selectedStudentProfessorId: string | null | undefined;
+  favoriteStudentProfessorIds?: readonly string[];
+  projectMatches: readonly ProfessorMatch[];
+  selectedProjectProfessorId: string | null | undefined;
+  selectedProfessorPaper: ProfessorPaperSelection | null | undefined;
+}): { source: "student" | "project" | "paper"; match: ProfessorMatch } | null {
+  const paperProfessorId = selectedProfessorPaper?.professorId ?? null;
+  if (paperProfessorId && selectedProfessorPaper) {
+    const studentPaperMatch = studentMatches.find(
+      (match) => match.professor.id === paperProfessorId,
+    ) ?? null;
+    const projectPaperMatch = projectMatches.find(
+      (match) => match.professor.id === paperProfessorId,
+    ) ?? null;
+
+    if (selectedStudentProfessorId === paperProfessorId && studentPaperMatch) {
+      return { source: "student", match: studentPaperMatch };
+    }
+    if (selectedProjectProfessorId === paperProfessorId && projectPaperMatch) {
+      return { source: "project", match: projectPaperMatch };
+    }
+    if (studentPaperMatch) return { source: "student", match: studentPaperMatch };
+    if (projectPaperMatch) return { source: "project", match: projectPaperMatch };
+    return { source: "paper", match: createProfessorPaperQuestMatch(selectedProfessorPaper) };
+  }
+
+  const studentMatch = resolveStudentProfessorMatch({
+    studentMatches,
+    selectedStudentProfessorId,
+    favoriteStudentProfessorIds,
+  });
+  return studentMatch ? { source: "student", match: studentMatch } : null;
 }
 
 /** 프로젝트 실행 화면은 프로젝트 버킷에서 선택한 자문 교수만 사용합니다. */

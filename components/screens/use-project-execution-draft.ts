@@ -11,6 +11,19 @@ import {
 } from "@/lib/project-execution";
 
 type ProjectExecutionSeed = Parameters<typeof createProjectExecutionDraft>[0];
+type ProjectExecutionStorageProvider = () => Pick<Storage, "setItem">;
+
+export function persistProjectExecutionDraftFromProvider(
+  getStorage: ProjectExecutionStorageProvider,
+  storageKey: string,
+  draft: ProjectExecutionDraft,
+): ProjectExecutionSaveState {
+  return persistProjectExecutionDraft({
+    setItem(key, value) {
+      getStorage().setItem(key, value);
+    },
+  }, storageKey, draft);
+}
 
 export function useProjectExecutionDraft(seed: ProjectExecutionSeed | null) {
   const fallback = useMemo(
@@ -54,7 +67,11 @@ export function useProjectExecutionDraft(seed: ProjectExecutionSeed | null) {
     const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
     draftRef.current = next;
     setDraft(next);
-    setSaveState(persistProjectExecutionDraft(window.localStorage, storageKey, next));
+    setSaveState(persistProjectExecutionDraftFromProvider(
+      () => window.localStorage,
+      storageKey,
+      next,
+    ));
   }, [storageKey]);
 
   return {

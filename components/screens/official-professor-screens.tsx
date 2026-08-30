@@ -65,6 +65,7 @@ import { ProfessorMatchRequestAbortedError } from "@/lib/professor-match-http";
 import { resolveProfessorPortrait } from "@/lib/professor-photo";
 import { MAX_FAVORITE_PROFESSORS } from "@/lib/professor-paper-selection";
 import { buildProfessorPitch, professorMatchRoleLabel } from "@/lib/professor-pitch";
+import { professorDetailNavigation, professorDetailQuery } from "@/lib/navigation-flow";
 import { useProfileStore, type ProfileGrade } from "@/store/profile-store";
 import { useResearchStore } from "@/store/research-store";
 
@@ -471,7 +472,6 @@ export function OfficialProfessorsScreen({
   const markInputsChanged = () => {
     activeRequestRef.current?.abort();
     activeRequestRef.current = null;
-    clearProfessorMatches();
     setSearchAttempted(false);
     setScopeNotice(null);
     setInputError(null);
@@ -655,7 +655,7 @@ export function OfficialProfessorsScreen({
    * searchAttempted는 이번 방문에만 사는 값이라, 잇다에 갔다 돌아오면
    * 저장소에 결과가 있는데도 빈 폼이 떴습니다. 즐겨찾기·논문 한입·포트폴리오가
    * 모두 이 결과를 이어받으므로 왕복해도 끊기지 않아야 합니다.
-   * 입력을 바꾸면 markInputsChanged가 저장 결과를 지우므로 낡은 결과가 남지 않습니다.
+   * 입력을 바꿔도 기존 결과는 유지하고, 새 검색에 성공할 때만 결과를 교체합니다.
    */
   const showsStoredMatches = hasHydrated
     && !searchAttempted
@@ -974,19 +974,13 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from");
-  const backHref = ({
-    home: "/home",
-    portfolio: "/portfolio",
-    quest: "/quest",
-    result: "/result/compare",
-    project: "/project-professors",
-    pitch: "/professors/pitch",
-  } as Record<string, string>)[from ?? ""] ?? "/professors";
+  const journey = searchParams.get("journey");
+  const detailNavigation = professorDetailNavigation(from, journey);
   const studentMatches = useResearchStore((state) => state.professorMatches);
   const projectMatches = useResearchStore((state) => state.projectProfessorMatches);
   const selectStudentProfessor = useResearchStore((state) => state.selectProfessor);
   const selectProjectProfessor = useResearchStore((state) => state.selectProjectProfessor);
-  const matches = from === "project" ? projectMatches : studentMatches;
+  const matches = detailNavigation.matchBucket === "project" ? projectMatches : studentMatches;
   const match = useMemo(
     () => matches.find((item) => item.professor.id === professor.id),
     [matches, professor.id],
@@ -996,7 +990,7 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
   return (
     <AppShell
       title="교수 공식 근거"
-      backHref={backHref}
+      backHref={detailNavigation.backHref}
       stickyAction={(
         <>
           <ProfessorFavoriteButton
@@ -1005,15 +999,15 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
           />
           {match ? (
             <PrimaryButton onClick={() => {
-              if (from === "project") selectProjectProfessor(professor.id);
+              if (detailNavigation.matchBucket === "project") selectProjectProfessor(professor.id);
               else selectStudentProfessor(professor.id);
-              router.push(from === "project" ? "/project-execution" : "/quest");
+              router.push(detailNavigation.nextHref);
             }}>
-              {from === "project" ? "이 교수님과 프로젝트 시작하기" : "이 교수님과 첫 대화 준비하기"} <ArrowRight size={17} />
+              {detailNavigation.matchBucket === "project" ? "이 교수님과 프로젝트 시작하기" : "이 교수님과 첫 대화 준비하기"} <ArrowRight size={17} />
             </PrimaryButton>
           ) : (
-            <SecondaryButton onClick={() => router.push("/professors/discover")}>
-              교수님 찾기에서 연결 맥락 만들기 <ArrowRight size={17} />
+            <SecondaryButton onClick={() => router.push(detailNavigation.matchBucket === "project" ? "/result/compare" : "/professors/discover")}>
+              {detailNavigation.matchBucket === "project" ? "프로젝트 근거에서 연결 맥락 만들기" : "교수님 찾기에서 연결 맥락 만들기"} <ArrowRight size={17} />
             </SecondaryButton>
           )}
         </>
@@ -1050,7 +1044,7 @@ export function OfficialProfessorDetailScreen({ professor }: { professor: Offici
       )}
 
       <SectionHeading title="공식 강의정보" description="대학이 공개한 강의·시간표를 확인합니다." />
-      <Link className="official-courses-link" href={`/professors/${professor.id}/courses`}>
+      <Link className="official-courses-link" href={`/professors/${professor.id}/courses${professorDetailQuery(from, journey)}`}>
         <CalendarClock size={18} aria-hidden="true" />
         <div>
           <strong>공식 강의정보 보기</strong>

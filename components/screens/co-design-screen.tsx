@@ -230,7 +230,7 @@ export function CoDesignScreen() {
           `${message} 검수된 로컬 후보로 흐름을 이어갑니다.`,
         );
       } finally {
-        router.push("/result");
+        router.replace("/result");
       }
     }
   };
@@ -247,7 +247,7 @@ export function CoDesignScreen() {
   return (
     <AppShell
       title="전공 진화 실험실 — 만들다"
-      onBack={() => router.push("/research/tutorial")}
+      onBack={() => router.replace("/research")}
       topAction={(
         <div className="co-studio-top-actions">
           <span className="step-count">{step + 1} / {CO_DESIGN_TOTAL_QUESTION_COUNT}</span>

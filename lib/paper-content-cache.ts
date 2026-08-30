@@ -1,4 +1,5 @@
 export const PAPER_CONTENT_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1_000;
+export const PAPER_CONTENT_NEGATIVE_CACHE_TTL_MS = 10 * 60 * 1_000;
 
 type CacheOptions = {
   now?: () => number;
@@ -20,12 +21,12 @@ export function createPaperContentCache<T>({
       }
       return entry.value;
     },
-    set(key: string, value: T): void {
+    set(key: string, value: T, ttlMs = PAPER_CONTENT_CACHE_TTL_MS): void {
       if (values.size >= maxEntries && !values.has(key)) {
         const oldestKey = values.keys().next().value;
         if (typeof oldestKey === "string") values.delete(oldestKey);
       }
-      values.set(key, { value, expiresAt: now() + PAPER_CONTENT_CACHE_TTL_MS });
+      values.set(key, { value, expiresAt: now() + Math.max(1, ttlMs) });
     },
   };
 }

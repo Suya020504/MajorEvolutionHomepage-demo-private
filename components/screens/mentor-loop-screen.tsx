@@ -465,8 +465,8 @@ export function MentorLoopScreen() {
     return (
       <AppShell title="다음 만남 씨앗" backHref="/quest" className="mentor-loop-screen">
         <PageHeader title="먼저 교수와 연구주제를 연결해 주세요" description="나의 교수님과 교수님 퀘스트를 거치면 면담 피드백을 같은 맥락에서 기록할 수 있습니다." />
-        <PrimaryButton onClick={() => router.push("/home")}>
-          교수 연결 3단계로 이동 <ArrowRight size={17} />
+        <PrimaryButton onClick={() => router.push("/professors")}>
+          교수 매칭부터 시작하기 <ArrowRight size={17} />
         </PrimaryButton>
       </AppShell>
     );

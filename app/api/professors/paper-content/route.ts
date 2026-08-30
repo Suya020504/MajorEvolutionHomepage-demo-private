@@ -4,7 +4,10 @@ import {
   lookupRelatedPublicPaperCandidate,
   type RelatedPaperLookupInput,
 } from "@/lib/paper-content-lookup";
-import { createPaperContentCache } from "@/lib/paper-content-cache";
+import {
+  createPaperContentCache,
+  PAPER_CONTENT_NEGATIVE_CACHE_TTL_MS,
+} from "@/lib/paper-content-cache";
 import {
   materializePublicPaperContent,
   type MaterializedPaperContent,
@@ -158,7 +161,15 @@ export async function POST(request: Request) {
     relatedOfficialPaper,
     fetchedAt: new Date().toISOString(),
   };
-  if (responsePayload.status !== "error") paperContentCache.set(cacheKey, responsePayload);
+  if (responsePayload.status !== "error") {
+    paperContentCache.set(
+      cacheKey,
+      responsePayload,
+      responsePayload.status === "unavailable"
+        ? PAPER_CONTENT_NEGATIVE_CACHE_TTL_MS
+        : undefined,
+    );
+  }
 
   return NextResponse.json(responsePayload, {
     headers: {

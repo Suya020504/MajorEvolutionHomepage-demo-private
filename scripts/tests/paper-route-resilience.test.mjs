@@ -171,6 +171,7 @@ test("관련 논문 PDF 추출 실패도 성공적인 미발견처럼 캐시하�
     /candidateContent\.status === "error"[\s\S]*responseStatus = "error"/,
   );
   assert.match(routeSource, /responsePayload\.status !== "error"/);
+  assert.match(routeSource, /responsePayload\.status === "unavailable"[\s\S]*PAPER_CONTENT_NEGATIVE_CACHE_TTL_MS/);
 });
 
 function createCounterStore() {

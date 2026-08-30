@@ -46,8 +46,11 @@ import type {
   ProfessorKnockKitDraft,
   ProfessorMatch,
 } from "@/lib/professor-domain";
-import { resolveJourneyTopic } from "@/lib/research-topic-context";
-import { resolveStudentProfessorMatch } from "@/lib/professor-match-state";
+import {
+  createProfessorPaperQuestTopic,
+  resolveJourneyTopic,
+} from "@/lib/research-topic-context";
+import { resolveQuestProfessorContextMatch } from "@/lib/professor-match-state";
 import { useQuestStore } from "@/store/quest-store";
 import { useResearchStore } from "@/store/research-store";
 
@@ -439,12 +442,18 @@ export function OfficialKnockKitScreen({
 
 export function getOfficialQuestContext(): { topic: ResearchTopic; match: ProfessorMatch } | null {
   const state = useResearchStore.getState();
-  const match = resolveStudentProfessorMatch({
+  const selectedPaper = state.selectedProfessorPaper;
+  const resolved = resolveQuestProfessorContextMatch({
     studentMatches: state.professorMatches,
     selectedStudentProfessorId: state.selectedProfessorId,
     favoriteStudentProfessorIds: state.favoriteProfessorIds,
+    projectMatches: state.projectProfessorMatches,
+    selectedProjectProfessorId: state.selectedProjectProfessorId,
+    selectedProfessorPaper: selectedPaper,
   });
-  if (!match) return null;
-  const topic = selectedTopicFromStore("student");
-  return topic ? { topic, match } : null;
+  if (!resolved) return null;
+  const topic = resolved.source === "paper" && selectedPaper
+    ? createProfessorPaperQuestTopic(selectedPaper)
+    : selectedTopicFromStore(resolved.source === "project" ? "project" : "student");
+  return topic ? { topic, match: resolved.match } : null;
 }

@@ -24,6 +24,7 @@ import { AppShell } from "@/components/app/primitives";
 import { ServiceBottomNav } from "@/components/app/side-nav";
 import { JourneyStageHero } from "@/components/app/journey-stage-hero";
 import { getProjectExecutionProgress } from "@/lib/project-execution";
+import { projectEntryRecoveryAction } from "@/lib/project-professor-page";
 import { resolveProjectProfessorMatch } from "@/lib/professor-match-state";
 import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
@@ -58,6 +59,10 @@ export function ProjectExecutionHomeScreen() {
   const projectMatches = useResearchStore((state) => state.projectProfessorMatches);
   const selectedProjectProfessorId = useResearchStore((state) => state.selectedProjectProfessorId);
   const topic = resolveJourneyTopic({ result, selectedTopicId, professorDiscoveryTopic: null });
+  const recoveryAction = projectEntryRecoveryAction({
+    hasCandidateResult: Boolean(result && result.kind !== "empty"),
+    hasSelectedTopic: Boolean(topic),
+  });
   const selectedMatch = resolveProjectProfessorMatch({
     projectMatches,
     selectedProjectProfessorId,
@@ -86,20 +91,33 @@ export function ProjectExecutionHomeScreen() {
     );
   }
 
-  if (!topic) {
+  if (recoveryAction?.state === "missing-result") {
     return (
       <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
         <EmptyExecutionState
           title="실행할 프로젝트가 아직 없어요"
-          description="프로젝트 후보를 비교하고 한 가지를 선택하면 실행 홈을 만들 수 있어요."
-          href="/result"
-          label="프로젝트 후보 선택하기"
+          description="프로젝트 설계 홈에서 문제·방법·범위를 정하면 실행 홈을 만들 수 있어요."
+          href={recoveryAction.href}
+          label={recoveryAction.label}
         />
       </AppShell>
     );
   }
 
-  if (!selectedMatch || !draft) {
+  if (recoveryAction?.state === "missing-selection") {
+    return (
+      <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
+        <EmptyExecutionState
+          title="실행할 프로젝트 후보를 먼저 선택해 주세요"
+          description="만들어 둔 후보의 데이터·방법·범위를 비교하고 실행할 하나를 골라 주세요."
+          href={recoveryAction.href}
+          label={recoveryAction.label}
+        />
+      </AppShell>
+    );
+  }
+
+  if (!topic || !selectedMatch || !draft) {
     return (
       <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
         <EmptyExecutionState
@@ -227,7 +245,7 @@ export function ProjectExecutionHomeScreen() {
               <span className={styles.railEyebrow}>선택한 자문 파트너</span>
               <div className={styles.professorIdentity}><span><GraduationCap size={22} /></span><div><strong>{professor.name} {professor.title}</strong><small>{professor.college} · {professor.department}</small></div></div>
               <div className={styles.roleReason}><small>{selectedMatch.role === "TOPIC" ? "연구주제" : selectedMatch.role === "METHOD" ? "연구방법" : "응용·확장"} 자문</small><p>{selectedMatch.mentorFitReason ?? selectedMatch.reason}</p></div>
-              <Link href={`/professors/${professor.id}?from=project`}>공식 근거 다시 보기 <ArrowRight size={15} /></Link>
+              <Link href={`/professors/${professor.id}?from=project-execution`}>공식 근거 다시 보기 <ArrowRight size={15} /></Link>
             </section>
 
             <section className={styles.methodCard}>

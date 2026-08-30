@@ -51,6 +51,7 @@ const QUESTION_STEPS = ["major", "mode", "interests", "readiness", "feasibility"
 const ALL_STEPS = ["welcome", ...QUESTION_STEPS] as const;
 const MAX_INTERESTS = 3;
 const MAX_METHODS = 2;
+const TUTORIAL_STORAGE_ERROR_MESSAGE = "이 브라우저에 저장하지 못했지만 현재 화면에서는 계속 진행할 수 있어요.";
 
 const STEP_LABEL: Record<QuestionStep, string> = {
   major: "전공",
@@ -159,10 +160,47 @@ function isOneOf<T extends string>(value: unknown, options: readonly T[]): value
 }
 
 function browserStorage(): Storage | null {
+  return typeof window === "undefined" ? null : window.localStorage;
+}
+
+function isStorageAccessError(error: unknown): boolean {
+  return Boolean(
+    error
+    && typeof error === "object"
+    && "name" in error
+    && (error.name === "SecurityError" || error.name === "QuotaExceededError"),
+  );
+}
+
+export function readResearchTutorialStorage(
+  getStorage: () => Pick<Storage, "getItem"> | null = browserStorage,
+): { value: string | null; error: string | null } {
   try {
-    return typeof window === "undefined" ? null : window.localStorage;
+    return { value: getStorage()?.getItem(STORAGE_KEY) ?? null, error: null };
   } catch {
+    return { value: null, error: TUTORIAL_STORAGE_ERROR_MESSAGE };
+  }
+}
+
+export function writeResearchTutorialStorage(
+  value: string,
+  getStorage: () => Pick<Storage, "setItem"> | null = browserStorage,
+): string | null {
+  try {
+    getStorage()?.setItem(STORAGE_KEY, value);
     return null;
+  } catch {
+    return TUTORIAL_STORAGE_ERROR_MESSAGE;
+  }
+}
+
+export function runResearchTutorialStoredAction(action: () => void): string | null {
+  try {
+    action();
+    return null;
+  } catch (error) {
+    if (!isStorageAccessError(error)) throw error;
+    return TUTORIAL_STORAGE_ERROR_MESSAGE;
   }
 }
 
@@ -298,20 +336,26 @@ export function ResearchTutorialScreen({
   const [draft, setDraft] = useState<TutorialDraft>(() => createDraft(emptyConditions, null));
   const [ready, setReady] = useState(false);
   const [issue, setIssue] = useState<string | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
   const [customInterest, setCustomInterest] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    markServiceEntered();
+    const nextStorageError = runResearchTutorialStoredAction(markServiceEntered);
+    if (nextStorageError) setStorageError(nextStorageError);
   }, [markServiceEntered]);
 
   useEffect(() => {
     if (!hasHydrated || ready) return;
     const fromFullForm = typeof window !== "undefined"
       && new URLSearchParams(window.location.search).get("source") === "full";
+    const storedDraft = fromFullForm
+      ? { value: null, error: null }
+      : readResearchTutorialStorage();
+    if (storedDraft.error) setStorageError(storedDraft.error);
     const saved = fromFullForm
       ? null
-      : restoreDraft(browserStorage()?.getItem(STORAGE_KEY) ?? "");
+      : restoreDraft(storedDraft.value ?? "");
     const academicDefaults = mergeAcademicProfileDefaults(storedConditions, profile);
     const conditionsWithProfile = { ...storedConditions, ...academicDefaults };
     setDraft(saved ?? createDraft(conditionsWithProfile, storedIdeaMode));
@@ -321,7 +365,8 @@ export function ResearchTutorialScreen({
 
   useEffect(() => {
     if (!ready || submitting) return;
-    browserStorage()?.setItem(STORAGE_KEY, JSON.stringify(draft));
+    const nextStorageError = writeResearchTutorialStorage(JSON.stringify(draft));
+    if (nextStorageError) setStorageError(nextStorageError);
   }, [draft, ready, submitting]);
 
   const step = draft.step;
@@ -393,8 +438,11 @@ export function ResearchTutorialScreen({
   };
 
   const openConditionEditor = () => {
-    saveIdeaDraft({ ideaMode: draft.ideaMode, conditions: draft.conditions });
-    browserStorage()?.setItem(STORAGE_KEY, JSON.stringify(draft));
+    const storeError = runResearchTutorialStoredAction(() => {
+      saveIdeaDraft({ ideaMode: draft.ideaMode, conditions: draft.conditions });
+    });
+    const draftError = writeResearchTutorialStorage(JSON.stringify(draft));
+    if (storeError || draftError) setStorageError(storeError ?? draftError);
     router.push("/research/conditions?view=review");
   };
 
@@ -424,10 +472,14 @@ export function ResearchTutorialScreen({
       return;
     }
     setSubmitting(true);
-    const missing = beginIdeaCoDesign({
-      ideaMode: draft.ideaMode,
-      conditions: draft.conditions,
+    let missing: string[] = [];
+    const storeError = runResearchTutorialStoredAction(() => {
+      missing = beginIdeaCoDesign({
+        ideaMode: draft.ideaMode,
+        conditions: draft.conditions,
+      });
     });
+    if (storeError) setStorageError(storeError);
     if (missing.length) {
       setSubmitting(false);
       setIssue(MISSING_LABEL[missing[0]] ?? "필수 조건을 다시 확인해 주세요.");
@@ -443,8 +495,9 @@ export function ResearchTutorialScreen({
       goTo(target as TutorialStep);
       return;
     }
-    browserStorage()?.setItem(STORAGE_KEY, JSON.stringify({ ...draft, step: "review" }));
-    router.push("/co-design");
+    const draftError = writeResearchTutorialStorage(JSON.stringify({ ...draft, step: "review" }));
+    if (draftError) setStorageError(draftError);
+    router.replace("/co-design");
   };
 
   const closeTutorial = () => {
@@ -793,6 +846,7 @@ export function ResearchTutorialScreen({
             <p>{copy.description}</p>
           </div>
           {renderStep()}
+          {storageError ? <p className={styles.issue} role="status">{storageError}</p> : null}
           {issue ? <p className={styles.issue} role="alert">{issue}</p> : null}
         </section>
 

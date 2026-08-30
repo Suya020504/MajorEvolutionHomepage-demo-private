@@ -30,6 +30,7 @@ import {
   HubUtilityLinks,
   serviceHubStyles as styles,
 } from "@/components/app/service-hub";
+import { growthProjectRecordHref } from "@/lib/navigation-flow";
 import { cardsForTool, useQuestStore } from "@/store/quest-store";
 import { useResearchStore } from "@/store/research-store";
 import { useAiProfessorStore } from "@/store/ai-professor-store";
@@ -166,6 +167,14 @@ export function PortfolioHubScreen() {
       : "저장되는 기록이 쌓이면 처음 고민과 지금의 방향을 비교해 보여드려요.";
   const visibleProjects = [...growthProjectHistory].reverse().slice(0, 3);
   const visibleProfessors = [...growthProfessorHistory].reverse().slice(0, 6);
+  const currentResultTopicIds = result?.kind === "ok"
+    ? result.candidates.map((candidate) => candidate.topic.id)
+    : result?.kind === "insufficient"
+      ? [result.candidate.topic.id]
+      : [];
+  const hasValidCurrentResult = Boolean(
+    selectedTopicId && currentResultTopicIds.includes(selectedTopicId),
+  );
   const conversationCount = aiMessages.filter((message) => message.role === "user").length;
   const conversationBranchCount = aiMessages.filter((message) => message.branchParentMessageId).length;
   const latestConversationReflection = [...aiMessages]
@@ -369,8 +378,8 @@ export function PortfolioHubScreen() {
               trailing={(
                 <>
                   <span className={growthStyles.desktopListCount}>{growthProjectHistory.length}개 프로젝트</span>
-                  <Link href="/result" className={growthStyles.mobileListAction}>
-                    현재 결과 <ArrowRight size={14} aria-hidden="true" />
+                  <Link href={hasValidCurrentResult ? "/result" : "/portfolio/builder"} className={growthStyles.mobileListAction}>
+                    {hasValidCurrentResult ? "현재 결과" : "전체 기록"} <ArrowRight size={14} aria-hidden="true" />
                   </Link>
                 </>
               )}
@@ -382,7 +391,11 @@ export function PortfolioHubScreen() {
                   title={project.title}
                   description={project.question}
                   status={project.topicId === selectedTopicId ? "현재 프로젝트" : "이전 선택"}
-                  href="/result"
+                  href={growthProjectRecordHref({
+                    recordTopicId: project.topicId,
+                    selectedTopicId,
+                    currentResultTopicIds,
+                  })}
                   tone={project.topicId === selectedTopicId ? "violet" : "neutral"}
                 />
               ))}
@@ -412,7 +425,9 @@ export function PortfolioHubScreen() {
                   status={record.selectedAt
                     ? "선택한 교수"
                     : `${PROFESSOR_SOURCE_LABEL[record.source]} · ${PROFESSOR_ROLE_LABEL[record.role]}`}
-                  href={`/professors/${record.professorId}`}
+                  href={record.source === "project"
+                    ? `/professors/${record.professorId}?from=portfolio&journey=project`
+                    : `/professors/${record.professorId}?from=portfolio`}
                   tone={record.selectedAt ? "mint" : record.source === "project" ? "violet" : "neutral"}
                 />
               ))}

@@ -53,3 +53,114 @@ test("교수를 직접 선택한 뒤에만 프로젝트 실행 홈으로 이동�
     disabled: false,
   });
 });
+
+test("프로젝트가 없거나 후보를 고르지 않았을 때 성공 상태를 표시하지 않는다", () => {
+  assert.ok(page, "프로젝트 교수 추천 페이지 계약 모듈이 필요합니다.");
+
+  assert.deepEqual(page.projectProfessorPagePresentation({
+    hasResult: false,
+    hasSelectedTopic: false,
+    matchStatus: "idle",
+    hasMatches: false,
+  }), {
+    state: "missing-result",
+    eyebrow: "프로젝트 실행 · 준비 전",
+    title: "프로젝트를 먼저 설계해 볼까요?",
+    description: "프로젝트의 문제·방법·범위를 정한 뒤 자문 교수를 연결할 수 있어요.",
+    steps: ["pending", "pending", "pending"],
+  });
+
+  assert.deepEqual(page.projectProfessorPagePresentation({
+    hasResult: true,
+    hasSelectedTopic: false,
+    matchStatus: "idle",
+    hasMatches: false,
+  }), {
+    state: "missing-selection",
+    eyebrow: "프로젝트 실행 · 1단계",
+    title: "프로젝트 후보를 먼저 선택해 주세요",
+    description: "후보를 고르고 상세 근거를 확인하면 프로젝트에 필요한 자문 역할을 연결해요.",
+    steps: ["current", "pending", "pending"],
+  });
+});
+
+test("교수 추천 진행·실패·성공 상태는 서로 다른 hero와 3단계 상태를 제공한다", () => {
+  assert.ok(page, "프로젝트 교수 추천 페이지 계약 모듈이 필요합니다.");
+
+  const idle = page.projectProfessorPagePresentation({
+    hasResult: true,
+    hasSelectedTopic: true,
+    matchStatus: "idle",
+    hasMatches: false,
+  });
+  assert.equal(idle.state, "idle");
+  assert.equal(idle.title, "선택한 프로젝트의 상세 근거를 확인해 주세요");
+  assert.deepEqual(idle.steps, ["complete", "current", "pending"]);
+
+  const loading = page.projectProfessorPagePresentation({
+    hasResult: true,
+    hasSelectedTopic: true,
+    matchStatus: "loading",
+    hasMatches: false,
+  });
+  assert.equal(loading.state, "loading");
+  assert.equal(loading.title, "프로젝트에 맞는 자문 교수를 찾고 있어요");
+  assert.deepEqual(loading.steps, ["complete", "complete", "current"]);
+
+  const error = page.projectProfessorPagePresentation({
+    hasResult: true,
+    hasSelectedTopic: true,
+    matchStatus: "error",
+    hasMatches: false,
+  });
+  assert.equal(error.state, "error");
+  assert.equal(error.title, "교수 추천을 완료하지 못했어요");
+  assert.deepEqual(error.steps, ["complete", "complete", "error"]);
+
+  const success = page.projectProfessorPagePresentation({
+    hasResult: true,
+    hasSelectedTopic: true,
+    matchStatus: "success",
+    hasMatches: true,
+  });
+  assert.equal(success.state, "success");
+  assert.equal(success.title, "이 프로젝트에 맞는 자문 교수를 연결했어요");
+  assert.deepEqual(success.steps, ["complete", "complete", "current"]);
+});
+
+test("프로젝트 실행·자문 빈 상태는 후보 존재와 선택 상태에 따라 복구 경로를 구분한다", () => {
+  assert.ok(page, "프로젝트 교수 추천 페이지 계약 모듈이 필요합니다.");
+
+  assert.deepEqual(page.projectEntryRecoveryAction({
+    hasCandidateResult: false,
+    hasSelectedTopic: false,
+  }), {
+    state: "missing-result",
+    href: "/research",
+    label: "프로젝트 설계 시작하기",
+  });
+  assert.deepEqual(page.projectEntryRecoveryAction({
+    hasCandidateResult: true,
+    hasSelectedTopic: false,
+  }), {
+    state: "missing-selection",
+    href: "/result",
+    label: "프로젝트 후보 선택하기",
+  });
+  assert.equal(page.projectEntryRecoveryAction({
+    hasCandidateResult: true,
+    hasSelectedTopic: true,
+  }), null);
+});
+
+test("이미 선택된 교수 버튼은 다시 선택할 수 없게 만든다", () => {
+  assert.ok(page, "프로젝트 교수 추천 페이지 계약 모듈이 필요합니다.");
+  assert.deepEqual(page.projectProfessorSelectionButton(false), {
+    label: "이 교수님 선택",
+    disabled: false,
+  });
+  assert.deepEqual(page.projectProfessorSelectionButton(true), {
+    label: "선택한 교수님",
+    disabled: true,
+  });
+});

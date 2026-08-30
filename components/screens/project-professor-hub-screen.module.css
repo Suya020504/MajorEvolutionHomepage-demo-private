@@ -17,6 +17,8 @@
 .steps > a svg { color: var(--brand-mint-dark); }
 .steps .currentStep { color: var(--brand-purple); border-color: rgba(103, 72, 221, 0.46); background: var(--brand-violet-soft); }
 .steps .currentStep > span { color: #fff; background: var(--brand-purple); }
+.steps .errorStep { color: #a04e28; border-color: rgba(201, 111, 66, 0.42); background: #fff4ed; }
+.steps .errorStep > span { color: #fff; background: #bd6035; }
 
 .projectSummary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 16px; padding: 22px; border: 1px solid rgba(184, 176, 231, 0.7); border-radius: 20px; background: radial-gradient(circle at 100% 0%, rgba(113, 83, 237, 0.12), transparent 38%), #fff; box-shadow: 0 14px 38px rgba(40, 49, 84, 0.07); }
 .projectSummaryIcon { display: grid; width: 50px; height: 50px; place-items: center; border-radius: 15px; color: var(--brand-purple); background: var(--brand-violet-soft); }
@@ -79,6 +81,7 @@
 .cardActions a { color: #526079; background: #fff; }
 .cardActions button { border-color: var(--role-color); color: #fff; background: var(--role-color); }
 .cardActions button[data-selected="true"] { color: var(--role-color); background: var(--role-soft); }
+.cardActions button:disabled { cursor: default; }
 
 .emptyProfessorCard { border-style: dashed; box-shadow: none; }
 .emptyCopy { display: grid; justify-items: start; gap: 6px; padding: 14px; border-radius: 12px; color: var(--text-secondary); background: #f8f9fc; }
@@ -100,6 +103,13 @@
 .emptyState a { display: inline-flex; min-height: 42px; align-items: center; gap: 6px; margin-top: 5px; padding: 0 15px; border-radius: 11px; color: #fff; background: var(--brand-purple); font-size: 12px; font-weight: 800; }
 
 @media (max-width: 1023px) { .professorGrid { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 701px) and (max-width: 1279px) {
+  .page { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
+  .actionDock {
+    z-index: 30;
+    bottom: calc(var(--app-bottom-nav-height) + env(safe-area-inset-bottom) + 12px);
+  }
+}
 @media (max-width: 700px) {
   .page { gap: 18px; padding-bottom: calc(118px + env(safe-area-inset-bottom)); }
   .pageHeader h1 { font-size: 27px; }

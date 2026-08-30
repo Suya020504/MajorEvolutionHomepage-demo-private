@@ -9,9 +9,19 @@ export const metadata: Metadata = {
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string | string[] }>;
+  searchParams: Promise<{ view?: string | string[]; from?: string | string[] }>;
 }) {
   const params = await searchParams;
   const view = Array.isArray(params.view) ? params.view[0] : params.view;
+  const from = Array.isArray(params.from) ? params.from[0] : params.from;
+  if (from === "home") {
+    return (
+      <ConditionSelectScreen
+        initialStep={view === "review" ? "review" : "direction"}
+        returnHref="/research"
+        returnLabel="프로젝트 설계 홈으로 돌아가기"
+      />
+    );
+  }
   return <ConditionSelectScreen initialStep={view === "review" ? "review" : "direction"} />;
 }

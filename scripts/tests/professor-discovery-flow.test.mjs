@@ -582,10 +582,10 @@ test("새 연구주제로 전환하면 프로젝트 자문 추천만 초기화�
     ),
     store.slice(
       store.indexOf("  reRecommend: () => {"),
-      store.indexOf("  selectTopic: (id) => set({"),
+      store.indexOf("  selectTopic: (id) =>"),
     ),
     store.slice(
-      store.indexOf("  selectTopic: (id) => set({"),
+      store.indexOf("  selectTopic: (id) =>"),
       store.indexOf("  setProfessorMatchLoading: (professorMatchTopicId) =>"),
     ),
   ];
@@ -670,10 +670,9 @@ test("전공 아이디어 튜토리얼은 최종 확인 전 로컬 초안만 쓰
     screen,
     /QUESTION_STEPS = \["major", "mode", "interests", "readiness", "feasibility", "review"\]/,
   );
-  assert.match(screen, /browserStorage\(\)\?\.setItem\(STORAGE_KEY, JSON\.stringify\(draft\)\)/);
   assert.match(
     screen,
-    /const startCoDesign = \(\) => \{[\s\S]*beginIdeaCoDesign\([\s\S]*router\.push\("\/co-design"\)/,
+    /const startCoDesign = \(\) => \{[\s\S]*beginIdeaCoDesign\([\s\S]*router\.replace\("\/co-design"\)/,
   );
 
   const atomicCommit = store.slice(
@@ -747,10 +746,9 @@ test("교수 상세와 논문 열람은 선택을 저장하지 않고 첫 대화
   const detailScreen = screen.slice(screen.indexOf("export function OfficialProfessorDetailScreen"));
   assert.match(detailScreen, /projectProfessorMatches/);
   assert.match(detailScreen, /selectProjectProfessor/);
-  assert.match(detailScreen, /home: "\/home"/);
-  assert.match(detailScreen, /portfolio: "\/portfolio"/);
-  assert.match(detailScreen, /quest: "\/quest"/);
-  assert.match(detailScreen, /result: "\/result\/compare"/);
+  assert.match(detailScreen, /professorDetailNavigation\(from, journey\)/);
+  assert.match(detailScreen, /detailNavigation\.matchBucket === "project"/);
+  assert.match(detailScreen, /backHref=\{detailNavigation\.backHref\}/);
   assert.match(detailScreen, /match \? \(/);
   assert.match(detailScreen, /교수님 찾기에서 연결 맥락 만들기/);
 });

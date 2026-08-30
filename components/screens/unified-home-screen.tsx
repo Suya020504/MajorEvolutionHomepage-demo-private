@@ -276,7 +276,7 @@ export function UnifiedHomeScreen({
       label: "교수 선택",
       shortLabel: "교수 선택",
       href: connectedProfessor
-        ? `/professors/${connectedProfessor.professor.id}`
+        ? `/professors/${connectedProfessor.professor.id}?from=home`
         : matches.length
           ? "/professors/pitch"
           : "/home?professor=quick",
@@ -418,7 +418,7 @@ export function UnifiedHomeScreen({
                   </div>
                 </div>
                 <div className={styles.professorActions}>
-                  <Link href={`/professors/${connectedProfessor.professor.id}`}>교수 정보 보기</Link>
+                  <Link href={`/professors/${connectedProfessor.professor.id}?from=home`}>교수 정보 보기</Link>
                   <Link href="/professors/pitch">다른 교수도 보기</Link>
                 </div>
               </>

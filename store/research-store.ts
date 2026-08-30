@@ -552,10 +552,10 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
 
   setHasHydrated: (hasHydrated) => set({ hasHydrated }),
   setIdeaMode: (ideaMode) =>
-    set({
-      ideaMode,
-      ...invalidatedResearchState(),
-    }),
+    set((state) => state.ideaMode === ideaMode ? state : ({
+        ideaMode,
+        ...invalidatedResearchState(),
+      })),
   setSchool: (school) =>
     set((state) => ({
       conditions: { ...state.conditions, school: school.slice(0, 80) },
@@ -789,15 +789,15 @@ export const useResearchStore = create<ResearchState>()(persist((set, get) => ({
     }
   },
 
-  selectTopic: (id) => set({
-    selectedTopicId: id,
-    growthProjectHistory: appendGrowthProjectRecord(
-      get().growthProjectHistory,
-      get().result,
-      id,
-    ),
-    ...emptyProjectProfessorMatchState(),
-  }),
+  selectTopic: (id) => set((state) => state.selectedTopicId === id ? state : ({
+      selectedTopicId: id,
+      growthProjectHistory: appendGrowthProjectRecord(
+        state.growthProjectHistory,
+        state.result,
+        id,
+      ),
+      ...emptyProjectProfessorMatchState(),
+    })),
   setProfessorMatchLoading: (professorMatchTopicId) =>
     set({ professorMatchStatus: "loading", professorMatchError: null, professorMatchTopicId }),
   // 늦게 도착한 이전 요청의 응답이 현재 결과를 덮지 않도록, 진행 중인 요청의 주제와만 대조합니다.

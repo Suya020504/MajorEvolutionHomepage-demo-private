@@ -31,6 +31,7 @@ import {
   PROJECT_EXECUTION_MATERIALS,
   type ProjectExecutionMaterialId,
 } from "@/lib/project-execution";
+import { projectEntryRecoveryAction } from "@/lib/project-professor-page";
 import { resolveProjectProfessorMatch } from "@/lib/professor-match-state";
 import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
@@ -65,6 +66,10 @@ export function ProjectMeetingScreen() {
   const projectMatches = useResearchStore((state) => state.projectProfessorMatches);
   const selectedProjectProfessorId = useResearchStore((state) => state.selectedProjectProfessorId);
   const topic = resolveJourneyTopic({ result, selectedTopicId, professorDiscoveryTopic: null });
+  const recoveryAction = projectEntryRecoveryAction({
+    hasCandidateResult: Boolean(result && result.kind !== "empty"),
+    hasSelectedTopic: Boolean(topic),
+  });
   const selectedMatch = resolveProjectProfessorMatch({
     projectMatches,
     selectedProjectProfessorId,
@@ -89,15 +94,23 @@ export function ProjectMeetingScreen() {
     return <div className="research-loading"><LoaderCircle className="spin" /><p>프로젝트 자문 준비를 불러오고 있어요.</p></div>;
   }
 
-  if (!topic) {
+  if (recoveryAction?.state === "missing-result") {
     return (
       <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
-        <EmptyMeetingState title="자문받을 프로젝트가 없어요" description="먼저 프로젝트 후보를 선택하고 실행 기준을 확인해 주세요." href="/result" label="프로젝트 후보 선택하기" />
+        <EmptyMeetingState title="자문받을 프로젝트가 없어요" description="프로젝트 설계 홈에서 문제·방법·범위를 먼저 정해 주세요." href={recoveryAction.href} label={recoveryAction.label} />
       </AppShell>
     );
   }
 
-  if (!selectedMatch || !draft) {
+  if (recoveryAction?.state === "missing-selection") {
+    return (
+      <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
+        <EmptyMeetingState title="자문받을 프로젝트 후보를 먼저 선택해 주세요" description="만들어 둔 후보를 비교하고 실행할 하나를 고르면 교수 자문을 준비할 수 있어요." href={recoveryAction.href} label={recoveryAction.label} />
+      </AppShell>
+    );
+  }
+
+  if (!topic || !selectedMatch || !draft) {
     return (
       <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
         <EmptyMeetingState title="프로젝트 자문 교수가 선택되지 않았어요" description="역할별 연결 이유를 비교하고 이 프로젝트에 자문을 구할 교수님을 선택해 주세요." href="/project-professors" label="프로젝트 교수 선택하기" />
@@ -252,7 +265,7 @@ export function ProjectMeetingScreen() {
               <span className={styles.railEyebrow}>프로젝트 자문 교수</span>
               <div className={styles.professorIdentity}><span><UserRound size={22} /></span><div><strong>{professor.name} {professor.title}</strong><small>{professor.college} · {professor.department}</small></div></div>
               <p>{selectedMatch.mentorFitReason ?? selectedMatch.reason}</p>
-              <Link href={`/professors/${professor.id}?from=project`}><GraduationCap size={15} /> 공식 연구 근거 보기</Link>
+              <Link href={`/professors/${professor.id}?from=project-meeting`}><GraduationCap size={15} /> 공식 연구 근거 보기</Link>
             </section>
             <button type="button" className={styles.copyButton} onClick={() => void copyBrief()}><Clipboard size={17} /> 자문 준비 내용 복사하기</button>
             {copyStatus ? <p className={styles.copyStatus} role="status">{copyStatus}</p> : null}

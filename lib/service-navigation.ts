@@ -182,8 +182,20 @@ export function resolveServiceSection(
     return "/project-professors";
   }
 
-  if (pathname === "/tutorial" || pathname.startsWith("/professors")) {
-    return searchParams?.get("from") === "project" ? "/project-professors" : "/professors";
+  if (pathname === "/tutorial") return "/professors";
+  if (pathname.startsWith("/professors")) {
+    const from = searchParams?.get("from");
+    if (from === "home") return "/home";
+    if (from === "quest") return "/quest";
+    if (from === "portfolio") return "/portfolio";
+    if (from === "result") return "/research";
+    if (
+      from === "project"
+      || from === "project-execution"
+      || from === "project-meeting"
+      || searchParams?.get("journey") === "project"
+    ) return "/project-professors";
+    return "/professors";
   }
 
   if (

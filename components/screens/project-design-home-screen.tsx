@@ -118,7 +118,7 @@ export function ProjectDesignHomeScreen() {
         <div className={styles.workspace}>
           <main className={styles.mainColumn}>
             <section className={styles.contextCard} aria-labelledby="project-design-context-title">
-              <header><div><small>함께 보고 있는 조건</small><h2 id="project-design-context-title">현재 프로젝트 출발점</h2></div><Link href="/research/conditions?view=review">조건 수정 <ArrowRight size={15} /></Link></header>
+              <header><div><small>함께 보고 있는 조건</small><h2 id="project-design-context-title">현재 프로젝트 출발점</h2></div><Link href="/research/conditions?view=review&from=home">조건 수정 <ArrowRight size={15} /></Link></header>
               <dl>
                 <div><dt>전공</dt><dd>{conditions.major || "아직 입력 전"}</dd></div>
                 <div><dt>관심</dt><dd>{conditions.interests.length ? conditions.interests.join(" · ") : "아직 선택 전"}</dd></div>
@@ -168,7 +168,7 @@ export function ProjectDesignHomeScreen() {
 
         <nav className={styles.utilityLinks} aria-label="프로젝트 설계 바로가기">
           <Link href="/research/tutorial"><Sparkles size={17} /> 단계별 설계 확인 <ArrowRight size={15} /></Link>
-          <Link href="/research/conditions?view=review"><Settings2 size={17} /> 저장 조건 수정 <ArrowRight size={15} /></Link>
+          <Link href="/research/conditions?view=review&from=home"><Settings2 size={17} /> 저장 조건 수정 <ArrowRight size={15} /></Link>
           {hasResult ? <Link href="/result"><BookOpenCheck size={17} /> 후보 비교 보기 <ArrowRight size={15} /></Link> : null}
         </nav>
       </div>

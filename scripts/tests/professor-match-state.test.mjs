@@ -201,3 +201,80 @@ test("논문 교수는 실제로 포함된 추천 버킷의 활성 선택으로 
     projectMatches: projectBucket.matches,
   }), null);
 });
+
+test("프로젝트 교수의 논문을 명시 선택하면 일반 선택을 덮지 않고 논문 질문 맥락으로만 이어간다", () => {
+  assert.equal(typeof state.resolveQuestProfessorMatch, "function");
+  const projectPaper = state.resolveQuestProfessorMatch({
+    studentMatches: studentBucket.matches,
+    selectedStudentProfessorId: "student-professor",
+    favoriteStudentProfessorIds: [],
+    projectMatches: projectBucket.matches,
+    selectedProjectProfessorId: "project-professor",
+    selectedPaperProfessorId: "project-professor",
+  });
+  assert.equal(projectPaper?.professor.id, "project-professor");
+
+  const unrelatedProject = state.resolveQuestProfessorMatch({
+    studentMatches: [],
+    selectedStudentProfessorId: null,
+    favoriteStudentProfessorIds: [],
+    projectMatches: projectBucket.matches,
+    selectedProjectProfessorId: "project-professor",
+    selectedPaperProfessorId: "different-professor",
+  });
+  assert.equal(unrelatedProject, null);
+});
+
+test("현재 추천 배열에서 빠진 즐겨찾기 교수도 공식 논문 선택 스냅샷으로 질문 맥락을 복원한다", () => {
+  const selection = {
+    professorId: "favorite-paper-professor",
+    professorName: "김연구",
+    professorDepartment: "컴퓨터공학과",
+    paperId: "paper-1",
+    title: "학습 지원 연구",
+    publicationType: "학술논문",
+    publishedDate: "2026-01-01",
+    doi: null,
+    kciId: null,
+    officialProfileUrl: "https://example.edu/professor",
+    selectedAt: "2026-08-31T00:00:00.000Z",
+  };
+  const match = state.createProfessorPaperQuestMatch(selection);
+  const topic = topicContext.createProfessorPaperQuestTopic(selection);
+
+  assert.equal(match.professor.id, selection.professorId);
+  assert.equal(match.professor.publications[0].id, selection.paperId);
+  assert.deepEqual(match.evidenceIds, [selection.paperId]);
+  assert.equal(topic.id, `paper:${selection.professorId}:${selection.paperId}`);
+  assert.match(topic.question, /학습 지원 연구/);
+});
+
+test("같은 교수가 두 추천 버킷에 있어도 실제 활성 선택과 같은 퀘스트 출처를 사용한다", () => {
+  const selection = {
+    professorId: "shared-professor",
+    professorName: "공유 교수",
+    professorDepartment: "컴퓨터공학과",
+    paperId: "shared-paper",
+    title: "공유 논문",
+    publicationType: "학술논문",
+    publishedDate: null,
+    doi: null,
+    kciId: null,
+    officialProfileUrl: "https://example.edu/shared",
+    selectedAt: "2026-08-31T00:00:00.000Z",
+  };
+  const resolved = state.resolveQuestProfessorContextMatch({
+    studentMatches: [{ professor: { id: "shared-professor" }, bucket: "student" }],
+    selectedStudentProfessorId: "shared-professor",
+    favoriteStudentProfessorIds: ["shared-professor"],
+    projectMatches: [
+      { professor: { id: "shared-professor" }, bucket: "project" },
+      { professor: { id: "other-project" }, bucket: "project" },
+    ],
+    selectedProjectProfessorId: "other-project",
+    selectedProfessorPaper: selection,
+  });
+
+  assert.equal(resolved?.source, "student");
+  assert.equal(resolved?.match.bucket, "student");
+});

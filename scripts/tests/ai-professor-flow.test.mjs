@@ -261,7 +261,7 @@ test("과거 노드에서 새 갈래를 시작하고 트리에서 여러 자식 
   assert.match(conversationMap, /nodeDetailRef\.current\?\.scrollIntoView\(\{ block: "start", behavior: "smooth" \}\)/);
   assert.doesNotMatch(conversationMap, /manualBranchButton/);
   assert.match(screen, /setBranchOrigin\(\{ parentId, title \}\)/);
-  assert.match(screen, /setViewMode\("chat"\)/);
+  assert.match(screen, /changeViewMode\("chat"\)/);
   assert.match(screen, /inputRef\.current\?\.focus\(\)/);
 });
 

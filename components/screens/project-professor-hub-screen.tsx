@@ -10,7 +10,13 @@ import {
 import { AppShell, PrimaryButton, SecondaryButton } from "@/components/app/primitives";
 import { ServiceBottomNav } from "@/components/app/side-nav";
 import { JourneyStageHero } from "@/components/app/journey-stage-hero";
-import { buildProjectProfessorRoleSlots, projectProfessorNextAction } from "@/lib/project-professor-page";
+import {
+  buildProjectProfessorRoleSlots,
+  projectProfessorNextAction,
+  projectProfessorPagePresentation,
+  projectProfessorSelectionButton,
+  type ProjectProfessorStepState,
+} from "@/lib/project-professor-page";
 import type { ProfessorMatch, ProfessorMatchRole } from "@/lib/professor-domain";
 import type { TopicWithChecks } from "@/lib/recommend";
 import { useResearchStore } from "@/store/research-store";
@@ -37,12 +43,29 @@ function findSelectedTopic(
   return result.candidates.find((candidate) => candidate.topic.id === selectedTopicId) ?? null;
 }
 
-function ProjectSteps() {
+function ProjectSteps({ states }: { states: readonly ProjectProfessorStepState[] }) {
+  const steps = [
+    { href: "/result", label: "후보 선택", state: states[0] },
+    { href: "/result/compare", label: "근거 확인", state: states[1] },
+    { href: "/project-professors", label: "교수 연결", state: states[2] },
+  ] as const;
   return (
     <nav className={styles.steps} aria-label="프로젝트 설계 진행 단계">
-      <Link href="/result" data-complete="true"><span>1</span><strong>후보 선택</strong><Check size={15} /></Link>
-      <Link href="/result/compare" data-complete="true"><span>2</span><strong>근거 확인</strong><Check size={15} /></Link>
-      <span className={styles.currentStep} aria-current="step"><span>3</span><strong>교수 연결</strong></span>
+      {steps.map((step, index) => {
+        const content = <><span>{index + 1}</span><strong>{step.label}</strong>{step.state === "complete" ? <Check size={15} /> : null}</>;
+        return step.state === "complete" ? (
+          <Link key={step.label} href={step.href} data-complete="true">{content}</Link>
+        ) : (
+          <span
+            key={step.label}
+            className={step.state === "current" ? styles.currentStep : step.state === "error" ? styles.errorStep : undefined}
+            aria-current={step.state === "current" || step.state === "error" ? "step" : undefined}
+            data-state={step.state}
+          >
+            {content}
+          </span>
+        );
+      })}
     </nav>
   );
 }
@@ -75,6 +98,7 @@ function ProfessorRoleCard({ slot, selected, onSelect }: {
     ...match.decisionBasis.matchedConcepts,
     ...match.matchedTerms,
   ])).slice(0, 5);
+  const selectionButton = projectProfessorSelectionButton(selected);
 
   return (
     <article className={styles.professorCard} data-role={slot.role.toLowerCase()} data-selected={selected}>
@@ -111,8 +135,17 @@ function ProfessorRoleCard({ slot, selected, onSelect }: {
 
       <footer className={styles.cardActions}>
         <Link href={`/professors/${match.professor.id}?from=project`}><BookOpenCheck size={16} /> 공식 근거 보기</Link>
-        <button type="button" data-selected={selected} onClick={() => onSelect(match)}>
-          {selected ? <><CircleCheck size={16} /> 선택한 교수님</> : <>이 교수님 선택 <ArrowRight size={16} /></>}
+        <button
+          type="button"
+          data-selected={selected}
+          aria-pressed={selected}
+          disabled={selectionButton.disabled}
+          onClick={() => {
+            if (!selectionButton.disabled) onSelect(match);
+          }}
+        >
+          {selected ? <CircleCheck size={16} /> : <ArrowRight size={16} />}
+          {selectionButton.label}
         </button>
       </footer>
     </article>
@@ -121,7 +154,7 @@ function ProfessorRoleCard({ slot, selected, onSelect }: {
 
 function EmptyState({ title, description, href, label }: { title: string; description: string; href: string; label: string }) {
   return (
-    <section className={styles.emptyState}>
+    <section className={styles.emptyState} data-service-help="project-primary">
       <GraduationCap size={28} /><h2>{title}</h2><p>{description}</p>
       <Link href={href}>{label} <ArrowRight size={16} /></Link>
     </section>
@@ -144,30 +177,37 @@ export function ProjectProfessorHubScreen() {
   if (!hasHydrated) return <div className="research-loading"><LoaderCircle className="spin" /><p>프로젝트 교수 추천을 불러오고 있어요.</p></div>;
 
   const selectedTopic = findSelectedTopic(result, selectedTopicId);
+  const hasCandidateResult = Boolean(result && result.kind !== "empty");
   const hasCurrentProjectMatches = professorMatchTopicId === selectedTopicId;
   const projectMatches = hasCurrentProjectMatches && professorCoverage ? professorMatches : [];
   const slots = buildProjectProfessorRoleSlots(projectMatches);
   const selectedProjectMatch = projectMatches.find((match) => match.professor.id === selectedProfessorId) ?? null;
   const nextAction = projectProfessorNextAction(selectedProjectMatch?.professor.id ?? null);
+  const presentation = projectProfessorPagePresentation({
+    hasResult: hasCandidateResult,
+    hasSelectedTopic: Boolean(selectedTopic),
+    matchStatus: professorMatchStatus,
+    hasMatches: projectMatches.length > 0,
+  });
 
   return (
     <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
       <div className={styles.page}>
-        <header className={styles.pageHeader} data-service-help="project-primary">
+        <header className={styles.pageHeader}>
           <Link href="/result/compare"><ArrowLeft size={17} /> 상세 근거로 돌아가기</Link>
         </header>
 
         <JourneyStageHero
           stage="recommend"
-          eyebrow="프로젝트 실행 · 3단계"
-          title="이 프로젝트에 맞는 자문 교수를 연결했어요"
-          description="선택한 프로젝트를 발전시키는 데 필요한 연구주제·방법·응용 확장 역할을 공식 근거로 나눠 확인합니다."
+          eyebrow={presentation.eyebrow}
+          title={presentation.title}
+          description={presentation.description}
         />
 
-        <ProjectSteps />
+        <ProjectSteps states={presentation.steps} />
 
-        {!result ? (
-          <EmptyState title="설계한 프로젝트가 아직 없어요" description="프로젝트의 문제·방법·범위를 먼저 정하면 역할별 교수 연결이 이어져요." href="/research/tutorial" label="프로젝트 설계하기" />
+        {!hasCandidateResult ? (
+          <EmptyState title="설계한 프로젝트가 아직 없어요" description="프로젝트의 문제·방법·범위를 먼저 정하면 역할별 교수 연결이 이어져요." href="/research" label="프로젝트 설계 시작하기" />
         ) : !selectedTopic ? (
           <EmptyState title="프로젝트 후보를 선택해 주세요" description="후보를 선택하고 상세 근거를 확인한 뒤 프로젝트 자문 교수를 연결할 수 있어요." href="/result" label="후보 선택하기" />
         ) : professorMatchStatus === "loading" ? (
@@ -178,7 +218,7 @@ export function ProjectProfessorHubScreen() {
           <EmptyState title="교수 추천을 준비하지 못했어요" description="상세 근거 화면에서 선택 후보를 확인하고 교수 연결을 다시 시작해 주세요." href="/result/compare" label="상세 근거 확인하기" />
         ) : (
           <>
-            <section className={styles.projectSummary} aria-labelledby="selected-project-title">
+            <section className={styles.projectSummary} aria-labelledby="selected-project-title" data-service-help="project-summary">
               <div className={styles.projectSummaryIcon}><FlaskConical size={24} /></div>
               <div className={styles.projectSummaryCopy}>
                 <small>선택한 프로젝트</small><h2 id="selected-project-title">{selectedTopic.topic.title}</h2><p>{selectedTopic.topic.question}</p>
@@ -204,12 +244,12 @@ export function ProjectProfessorHubScreen() {
               </div>
             </section>
 
-            <details className={styles.trustDetails}>
+            <details className={styles.trustDetails} data-service-help="recommendation-criteria">
               <summary><ShieldCheck size={17} /> 추천 기준과 확인 범위</summary>
               <div><p>교수 이름·소속·연구분야·논문은 대학 공식 프로필에 확인된 범위만 사용합니다.</p><p>프로젝트 연결 이유는 역할별 자문 근거이며 교수의 면담 가능 여부를 나타내지 않습니다.</p></div>
             </details>
 
-            <div className={styles.actionDock}>
+            <div className={styles.actionDock} data-service-help="project-primary">
               <SecondaryButton onClick={() => router.push("/result/compare")}>상세 근거로 돌아가기</SecondaryButton>
               <PrimaryButton disabled={nextAction.disabled} onClick={() => nextAction.href && router.push(nextAction.href)}>{nextAction.label} {!nextAction.disabled ? <ArrowRight size={17} /> : null}</PrimaryButton>
             </div>

@@ -3,8 +3,11 @@
 import { useMemo } from "react";
 import type { ResearchTopic } from "@/data/research-mvp";
 import type { ProfessorMatch } from "@/lib/professor-domain";
-import { resolveStudentProfessorMatch } from "@/lib/professor-match-state";
-import { resolveJourneyTopic } from "@/lib/research-topic-context";
+import { resolveQuestProfessorContextMatch } from "@/lib/professor-match-state";
+import {
+  createProfessorPaperQuestTopic,
+  resolveJourneyTopic,
+} from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
 
 export type QuestContext = {
@@ -27,19 +30,28 @@ export function useQuestContext({
   const matches = useResearchStore((state) => state.professorMatches);
   const selectedProfessorId = useResearchStore((state) => state.selectedProfessorId);
   const favoriteProfessorIds = useResearchStore((state) => state.favoriteProfessorIds);
+  const projectMatches = useResearchStore((state) => state.projectProfessorMatches);
+  const selectedProjectProfessorId = useResearchStore((state) => state.selectedProjectProfessorId);
+  const selectedProfessorPaper = useResearchStore((state) => state.selectedProfessorPaper);
   const professorDiscoveryTopic = useResearchStore((state) => state.professorDiscoveryTopic);
 
   return useMemo(() => {
-    const match = resolveStudentProfessorMatch({
+    const resolved = resolveQuestProfessorContextMatch({
       studentMatches: matches,
       selectedStudentProfessorId: selectedProfessorId,
       favoriteStudentProfessorIds: includeFavoriteFallback ? favoriteProfessorIds : [],
+      projectMatches,
+      selectedProjectProfessorId,
+      selectedProfessorPaper,
     });
-    const topic: ResearchTopic | null = resolveJourneyTopic({
-      result,
-      selectedTopicId,
-      professorDiscoveryTopic,
-    });
+    const match = resolved?.match ?? null;
+    const topic: ResearchTopic | null = resolved?.source === "paper" && selectedProfessorPaper
+      ? createProfessorPaperQuestTopic(selectedProfessorPaper)
+      : resolveJourneyTopic({
+          result,
+          selectedTopicId,
+          professorDiscoveryTopic: resolved?.source === "project" ? null : professorDiscoveryTopic,
+        });
     /*
      * 교수 맥락은 두 신호에서 옵니다.
      *
@@ -55,6 +67,9 @@ export function useQuestContext({
     matches,
     selectedProfessorId,
     favoriteProfessorIds,
+    projectMatches,
+    selectedProjectProfessorId,
+    selectedProfessorPaper,
     includeFavoriteFallback,
   ]);
 }

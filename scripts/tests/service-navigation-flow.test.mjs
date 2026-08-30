@@ -497,7 +497,9 @@ test("면담 후 기록 화면은 현재 한 단계만 보여주고 보조 기�
 
 test("탭 활성 규칙은 빠른 시작과 하위 화면의 실제 여정 맥락을 유지한다", () => {
   assert.match(navigationConfigSource, /pathname === "\/tutorial"/);
-  assert.match(navigationConfigSource, /searchParams\?\.get\("from"\) === "project"/);
+  assert.match(navigationConfigSource, /const from = searchParams\?\.get\("from"\)/);
+  assert.match(navigationConfigSource, /from === "project-execution"/);
+  assert.match(navigationConfigSource, /from === "project-meeting"/);
   assert.match(navigationConfigSource, /searchParams\?\.get\("section"\) === "professor-connection"/);
   assert.match(navigationConfigSource, /pathname\.startsWith\("\/paper"\)/);
   assert.match(navigationConfigSource, /pathname\.startsWith\("\/portfolio"\)/);
@@ -570,7 +572,7 @@ test("모바일 홈은 가로 스크롤 대신 현재 단계와 핵심 대화 �
 });
 
 test("맞춤 교수 추천 탭은 프로젝트 진행 상태마다 막히지 않는 다음 행동을 제공한다", () => {
-  assert.match(projectProfessorHubSource, /프로젝트 설계하기/);
+  assert.match(projectProfessorHubSource, /프로젝트 설계 시작하기/);
   assert.match(projectProfessorHubSource, /후보 선택하기/);
   assert.match(projectProfessorHubSource, /상세 근거 확인하기/);
   assert.match(projectProfessorHubSource, /buildProjectProfessorRoleSlots/);
@@ -584,13 +586,30 @@ test("맞춤 교수 추천 탭은 프로젝트 진행 상태마다 막히지 않
   assert.match(projectProfessorHubSource, /selectedProjectMatch/);
   assert.match(projectProfessorHubSource, /\/result\/compare/);
   assert.match(projectProfessorHubSource, /\?from=project/);
-  assert.match(officialProfessorSource, /project: "\/project-professors"/);
-  assert.match(officialProfessorSource, /from === "project" \? projectMatches : studentMatches/);
+  assert.match(officialProfessorSource, /professorDetailNavigation\(from, journey\)/);
+  assert.match(officialProfessorSource, /detailNavigation\.matchBucket === "project" \? projectMatches : studentMatches/);
   assert.match(researchResultSource, /router\.push\("\/project-professors"\)/);
   assert.match(researchResultSource, /view === "summary"/);
   assert.match(researchResultSource, /CriterionDisclosure/);
   assert.match(researchResultSource, /step\.id === "professors"/);
   assert.match(researchResultSource, /선택한 주제로 교수 찾기|primaryAction\.label/);
+});
+
+test("프로젝트 교수 도움말 세 영역은 실제 화면의 대응 영역에 연결된다", () => {
+  assert.match(projectProfessorHubSource, /data-service-help="project-primary"/);
+  assert.match(projectProfessorHubSource, /data-service-help="project-summary"/);
+  assert.match(projectProfessorHubSource, /data-service-help="recommendation-criteria"/);
+});
+
+test("일반 면담 기록의 맥락이 없으면 교수 매칭부터 다시 시작한다", () => {
+  const emptyStateStart = mentorLoopSource.indexOf("  if (!topic || !match)");
+  const emptyState = mentorLoopSource.slice(
+    emptyStateStart,
+    mentorLoopSource.indexOf("  const key =", emptyStateStart),
+  );
+  assert.match(emptyState, /router\.push\("\/professors"\)/);
+  assert.match(emptyState, /교수 매칭부터 시작하기/);
+  assert.doesNotMatch(emptyState, /교수 연결 3단계로 이동/);
 });
 
 test("프로젝트 실행 홈과 자문 준비는 각 화면에 맞는 도움말을 제공한다", () => {
@@ -651,8 +670,8 @@ test("학생 고민 매칭 응답과 프로젝트 멘토 응답은 주제 ID가 
   assert.match(researchStoreSource, /item\.source === "student" && currentProjectProfessorIds\.has\(item\.professorId\)/);
 });
 
-test("일반 교수 연결에서 고른 교수는 일반 만남 준비의 연결 교수로 인정한다", () => {
-  assert.match(questHubSource, /useQuestContext\(\{ includeFavoriteFallback: false \}\)/);
+test("일반 교수 선택과 논문 즐겨찾기는 모두 만남 준비의 연결 교수로 인정한다", () => {
+  assert.match(questHubSource, /useQuestContext\(\)/);
   assert.match(questHubSource, /match: selectedProfessorMatch/);
   assert.match(questHubSource, /hasConnectedProfessor/);
   assert.match(questHubSource, /교수님의 연구를 살펴볼 차례예요/);
@@ -665,9 +684,10 @@ test("일반 교수 연결에서 고른 교수는 일반 만남 준비의 연결
   assert.doesNotMatch(connectionState, /favoriteProfessorIds/);
 });
 
-test("홈과 만남 준비는 같은 활성 교수·주제 해석을 사용한다", () => {
+test("만남 준비는 논문에서 저장한 즐겨찾기 교수도 이어받고 홈은 명시 선택을 유지한다", () => {
   assert.match(homeSource, /useQuestContext\(\{ includeFavoriteFallback: false \}\)/);
-  assert.match(questHubSource, /useQuestContext\(\{ includeFavoriteFallback: false \}\)/);
+  assert.match(questHubSource, /useQuestContext\(\)/);
+  assert.doesNotMatch(questHubSource, /includeFavoriteFallback: false/);
   assert.doesNotMatch(questHubSource, /resolveJourneyTopic\(\{ result, selectedTopicId, professorDiscoveryTopic \}\)/);
 });
 

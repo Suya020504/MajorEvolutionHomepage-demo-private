@@ -136,7 +136,7 @@ export function QuestHubScreen() {
   const knockKitDrafts = useResearchStore((state) => state.knockKitDrafts);
   const mentorLoopEntries = useResearchStore((state) => state.mentorLoopEntries);
   const cards = useQuestStore((state) => state.cards);
-  const { topic, match: selectedProfessorMatch } = useQuestContext({ includeFavoriteFallback: false });
+  const { topic, match: selectedProfessorMatch } = useQuestContext();
 
   if (!hasHydrated || !hasResearchHydrated) {
     return (
@@ -226,7 +226,7 @@ export function QuestHubScreen() {
       id: "professor",
       label: "교수 선택",
       status: hasConnectedProfessor ? "연결 완료" : "먼저 선택",
-      href: selectedProfessor ? `/professors/${selectedProfessor.id}` : "/professors",
+      href: selectedProfessor ? `/professors/${selectedProfessor.id}?from=quest` : "/professors",
       icon: Compass,
       done: hasConnectedProfessor,
     },
@@ -311,7 +311,7 @@ export function QuestHubScreen() {
                   <blockquote>{selectedProfessorMatch.reason}</blockquote>
                 ) : null}
                 <Link
-                  href={selectedProfessor ? `/professors/${selectedProfessor.id}` : "/professors"}
+                  href={selectedProfessor ? `/professors/${selectedProfessor.id}?from=quest` : "/professors"}
                   className={questStyles.contextLink}
                 >
                   {selectedProfessor ? "연결 근거 다시 보기" : "교수 찾기"}

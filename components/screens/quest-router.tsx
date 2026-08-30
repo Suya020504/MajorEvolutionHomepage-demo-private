@@ -22,8 +22,6 @@ export function QuestRouterScreen({
 }) {
   const router = useRouter();
   const hasHydrated = useResearchStore((state) => state.hasHydrated);
-  const selectedProfessorId = useResearchStore((state) => state.selectedProfessorId);
-  const matches = useResearchStore((state) => state.professorMatches);
 
   if (!hasHydrated) {
     return (
@@ -34,10 +32,7 @@ export function QuestRouterScreen({
     );
   }
 
-  const hasSelectedProfessor = Boolean(
-    selectedProfessorId && matches.some((match) => match.professor.id === selectedProfessorId),
-  );
-  const context = hasSelectedProfessor ? getOfficialQuestContext() : null;
+  const context = getOfficialQuestContext();
 
   if (context) {
     return <OfficialKnockKitScreen topic={context.topic} match={context.match} journeySource={journeySource} />;
