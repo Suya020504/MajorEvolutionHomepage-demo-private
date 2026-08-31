@@ -19,7 +19,13 @@
   padding-bottom: 118px;
 }
 
-.pageHeader { padding: 3px 2px 0; }
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 2px 0;
+}
 
 .pageHeader a {
   display: inline-flex;
@@ -30,6 +36,38 @@
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 780;
+}
+
+.demoFillButton {
+  display: inline-flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid rgba(109, 74, 255, 0.3);
+  border-radius: 12px;
+  color: #5436cf;
+  background: #f7f4ff;
+  box-shadow: 0 5px 16px rgba(87, 59, 194, 0.08);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 820;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.demoFillButton:hover {
+  border-color: rgba(109, 74, 255, 0.55);
+  color: #4325bd;
+  background: #f1ecff;
+}
+
+.demoFillButton:focus-visible {
+  outline: 3px solid rgba(50, 207, 180, 0.42);
+  outline-offset: 2px;
 }
 
 .heroAction,
@@ -355,6 +393,16 @@
 @media (max-width: 700px) {
   .page { gap: 16px; padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
   .pageHeader { padding-inline: 2px; }
+  .pageHeader a { min-width: 0; }
+  .demoFillButton { width: 44px; min-width: 44px; padding: 0; }
+  .demoFillButton > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
   .contextBand { grid-template-columns: minmax(0, 1fr); gap: 13px; padding: 16px; }
   .contextDivider { width: 100%; height: 1px; }
   .contextItem > span { width: 38px; height: 38px; }
