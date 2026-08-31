@@ -212,7 +212,7 @@ export function ProfessorTutorialScreen({
     university: taxonomy.university,
     college: PRESENTATION_PROFESSOR_DEFAULTS.college,
     major: PRESENTATION_PROFESSOR_DEFAULTS.major,
-    interests: [],
+    interests: [...PRESENTATION_PROFESSOR_DEFAULTS.interests],
     careerInterests: [],
     careerConcerns: [],
   });
@@ -306,7 +306,7 @@ export function ProfessorTutorialScreen({
       university: taxonomy.university,
       college: PRESENTATION_PROFESSOR_DEFAULTS.college,
       major: PRESENTATION_PROFESSOR_DEFAULTS.major,
-      interests: [],
+      interests: [...PRESENTATION_PROFESSOR_DEFAULTS.interests],
       careerInterests: [],
       careerConcerns: [],
     });

@@ -49,6 +49,7 @@ import {
 } from "@/lib/professor-discovery-client";
 import {
   buildProfessorContextQuestions,
+  createPresentationProfessorQuickFillContext,
   DIRECT_ACADEMIC_ENTRY,
   EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
   PRESENTATION_PROFESSOR_DEFAULTS,
@@ -471,6 +472,7 @@ export function OfficialProfessorsScreen({
   const [scopeNotice, setScopeNotice] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
+  const [formTransientResetKey, setFormTransientResetKey] = useState(0);
   const activeRequestRef = useRef<AbortController | null>(null);
 
   const markInputsChanged = () => {
@@ -487,6 +489,16 @@ export function OfficialProfessorsScreen({
   ) => {
     markInputsChanged();
     setContext(updater);
+  };
+
+  const fillPresentationConditions = () => {
+    if (status === "loading") return;
+    setSearchAttempted(false);
+    setScopeNotice(null);
+    setInputError(null);
+    setPrefilled(true);
+    setFormTransientResetKey((current) => current + 1);
+    setContext(createPresentationProfessorQuickFillContext());
   };
 
   useEffect(() => () => {
@@ -667,7 +679,24 @@ export function OfficialProfessorsScreen({
     && Boolean(storedDiscoveryTopic);
 
   return (
-    <AppShell title="조건 직접 입력" backHref="/professors" className="find-professor-screen">
+    <AppShell
+      title="조건 직접 입력"
+      backHref="/professors"
+      className="find-professor-screen"
+      topAction={(
+        <button
+          type="button"
+          className="professor-demo-fill"
+          aria-label="시연 조건 한 번에 채우기"
+          title="시연 조건 한 번에 채우기"
+          onClick={fillPresentationConditions}
+          disabled={status === "loading"}
+        >
+          <Sparkles size={17} aria-hidden="true" />
+          <span>시연 조건 채우기</span>
+        </button>
+      )}
+    >
       <SceneBanner
         scene={brandScene.find}
         alt="공식 자료로 관심 분야에 맞는 교수님을 찾는 장면"
@@ -688,6 +717,7 @@ export function OfficialProfessorsScreen({
         inputError={inputError}
         loading={status === "loading"}
         rejectedCount={rejectedIds.length}
+        transientInputResetKey={formTransientResetKey}
         onContextChange={updateContext}
         onSubmit={() => {
           setRejectedIds([]);

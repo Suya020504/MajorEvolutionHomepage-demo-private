@@ -180,6 +180,41 @@ test("빠른 교수 매칭은 전공과 관심 분야만으로 기본 설정을 
   assert.ok(topic.question);
 });
 
+test("시연 조건 채우기는 명시 클릭용 검증 조합을 새 객체로 만든다", () => {
+  const first = discoveryModule.createPresentationProfessorQuickFillContext();
+  const second = discoveryModule.createPresentationProfessorQuickFillContext();
+
+  assert.equal(first.college, "SW융합대학");
+  assert.equal(first.major, "통계데이터사이언스학과");
+  assert.deepEqual(first.interests, [
+    "AI·데이터",
+    "경제·금융",
+    "푸드테크",
+    "도매시장",
+    "식품·농업",
+  ]);
+  assert.deepEqual(first.careerInterests, [
+    "데이터·AI 직무",
+    "서비스기획·PM",
+    "연구개발·실험",
+  ]);
+  assert.equal(first.secondaryMajorType, "복수전공");
+  assert.equal(first.secondaryMajor, "식품자원경제학과");
+  assert.equal(first.studentStage, "진로를 다시 탐색하는 중");
+  assert.equal(first.goal, "프로젝트·학부연구 참여");
+  assert.deepEqual(first.careerConcerns, ["아직 잘 모르겠어요"]);
+  assert.equal(first.careerGoal, "아직 탐색 중");
+  assert.equal(first.meetingSituation, "연구실 방문");
+  assert.equal(first.preferredSupport, "프로젝트·연구에 참여하고 싶어요");
+  assert.equal(first.topic, "농산물 거래자료와 사진을 활용한 가격 예측 AI 프로젝트를 준비");
+  assert.equal(first.experience, "파이썬 기반 데이터분석이 가능합니다.");
+  assert.equal(discoveryModule.validateProfessorDiscoveryBasics(first), null);
+  assert.equal(discoveryModule.validateProfessorDiscoverySecondary(first), null);
+  assert.notStrictEqual(first, second);
+  assert.notStrictEqual(first.interests, second.interests);
+  assert.notStrictEqual(first.careerInterests, second.careerInterests);
+});
+
 test("교수 매칭 튜토리얼은 최소 설정 뒤 확인 화면으로 이어진다", () => {
   const source = fs.readFileSync(
     path.join(repositoryRoot, "components/tutorial/professor-tutorial-screen.tsx"),
@@ -189,18 +224,61 @@ test("교수 매칭 튜토리얼은 최소 설정 뒤 확인 화면으로 이어
     path.join(repositoryRoot, "components/screens/official-professor-screens.tsx"),
     "utf8",
   );
+  const primitivesSource = fs.readFileSync(
+    path.join(repositoryRoot, "components/app/primitives.tsx"),
+    "utf8",
+  );
+  const discoveryFormSource = fs.readFileSync(
+    path.join(repositoryRoot, "components/screens/professor-discovery-form.tsx"),
+    "utf8",
+  );
 
   assert.match(source, /const SETUP_STEPS = \["academic", "interests"\] as const;/);
   assert.deepEqual(discoveryModule.PRESENTATION_PROFESSOR_DEFAULTS, {
     college: "SW융합대학",
     major: "통계데이터사이언스학과",
+    interests: ["AI·데이터", "경제·금융"],
   });
   assert.match(source, /college: PRESENTATION_PROFESSOR_DEFAULTS\.college/);
   assert.match(source, /major: PRESENTATION_PROFESSOR_DEFAULTS\.major/);
-  assert.match(source, /major: PRESENTATION_PROFESSOR_DEFAULTS\.major,\s*interests: \[\]/);
+  assert.equal(
+    source.match(/interests: \[\.\.\.PRESENTATION_PROFESSOR_DEFAULTS\.interests\]/g)?.length,
+    2,
+    "첫 기본 설정과 다시 시작 모두 시연 관심 분야 두 개를 사용해야 한다",
+  );
   assert.match(directFormSource, /college: PRESENTATION_PROFESSOR_DEFAULTS\.college/);
   assert.match(directFormSource, /major: PRESENTATION_PROFESSOR_DEFAULTS\.major/);
   assert.match(directFormSource, /major: PRESENTATION_PROFESSOR_DEFAULTS\.major,\s*interests: \[\]/);
+  assert.match(directFormSource, /className="professor-demo-fill"/);
+  assert.match(directFormSource, /disabled=\{status === "loading"\}/);
+  const fillHandler = directFormSource.slice(
+    directFormSource.indexOf("  const fillPresentationConditions ="),
+    directFormSource.indexOf("  useEffect(() => () =>"),
+  );
+  assert.match(fillHandler, /if \(status === "loading"\) return/);
+  assert.match(fillHandler, /setSearchAttempted\(false\)/);
+  assert.match(fillHandler, /setScopeNotice\(null\)/);
+  assert.match(fillHandler, /setInputError\(null\)/);
+  assert.match(fillHandler, /setPrefilled\(true\)/);
+  assert.match(fillHandler, /setFormTransientResetKey\(\(current\) => current \+ 1\)/);
+  assert.match(fillHandler, /setContext\(createPresentationProfessorQuickFillContext\(\)\)/);
+  assert.doesNotMatch(
+    fillHandler,
+    /runSearch|requestProfessorDiscoveryMatches|setRejectedIds|setDiscoveryTopic|setDiscoverySummary|saveProfile|router\./,
+  );
+  assert.match(directFormSource, /transientInputResetKey=\{formTransientResetKey\}/);
+  assert.match(
+    discoveryFormSource,
+    /useEffect\(\(\) => \{\s*setStepError\(null\);\s*setCustomInterest\(""\);\s*setInterestInputError\(null\);\s*\}, \[transientInputResetKey\]\)/,
+  );
+  const topBar = primitivesSource.slice(
+    primitivesSource.indexOf("      {showHeader && ("),
+    primitivesSource.indexOf("      <main"),
+  );
+  assert.ok(
+    topBar.indexOf(": topAction}") < topBar.indexOf('className="top-app-bar__intro"'),
+    "시연 조건 버튼은 서비스 소개 왼쪽에 배치되어야 한다",
+  );
   assert.match(source, /major-evolution-professor-tutorial-v8/);
   assert.match(source, /title: "이제 교수님을 찾으러 가볼까요\?"/);
   assert.match(source, />교수님 찾기 <ArrowRight/);

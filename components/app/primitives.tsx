@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  BookOpen,
   Bookmark,
   Check,
   ChevronRight,
@@ -296,6 +297,14 @@ export function AppShell({
           <strong>{title}</strong>
           <div className="top-app-bar__side top-app-bar__side--right">
             {step ? <span className="step-count">{step.current} / {step.total}</span> : topAction}
+            <Link
+              href="/welcome"
+              className="top-app-bar__intro"
+              aria-label="서비스 소개 보기"
+              title="서비스 소개 보기"
+            >
+              <BookOpen size={18} aria-hidden="true" />
+            </Link>
             <ServiceHelpGuide placement="header" />
           </div>
         </header>

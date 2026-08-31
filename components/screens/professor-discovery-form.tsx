@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -55,6 +55,7 @@ type ProfessorDiscoveryFormProps = {
   inputError: string | null;
   loading: boolean;
   rejectedCount: number;
+  transientInputResetKey: number;
   onContextChange: (updater: ContextUpdater) => void;
   onSubmit: () => void;
   onResetRejected: () => void;
@@ -132,6 +133,7 @@ export function ProfessorDiscoveryForm({
   inputError,
   loading,
   rejectedCount,
+  transientInputResetKey,
   onContextChange,
   onSubmit,
   onResetRejected,
@@ -140,6 +142,12 @@ export function ProfessorDiscoveryForm({
   const [stepError, setStepError] = useState<string | null>(null);
   const [customInterest, setCustomInterest] = useState("");
   const [interestInputError, setInterestInputError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setStepError(null);
+    setCustomInterest("");
+    setInterestInputError(null);
+  }, [transientInputResetKey]);
 
   const primaryDepartments = useMemo(
     () => getDepartmentsForCollege(taxonomy, context.college),

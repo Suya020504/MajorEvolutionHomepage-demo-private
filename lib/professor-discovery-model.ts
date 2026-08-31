@@ -147,7 +147,32 @@ export const EMPTY_PROFESSOR_DISCOVERY_CONTEXT: ProfessorDiscoveryContext = {
 export const PRESENTATION_PROFESSOR_DEFAULTS = {
   college: "SW융합대학",
   major: "통계데이터사이언스학과",
+  interests: ["AI·데이터", "경제·금융"],
 } as const;
+
+/** 사용자가 명시적으로 시연 버튼을 눌렀을 때만 불러오는 검증된 입력 조합입니다. */
+export function createPresentationProfessorQuickFillContext(): ProfessorDiscoveryContext {
+  return {
+    ...EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
+    university: "단국대학교",
+    college: PRESENTATION_PROFESSOR_DEFAULTS.college,
+    major: PRESENTATION_PROFESSOR_DEFAULTS.major,
+    studentStage: "진로를 다시 탐색하는 중",
+    goal: "프로젝트·학부연구 참여",
+    interests: ["AI·데이터", "경제·금융", "푸드테크", "도매시장", "식품·농업"],
+    careerInterests: ["데이터·AI 직무", "서비스기획·PM", "연구개발·실험"],
+    careerConcerns: ["아직 잘 모르겠어요"],
+    secondaryMajorType: "복수전공",
+    secondaryCollege: "공공인재대학",
+    secondaryMajor: "식품자원경제학과",
+    topic: "농산물 거래자료와 사진을 활용한 가격 예측 AI 프로젝트를 준비",
+    careerGoal: "아직 탐색 중",
+    meetingSituation: "연구실 방문",
+    preferredSupport: "프로젝트·연구에 참여하고 싶어요",
+    experience: "파이썬 기반 데이터분석이 가능합니다.",
+    additionalContext: "",
+  };
+}
 
 export function discoveryContextToMatchTopic(
   context: ProfessorDiscoveryContext,
