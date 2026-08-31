@@ -14,6 +14,7 @@ import {
   PencilRuler,
   RefreshCcw,
   ShieldCheck,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import {
@@ -29,6 +30,7 @@ import type {
   ProfessorMatch,
   ProfessorMentorLoopEntry,
 } from "@/lib/professor-domain";
+import { createMentorLoopDemoEntry } from "@/lib/mentor-loop-demo";
 import { hasUnsavedMentorLoopChanges } from "@/lib/mentor-loop-state";
 import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
@@ -200,6 +202,7 @@ function MentorLoopEditor({
   });
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [demoFilled, setDemoFilled] = useState(false);
   const isDirty = hasUnsavedMentorLoopChanges(entry, lastSavedEntry);
   const hasPendingSavedChanges = Boolean(lastSavedEntry) && isDirty;
 
@@ -277,6 +280,19 @@ function MentorLoopEditor({
     setStatus("피드백 반영안과 7일 행동을 이 브라우저에 저장했습니다.");
   };
 
+  const fillPresentationEntry = () => {
+    const demoEntry = createMentorLoopDemoEntry(entry);
+    const withEmail = {
+      ...demoEntry,
+      followUpEmail: buildFollowUpEmail(demoEntry, match, topic),
+    };
+    setEntry(withEmail);
+    setStage(1);
+    setDemoFilled(true);
+    setError("");
+    setStatus("시연용 임시 데이터를 채웠어요. 단계별로 확인한 뒤 마지막 단계에서 저장하세요.");
+  };
+
   const copyEmail = async () => {
     try {
       await navigator.clipboard.writeText(entry.followUpEmail);
@@ -308,7 +324,24 @@ function MentorLoopEditor({
   };
 
   return (
-    <AppShell title="다음 만남 씨앗" backHref="/quest" className="mentor-loop-screen">
+    <AppShell
+      title="다음 만남 씨앗"
+      backHref="/quest"
+      className="mentor-loop-screen"
+      topAction={(
+        <button
+          type="button"
+          className="professor-demo-fill mentor-loop-demo-fill"
+          aria-label="시연 기록 한 번에 채우기"
+          title="시연 기록 한 번에 채우기"
+          aria-pressed={demoFilled}
+          onClick={fillPresentationEntry}
+        >
+          <Sparkles size={17} aria-hidden="true" />
+          <span>{demoFilled ? "시연 내용 채움" : "시연 내용 채우기"}</span>
+        </button>
+      )}
+    >
       <PageHeader
         eyebrow="교수님 만남 후"
         title="받은 조언을 다음 행동으로 바꿔요"
@@ -424,7 +457,10 @@ function MentorLoopEditor({
 
       {stage === 3 && entry.followUpEmail ? (
         <details className="mentor-loop-email-disclosure">
-          <summary>감사·후속 이메일 초안 보기 <span>{hasPendingSavedChanges ? "재저장 필요" : "저장됨"}</span></summary>
+          <summary>
+            감사·후속 이메일 초안 보기
+            <span>{hasPendingSavedChanges ? "재저장 필요" : lastSavedEntry ? "저장됨" : "저장 전"}</span>
+          </summary>
           <Card className="mentor-loop-email">
             <textarea className="textarea" value={entry.followUpEmail} onChange={(event) => updateEntry({ followUpEmail: event.target.value })} aria-label="감사 및 후속 이메일 초안" />
             <div>

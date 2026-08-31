@@ -19,6 +19,7 @@ import {
   NotebookPen,
   Save,
   ShieldCheck,
+  Sparkles,
   Target,
   UserRound,
 } from "lucide-react";
@@ -32,6 +33,7 @@ import {
   type ProjectExecutionMaterialId,
 } from "@/lib/project-execution";
 import { projectEntryRecoveryAction } from "@/lib/project-professor-page";
+import { createProjectMeetingDemoPatch } from "@/lib/project-meeting-demo";
 import { resolveProjectProfessorMatch } from "@/lib/professor-match-state";
 import { resolveJourneyTopic } from "@/lib/research-topic-context";
 import { useResearchStore } from "@/store/research-store";
@@ -89,6 +91,7 @@ export function ProjectMeetingScreen() {
     saveError,
   } = useProjectExecutionDraft(seed);
   const [copyStatus, setCopyStatus] = useState("");
+  const [demoFilled, setDemoFilled] = useState(false);
 
   if (!hasResearchHydrated || !hasDraftHydrated) {
     return <div className="research-loading"><LoaderCircle className="spin" /><p>프로젝트 자문 준비를 불러오고 있어요.</p></div>;
@@ -144,11 +147,28 @@ export function ProjectMeetingScreen() {
     }
   };
 
+  const fillPresentationMeeting = () => {
+    updateDraft(createProjectMeetingDemoPatch());
+    setDemoFilled(true);
+    setCopyStatus("시연 자문 데이터를 채우고 이 브라우저에 저장했어요.");
+  };
+
   return (
     <AppShell showHeader={false} className={styles.shell} bottomNav={<ServiceBottomNav />}>
       <div className={styles.page}>
         <header className={styles.pageHeader}>
           <Link href="/project-execution"><ArrowLeft size={17} /> 프로젝트 실행 홈으로 돌아가기</Link>
+          <button
+            type="button"
+            className={styles.demoFillButton}
+            aria-label="시연 프로젝트 자문 한 번에 채우기"
+            title="시연 프로젝트 자문 한 번에 채우기"
+            aria-pressed={demoFilled}
+            onClick={fillPresentationMeeting}
+          >
+            <Sparkles size={17} aria-hidden="true" />
+            <span>{demoFilled ? "시연 자문 채움" : "시연 자문 채우기"}</span>
+          </button>
         </header>
 
         <JourneyStageHero
