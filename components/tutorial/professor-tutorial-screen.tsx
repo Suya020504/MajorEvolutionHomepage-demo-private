@@ -39,7 +39,7 @@ import { useProfileStore } from "@/store/profile-store";
 import { useResearchStore } from "@/store/research-store";
 import styles from "./professor-tutorial.module.css";
 
-const STORAGE_KEY = "major-evolution-professor-tutorial-v7";
+const STORAGE_KEY = "major-evolution-professor-tutorial-v8";
 const TUTORIAL_STORAGE_ERROR_MESSAGE = "이 브라우저에 저장하지 못했지만 현재 화면에서는 계속 진행할 수 있어요.";
 
 const SETUP_STEPS = ["academic", "interests"] as const;
@@ -47,7 +47,7 @@ const ALL_STEPS = [...SETUP_STEPS, "ready"] as const;
 type TutorialStep = (typeof ALL_STEPS)[number];
 
 type StoredDraft = {
-  version: 7;
+  version: 8;
   step: TutorialStep;
   context: ProfessorDiscoveryContext;
   directMajor: boolean;
@@ -146,11 +146,11 @@ export function runProfessorTutorialStoredAction(action: () => void): string | n
 function restoreDraft(value: string): StoredDraft | null {
   try {
     const parsed: unknown = JSON.parse(value);
-    if (!isRecord(parsed) || parsed.version !== 7 || !isTutorialStep(parsed.step)) return null;
+    if (!isRecord(parsed) || parsed.version !== 8 || !isTutorialStep(parsed.step)) return null;
     if (!isRecord(parsed.context)) return null;
     const context = parsed.context as Partial<ProfessorDiscoveryContext>;
     return {
-      version: 7,
+      version: 8,
       step: parsed.step,
       directMajor: parsed.directMajor === true,
       context: {
@@ -212,7 +212,7 @@ export function ProfessorTutorialScreen({
     university: taxonomy.university,
     college: PRESENTATION_PROFESSOR_DEFAULTS.college,
     major: PRESENTATION_PROFESSOR_DEFAULTS.major,
-    interests: [...PRESENTATION_PROFESSOR_DEFAULTS.interests],
+    interests: [],
     careerInterests: [],
     careerConcerns: [],
   });
@@ -259,7 +259,7 @@ export function ProfessorTutorialScreen({
 
   useEffect(() => {
     if (!restored || isMatching) return;
-    const draft: StoredDraft = { version: 7, step, context, directMajor };
+    const draft: StoredDraft = { version: 8, step, context, directMajor };
     const nextStorageError = writeProfessorTutorialStorage(JSON.stringify(draft));
     if (nextStorageError) setStorageError(nextStorageError);
   }, [context, directMajor, isMatching, restored, step]);
@@ -306,7 +306,7 @@ export function ProfessorTutorialScreen({
       university: taxonomy.university,
       college: PRESENTATION_PROFESSOR_DEFAULTS.college,
       major: PRESENTATION_PROFESSOR_DEFAULTS.major,
-      interests: [...PRESENTATION_PROFESSOR_DEFAULTS.interests],
+      interests: [],
       careerInterests: [],
       careerConcerns: [],
     });
