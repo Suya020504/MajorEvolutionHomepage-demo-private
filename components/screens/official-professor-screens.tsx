@@ -49,8 +49,10 @@ import {
 } from "@/lib/professor-discovery-client";
 import {
   buildProfessorContextQuestions,
+  createPresentationProfessorQuickFillContext,
   DIRECT_ACADEMIC_ENTRY,
   EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
+  PRESENTATION_PROFESSOR_DEFAULTS,
   professorMatchTopicToDiscoveryContext,
   validateProfessorDiscoveryBasics,
   validateProfessorDiscoverySecondary,
@@ -457,6 +459,9 @@ export function OfficialProfessorsScreen({
 
   const [context, setContext] = useState<ProfessorDiscoveryContext>(() => ({
     ...EMPTY_PROFESSOR_DISCOVERY_CONTEXT,
+    university: taxonomy.university,
+    college: PRESENTATION_PROFESSOR_DEFAULTS.college,
+    major: PRESENTATION_PROFESSOR_DEFAULTS.major,
     interests: [],
     careerInterests: [],
     careerConcerns: [],
@@ -467,6 +472,7 @@ export function OfficialProfessorsScreen({
   const [scopeNotice, setScopeNotice] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
+  const [formTransientResetKey, setFormTransientResetKey] = useState(0);
   const activeRequestRef = useRef<AbortController | null>(null);
 
   const markInputsChanged = () => {
@@ -483,6 +489,16 @@ export function OfficialProfessorsScreen({
   ) => {
     markInputsChanged();
     setContext(updater);
+  };
+
+  const fillPresentationConditions = () => {
+    if (status === "loading") return;
+    setSearchAttempted(false);
+    setScopeNotice(null);
+    setInputError(null);
+    setPrefilled(true);
+    setFormTransientResetKey((current) => current + 1);
+    setContext(createPresentationProfessorQuickFillContext());
   };
 
   useEffect(() => () => {
@@ -663,7 +679,24 @@ export function OfficialProfessorsScreen({
     && Boolean(storedDiscoveryTopic);
 
   return (
-    <AppShell title="조건 직접 입력" backHref="/professors" className="find-professor-screen">
+    <AppShell
+      title="조건 직접 입력"
+      backHref="/professors"
+      className="find-professor-screen"
+      topAction={(
+        <button
+          type="button"
+          className="professor-demo-fill"
+          aria-label="시연 조건 한 번에 채우기"
+          title="시연 조건 한 번에 채우기"
+          onClick={fillPresentationConditions}
+          disabled={status === "loading"}
+        >
+          <Sparkles size={17} aria-hidden="true" />
+          <span>시연 조건 채우기</span>
+        </button>
+      )}
+    >
       <SceneBanner
         scene={brandScene.find}
         alt="공식 자료로 관심 분야에 맞는 교수님을 찾는 장면"
@@ -684,6 +717,7 @@ export function OfficialProfessorsScreen({
         inputError={inputError}
         loading={status === "loading"}
         rejectedCount={rejectedIds.length}
+        transientInputResetKey={formTransientResetKey}
         onContextChange={updateContext}
         onSubmit={() => {
           setRejectedIds([]);
@@ -905,8 +939,8 @@ export function ProfessorPitchScreen() {
                   <p>
                     {hasHomeDepartmentMatch
                       ? matchedAffiliation
-                        ? `입력한 ${matchedAffiliation.label} ‘${matchedAffiliation.major}’의 공식 소속 교수님을 가까운 시작점으로 먼저 제안하고, 다른 학과에서는 내 관심 주제와 방법에 맞는 교수님을 찾아드렸어요.`
-                        : "입력한 학과의 공식 소속 교수님을 가까운 시작점으로 먼저 제안하고, 다른 학과에서는 내 관심 주제와 방법에 맞는 교수님을 찾아드렸어요."
+                        ? `입력한 ${matchedAffiliation.label} ‘${matchedAffiliation.major}’의 공식 소속 교수님을 가까운 시작점으로 먼저 제안하고, 학과 구분 없이 내 관심 주제와 방법의 공식 근거가 가장 강한 교수님을 찾아드렸어요.`
+                        : "입력한 학과의 공식 소속 교수님을 가까운 시작점으로 먼저 제안하고, 학과 구분 없이 내 관심 주제와 방법의 공식 근거가 가장 강한 교수님을 찾아드렸어요."
                       : "공식 데이터에서 입력한 주전공·부전공·복수전공 소속 교수를 확인하지 못해, 내 관심 주제와 방법을 넓혀 볼 세 분을 근거와 함께 제안했어요."}
                   </p>
                   <small>

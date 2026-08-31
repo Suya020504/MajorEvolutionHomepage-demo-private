@@ -519,6 +519,62 @@ strong {
 .service-tab-header__intro:focus-visible { outline: 3px solid rgba(50, 207, 180, 0.42); outline-offset: 2px; }
 .service-tab-header__intro-short { display: none; }
 
+.top-app-bar__intro,
+.professor-demo-fill {
+  display: inline-flex;
+  min-height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgba(196, 206, 226, 0.88);
+  border-radius: 12px;
+  color: #48546d;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 5px 16px rgba(34, 48, 85, 0.065);
+  font-size: 12px;
+  font-weight: 790;
+  line-height: 1;
+  text-decoration: none;
+  transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
+}
+
+.top-app-bar__intro {
+  width: 44px;
+  height: 44px;
+}
+
+.professor-demo-fill {
+  padding: 0 12px;
+  border-color: rgba(109, 74, 255, 0.3);
+  color: #5436cf;
+  background: #f7f4ff;
+  box-shadow: 0 5px 16px rgba(87, 59, 194, 0.08);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 820;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.top-app-bar__intro:hover,
+.professor-demo-fill:hover {
+  border-color: rgba(109, 74, 255, 0.55);
+  color: #4325bd;
+  background: #f1ecff;
+}
+
+.top-app-bar__intro:focus-visible,
+.professor-demo-fill:focus-visible {
+  outline: 3px solid rgba(50, 207, 180, 0.42);
+  outline-offset: 2px;
+}
+
+.professor-demo-fill:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .service-tab-header__profile {
   display: grid;
   width: 44px;
@@ -612,6 +668,21 @@ strong {
   }
 
   .top-app-bar .service-help-trigger > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .professor-demo-fill {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .professor-demo-fill > span {
     position: absolute;
     width: 1px;
     height: 1px;
